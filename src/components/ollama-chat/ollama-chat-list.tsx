@@ -1,0 +1,52 @@
+import { Message, ChatRequestOptions } from "ai/react";
+import React from "react";
+import OllamaChatMessage from "./ollama-chat-message";
+import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
+import {
+  ChatBubble,
+  ChatBubbleAvatar,
+  ChatBubbleMessage,
+} from "@/components/ui/chat/chat-bubble";
+
+interface ChatListProps {
+  messages: Message[];
+  isLoading: boolean;
+  loadingSubmit?: boolean;
+  reload: (
+    chatRequestOptions?: ChatRequestOptions
+  ) => Promise<string | null | undefined>;
+}
+
+export default function OllamaChatList({
+  messages,
+  isLoading,
+  loadingSubmit,
+  reload,
+}: ChatListProps) {
+  return (
+    <div className="flex-1 w-full overflow-y-auto">
+      <ChatMessageList>
+        {messages.map((message, index) => (
+          <OllamaChatMessage
+            key={message.id || index}
+            message={message}
+            isLast={index === messages.length - 1}
+            isLoading={isLoading}
+            reload={reload}
+          />
+        ))}
+        {loadingSubmit && (
+          <ChatBubble variant="received">
+            <ChatBubbleAvatar
+              src="/images/favicon.png"
+              width={6}
+              height={6}
+              className="object-contain"
+            />
+            <ChatBubbleMessage isLoading />
+          </ChatBubble>
+        )}
+      </ChatMessageList>
+    </div>
+  );
+}

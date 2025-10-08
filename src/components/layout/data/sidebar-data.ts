@@ -30,6 +30,11 @@ export const sidebarData: SidebarData = {
           icon: MessageSquarePlus,
         },
         {
+          title: 'Ollama Chat',
+          url: '/ollama-chat',
+          icon: Bot,
+        },
+        {
           title: 'Bibliothek',
           url: '/library',
           icon: Library,

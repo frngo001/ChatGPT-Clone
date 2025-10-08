@@ -1,7 +1,5 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Cross2Icon,
@@ -9,44 +7,36 @@ import {
 } from "@radix-ui/react-icons";
 import { Mic, SendHorizonal, X } from "lucide-react";
 import useSpeechToText from "@/hooks/useSpeechRecognition";
-import MultiImagePicker from "../image-embedder";
-import { ChatInput } from "../ui/chat/chat-input";
-
-export interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp?: Date;
-  experimental_attachments?: Array<{
-    contentType?: string;
-    url: string;
-  }>;
-}
+import MultiImagePicker from "@/components/image-embedder";
+import useOllamaChatStore from "@/stores/ollama-chat-store";
+import type { ChatRequestOptions } from "ai";
+import { ChatInput } from "@/components/ui/chat/chat-input";
 
 interface ChatBottombarProps {
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  handleSubmit: (
+    e: React.FormEvent<HTMLFormElement>,
+    chatRequestOptions?: ChatRequestOptions
+  ) => void;
   isLoading: boolean;
   stop: () => void;
   setInput?: React.Dispatch<React.SetStateAction<string>>;
   input: string;
-  base64Images?: string[] | null;
-  setBase64Images?: (images: string[] | null) => void;
-  selectedModel?: string;
 }
 
-export default function ChatBottombar({
+export default function OllamaChatBottombar({
   input,
   handleInputChange,
   handleSubmit,
   isLoading,
   stop,
   setInput,
-  base64Images,
-  setBase64Images,
-  selectedModel,
 }: ChatBottombarProps) {
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
+  const base64Images = useOllamaChatStore((state) => state.base64Images);
+  const setBase64Images = useOllamaChatStore((state) => state.setBase64Images);
+  const selectedModel = useOllamaChatStore((state) => state.selectedModel);
+  
   const [showError, setShowError] = useState(false);
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -118,7 +108,7 @@ export default function ChatBottombar({
       <AnimatePresence initial={false}>
         <form
           onSubmit={handleSubmit}
-          className="w-full items-center flex flex-col bg-accent dark:bg-card rounded-lg "
+          className="w-full items-center flex flex-col  bg-accent dark:bg-card rounded-lg "
         >
           <ChatInput
             value={isListening ? (transcript.length ? transcript : "") : input}
@@ -134,10 +124,7 @@ export default function ChatBottombar({
             {isLoading ? (
               // Loading state
               <div className="flex w-full justify-between">
-                <MultiImagePicker 
-                  disabled 
-                  onImagesPick={setBase64Images || (() => {})} 
-                />
+                <MultiImagePicker disabled onImagesPick={setBase64Images} />
                 <div>
                   <Button
                     className="shrink-0 rounded-full"
@@ -167,7 +154,7 @@ export default function ChatBottombar({
               <div className="flex w-full justify-between">
                 <MultiImagePicker
                   disabled={isLoading}
-                  onImagesPick={setBase64Images || (() => {})}
+                  onImagesPick={setBase64Images}
                 />
                 <div>
                   {/* Microphone button with animation when listening */}
@@ -222,17 +209,17 @@ export default function ChatBottombar({
                         width={20}
                         height={20}
                         className="h-auto rounded-md w-auto max-w-[100px] max-h-[100px]"
-                        alt={""}
+                        alt=""
                       />
                     </div>
                     <Button
                       onClick={() => {
                         const updatedImages = (prevImages: string[]) =>
                           prevImages.filter((_, i) => i !== index);
-                        setBase64Images && setBase64Images(updatedImages(base64Images));
+                        setBase64Images(updatedImages(base64Images));
                       }}
                       size="icon"
-                      className="absolute -top-1.5 -right-1.5 text-white cursor-pointer bg-red-500 hover:bg-red-600 w-4 h-4 rounded-full flex items-center justify-center"
+                      className="absolute -top-1.5 -right-1.5 text-white cursor-pointer  bg-red-500 hover:bg-red-600 w-4 h-4 rounded-full flex items-center justify-center"
                     >
                       <Cross2Icon className="w-3 h-3" />
                     </Button>

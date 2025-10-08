@@ -1,6 +1,7 @@
 import * as React from "react";
 import { ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAutoScroll } from "@/components/ui/chat/hooks/useAutoScroll";
 
 interface ChatMessageListProps extends React.HTMLAttributes<HTMLDivElement> {
   smooth?: boolean;
@@ -8,48 +9,16 @@ interface ChatMessageListProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const ChatMessageList = React.forwardRef<HTMLDivElement, ChatMessageListProps>(
   ({ className, children, smooth = false, ...props }, _ref) => {
-    const [isAtBottom, setIsAtBottom] = React.useState(true);
-    const [autoScrollEnabled, setAutoScrollEnabled] = React.useState(true);
-    const scrollRef = React.useRef<HTMLDivElement>(null);
-
-    const scrollToBottom = React.useCallback(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTo({
-          top: scrollRef.current.scrollHeight,
-          behavior: smooth ? "smooth" : "auto",
-        });
-      }
-    }, [smooth]);
-
-    const checkIfAtBottom = React.useCallback(() => {
-      if (scrollRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-        const isAtBottomNow = scrollHeight - scrollTop - clientHeight < 100;
-        setIsAtBottom(isAtBottomNow);
-      }
-    }, []);
-
-    const disableAutoScroll = React.useCallback(() => {
-      setAutoScrollEnabled(false);
-    }, []);
-
-    React.useEffect(() => {
-      const scrollElement = scrollRef.current;
-      if (!scrollElement) return;
-
-      const handleScroll = () => {
-        checkIfAtBottom();
-      };
-
-      scrollElement.addEventListener("scroll", handleScroll);
-      return () => scrollElement.removeEventListener("scroll", handleScroll);
-    }, [checkIfAtBottom]);
-
-    React.useEffect(() => {
-      if (autoScrollEnabled) {
-        scrollToBottom();
-      }
-    }, [children, autoScrollEnabled, scrollToBottom]);
+    const {
+      scrollRef,
+      isAtBottom,
+      autoScrollEnabled,
+      scrollToBottom,
+      disableAutoScroll,
+    } = useAutoScroll({
+      smooth,
+      content: children,
+    });
 
     return (
       <div className="relative w-full h-full">

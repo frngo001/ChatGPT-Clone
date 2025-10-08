@@ -13,6 +13,7 @@ import { Route as LandingRouteImport } from './routes/landing'
 import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedOllamaChatRouteImport } from './routes/_authenticated/ollama-chat'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
@@ -32,6 +33,7 @@ import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authen
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedOllamaChatIndexRouteImport } from './routes/_authenticated/ollama-chat.index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
 import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats/index'
 import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authenticated/apps/index'
@@ -42,6 +44,7 @@ import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
+import { Route as AuthenticatedOllamaChatChatIdRouteImport } from './routes/_authenticated/ollama-chat.$chatId'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedChatNewRouteImport } from './routes/_authenticated/chat.new'
 import { Route as AuthenticatedChatHistoryRouteImport } from './routes/_authenticated/chat.history'
@@ -65,6 +68,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedOllamaChatRoute = AuthenticatedOllamaChatRouteImport.update({
+  id: '/ollama-chat',
+  path: '/ollama-chat',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
   id: '/chat',
@@ -161,6 +169,12 @@ const AuthenticatedSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedOllamaChatIndexRoute =
+  AuthenticatedOllamaChatIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedOllamaChatRoute,
+  } as any)
 const AuthenticatedHelpCenterIndexRoute =
   AuthenticatedHelpCenterIndexRouteImport.update({
     id: '/help-center/',
@@ -217,6 +231,12 @@ const AuthenticatedSettingsAccountRoute =
     path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedOllamaChatChatIdRoute =
+  AuthenticatedOllamaChatChatIdRouteImport.update({
+    id: '/$chatId',
+    path: '/$chatId',
+    getParentRoute: () => AuthenticatedOllamaChatRoute,
+  } as any)
 const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
@@ -259,10 +279,12 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/chat': typeof AuthenticatedChatRouteWithChildren
+  '/ollama-chat': typeof AuthenticatedOllamaChatRouteWithChildren
   '/chat/$id': typeof AuthenticatedChatIdRoute
   '/chat/history': typeof AuthenticatedChatHistoryRoute
   '/chat/new': typeof AuthenticatedChatNewRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/ollama-chat/$chatId': typeof AuthenticatedOllamaChatChatIdRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -273,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
+  '/ollama-chat/': typeof AuthenticatedOllamaChatIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
@@ -298,6 +321,7 @@ export interface FileRoutesByTo {
   '/chat/history': typeof AuthenticatedChatHistoryRoute
   '/chat/new': typeof AuthenticatedChatNewRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/ollama-chat/$chatId': typeof AuthenticatedOllamaChatChatIdRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -308,6 +332,7 @@ export interface FileRoutesByTo {
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
+  '/ollama-chat': typeof AuthenticatedOllamaChatIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
@@ -334,10 +359,12 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/chat': typeof AuthenticatedChatRouteWithChildren
+  '/_authenticated/ollama-chat': typeof AuthenticatedOllamaChatRouteWithChildren
   '/_authenticated/chat/$id': typeof AuthenticatedChatIdRoute
   '/_authenticated/chat/history': typeof AuthenticatedChatHistoryRoute
   '/_authenticated/chat/new': typeof AuthenticatedChatNewRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/ollama-chat/$chatId': typeof AuthenticatedOllamaChatChatIdRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -348,6 +375,7 @@ export interface FileRoutesById {
   '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
+  '/_authenticated/ollama-chat/': typeof AuthenticatedOllamaChatIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
@@ -373,10 +401,12 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/chat'
+    | '/ollama-chat'
     | '/chat/$id'
     | '/chat/history'
     | '/chat/new'
     | '/errors/$error'
+    | '/ollama-chat/$chatId'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -387,6 +417,7 @@ export interface FileRouteTypes {
     | '/apps'
     | '/chats'
     | '/help-center'
+    | '/ollama-chat/'
     | '/settings/'
     | '/tasks'
     | '/users'
@@ -412,6 +443,7 @@ export interface FileRouteTypes {
     | '/chat/history'
     | '/chat/new'
     | '/errors/$error'
+    | '/ollama-chat/$chatId'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -422,6 +454,7 @@ export interface FileRouteTypes {
     | '/apps'
     | '/chats'
     | '/help-center'
+    | '/ollama-chat'
     | '/settings'
     | '/tasks'
     | '/users'
@@ -447,10 +480,12 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/chat'
+    | '/_authenticated/ollama-chat'
     | '/_authenticated/chat/$id'
     | '/_authenticated/chat/history'
     | '/_authenticated/chat/new'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/ollama-chat/$chatId'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
@@ -461,6 +496,7 @@ export interface FileRouteTypes {
     | '/_authenticated/apps/'
     | '/_authenticated/chats/'
     | '/_authenticated/help-center/'
+    | '/_authenticated/ollama-chat/'
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
@@ -514,6 +550,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/ollama-chat': {
+      id: '/_authenticated/ollama-chat'
+      path: '/ollama-chat'
+      fullPath: '/ollama-chat'
+      preLoaderRoute: typeof AuthenticatedOllamaChatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/chat': {
       id: '/_authenticated/chat'
@@ -648,6 +691,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/ollama-chat/': {
+      id: '/_authenticated/ollama-chat/'
+      path: '/'
+      fullPath: '/ollama-chat/'
+      preLoaderRoute: typeof AuthenticatedOllamaChatIndexRouteImport
+      parentRoute: typeof AuthenticatedOllamaChatRoute
+    }
     '/_authenticated/help-center/': {
       id: '/_authenticated/help-center/'
       path: '/help-center'
@@ -718,6 +768,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/ollama-chat/$chatId': {
+      id: '/_authenticated/ollama-chat/$chatId'
+      path: '/$chatId'
+      fullPath: '/ollama-chat/$chatId'
+      preLoaderRoute: typeof AuthenticatedOllamaChatChatIdRouteImport
+      parentRoute: typeof AuthenticatedOllamaChatRoute
+    }
     '/_authenticated/errors/$error': {
       id: '/_authenticated/errors/$error'
       path: '/errors/$error'
@@ -787,9 +844,26 @@ const AuthenticatedChatRouteChildren: AuthenticatedChatRouteChildren = {
 const AuthenticatedChatRouteWithChildren =
   AuthenticatedChatRoute._addFileChildren(AuthenticatedChatRouteChildren)
 
+interface AuthenticatedOllamaChatRouteChildren {
+  AuthenticatedOllamaChatChatIdRoute: typeof AuthenticatedOllamaChatChatIdRoute
+  AuthenticatedOllamaChatIndexRoute: typeof AuthenticatedOllamaChatIndexRoute
+}
+
+const AuthenticatedOllamaChatRouteChildren: AuthenticatedOllamaChatRouteChildren =
+  {
+    AuthenticatedOllamaChatChatIdRoute: AuthenticatedOllamaChatChatIdRoute,
+    AuthenticatedOllamaChatIndexRoute: AuthenticatedOllamaChatIndexRoute,
+  }
+
+const AuthenticatedOllamaChatRouteWithChildren =
+  AuthenticatedOllamaChatRoute._addFileChildren(
+    AuthenticatedOllamaChatRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedChatRoute: typeof AuthenticatedChatRouteWithChildren
+  AuthenticatedOllamaChatRoute: typeof AuthenticatedOllamaChatRouteWithChildren
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
@@ -801,6 +875,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedChatRoute: AuthenticatedChatRouteWithChildren,
+  AuthenticatedOllamaChatRoute: AuthenticatedOllamaChatRouteWithChildren,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,

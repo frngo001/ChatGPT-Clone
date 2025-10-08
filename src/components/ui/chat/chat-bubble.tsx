@@ -2,7 +2,8 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "../button";
+import MessageLoading from "./message-loading";
+import { Button, ButtonProps } from "../button";
 
 // ChatBubble
 const chatBubbleVariant = cva(
@@ -123,11 +124,7 @@ const ChatBubbleMessage = React.forwardRef<
     >
       {isLoading ? (
         <div className="flex items-center space-x-2">
-          <div className="flex space-x-1">
-            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-          </div>
+          <MessageLoading />
         </div>
       ) : (
         children
@@ -154,7 +151,7 @@ const ChatBubbleTimestamp: React.FC<ChatBubbleTimestampProps> = ({
 );
 
 // ChatBubbleAction
-type ChatBubbleActionProps = React.ComponentProps<typeof Button> & {
+type ChatBubbleActionProps = ButtonProps & {
   icon: React.ReactNode;
 };
 
