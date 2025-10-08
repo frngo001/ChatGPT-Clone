@@ -7,7 +7,6 @@ import { CheckIcon, CopyIcon } from "@radix-ui/react-icons";
 import { RefreshCcw } from "lucide-react";
 import {
   ChatBubble,
-  ChatBubbleAvatar,
   ChatBubbleMessage,
 } from "@/components/ui/chat/chat-bubble";
 import ButtonWithTooltip from "@/components/button-with-tooltip";
@@ -78,7 +77,7 @@ function OllamaChatMessage({ message, isLast, isLoading, reload }: ChatMessagePr
 
   const renderThinkingProcess = () => (
     thinkContent && message.role === "assistant" && (
-      <details className="mb-2 text-sm" open>
+      <details className="mb-2 text-xs" open>
         <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
           Thinking process
         </summary>
@@ -139,13 +138,6 @@ function OllamaChatMessage({ message, isLast, isLoading, reload }: ChatMessagePr
   return (
     <motion.div {...MOTION_CONFIG} className="flex flex-col gap-2 whitespace-pre-wrap">
       <ChatBubble variant={message.role === "user" ? "sent" : "received"}>
-        <ChatBubbleAvatar
-          src={message.role === "assistant" ? "/images/favicon.png" : ""}
-          width={6}
-          height={6}
-          className="object-contain"
-          fallback={message.role === "user" ? "US" : ""}
-        />
         <ChatBubbleMessage>
           {renderThinkingProcess()}
           {renderAttachments()}

@@ -4,7 +4,6 @@ import OllamaChatMessage from "./ollama-chat-message";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
 import {
   ChatBubble,
-  ChatBubbleAvatar,
   ChatBubbleMessage,
 } from "@/components/ui/chat/chat-bubble";
 
@@ -37,12 +36,6 @@ export default function OllamaChatList({
         ))}
         {loadingSubmit && (
           <ChatBubble variant="received">
-            <ChatBubbleAvatar
-              src="/images/favicon.png"
-              width={6}
-              height={6}
-              className="object-contain"
-            />
             <ChatBubbleMessage isLoading />
           </ChatBubble>
         )}

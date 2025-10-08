@@ -18,10 +18,9 @@ type Attachment = {
 export interface ChatProps {
   id: string;
   initialMessages: Message[] | [];
-  isMobile?: boolean;
 }
 
-export default function OllamaChat({ initialMessages, id, isMobile }: ChatProps) {
+export default function OllamaChat({ initialMessages, id }: ChatProps) {
   const navigate = useNavigate();
   
   const {

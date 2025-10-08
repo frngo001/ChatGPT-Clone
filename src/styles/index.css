@@ -8,8 +8,34 @@
   * {
     @apply border-border outline-ring/50;
     scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s ease;
   }
+  
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 10px;
+    transition: background-color 0.3s ease;
+  }
+  
+  /* Scrollbar sichtbar beim Hover */
+  *:hover::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+  }
+  
+  *:hover {
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  
   html {
     @apply overflow-x-hidden;
   }

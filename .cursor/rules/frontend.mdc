@@ -19,3 +19,4 @@ Elemente MÜSSEN wie folgt organisiert werden:
  - Nutze den Exakten Chatverlauf wie in OllamaChat
  - Nutze die gleiche Logik und gleiche Elemente. Achte aber die obere Punkten über die Oragnisation der Elemente
  
+Aktualisiere immer die PACKAGE.json wenn du ein Neues Packet installierst

@@ -1,4 +1,5 @@
 import { useLayout } from '@/context/layout-provider'
+import { useLocation } from '@tanstack/react-router'
 import {
   Sidebar,
   SidebarContent,
@@ -13,10 +14,15 @@ import { sidebarData } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { TeamSwitcher } from './team-switcher'
 import { ChatHistory } from './chat-history'
+import { OllamaChatHistory } from './ollama-chat-history'
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
   const { state, isMobile } = useSidebar()
+  const location = useLocation()
+  
+  // Check if we're on the ollama-chat page
+  const isOllamaChatPage = location.pathname.startsWith('/ollama-chat')
   
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
@@ -36,8 +42,10 @@ export function AppSidebar() {
         {/* On mobile, always show when sidebar is open */}
         {(state !== 'collapsed' || isMobile) && (
           <SidebarGroup>
-            <SidebarGroupLabel>Chat-Verlauf</SidebarGroupLabel>
-            <ChatHistory />
+            <SidebarGroupLabel>
+              {isOllamaChatPage ? 'Ollama Chat-Verlauf' : 'Chat-Verlauf'}
+            </SidebarGroupLabel>
+            {isOllamaChatPage ? <OllamaChatHistory /> : <ChatHistory />}
           </SidebarGroup>
         )}
       </SidebarContent>
