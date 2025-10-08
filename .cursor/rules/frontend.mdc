@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+
+## Organisation der Elemente 
+
+Elemente MÜSSEN wie folgt organisiert werden: 
+ - Die Navbar und Sidebar muss fix sein. 
+ - Neue Seiten werden nur im MAIN Bereich hinzugefügt. siehe frontendRule.jpg im HAUPTVERZEICHNIS
+ - Für Chatkomponente, analysiere des OllamaChat Projekt und nehme meistens die Komponente von da.
+ - OllamaChat beinhaltet die meinsten Komponente, die wir anwenden woll, also überprüfe immer was da vorher gemacht wird, bevor du irgendwas machst. 
+ - Nutze IMMER Shadcn Komponente
+
+ Aktualisierung des Package 
+ - Wenn du ein neues Package nutzt, muss du immer die PACKAGE Dateien aktualisieren
+
+## Chatverlauf
+ - Der ChatVerlauf musste immer in der Sidebar stehen, wie es aktuell ist. und es es auch in der OllamaChat App steht
+ - Nutze den Exakten Chatverlauf wie in OllamaChat
+ - Nutze die gleiche Logik und gleiche Elemente. Achte aber die obere Punkten über die Oragnisation der Elemente
+ 
