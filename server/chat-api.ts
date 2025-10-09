@@ -46,7 +46,7 @@ export function setupChatApi(server: ViteDevServer) {
           ],
           temperature: streamingConfig?.temperature ?? 0.7,
           topP: streamingConfig?.topP ?? 0.9,
-          maxTokens: streamingConfig?.maxTokens ?? 2048,
+          maxTokens: streamingConfig?.maxTokens ?? 1000000,
         });
 
         // Convert to data stream response

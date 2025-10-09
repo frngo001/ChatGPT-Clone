@@ -1,5 +1,5 @@
-import { Message, ChatRequestOptions } from "ai/react";
-import React from "react";
+import { Message } from "ai/react";
+import type { ChatRequestOptions } from "ai";
 import OllamaChatMessage from "./ollama-chat-message";
 import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
 import {
@@ -30,6 +30,7 @@ export default function OllamaChatList({
             key={message.id || index}
             message={message}
             isLast={index === messages.length - 1}
+            isSecondLast={index === messages.length - 2}
             isLoading={isLoading}
             reload={reload}
           />

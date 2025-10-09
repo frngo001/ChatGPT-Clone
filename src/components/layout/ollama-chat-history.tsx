@@ -112,9 +112,9 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
   }
 
   return (
-    <div className={cn('space-y-2', className)}>
-      {/* Search Input */}
-      <div className="px-2">
+    <div className={cn('flex flex-col h-full', className)}>
+      {/* Fixed Search Input */}
+      <div className="flex-shrink-0 px-2 pb-2">
         <div className="relative">
           <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -136,9 +136,9 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
         </div>
       </div>
 
-      {/* Search Results Info */}
+      {/* Fixed Search Results Info */}
       {searchQuery && (
-        <div className="px-2 text-xs text-muted-foreground">
+        <div className="flex-shrink-0 px-2 pb-2 text-xs text-muted-foreground">
           {sortedChats.length === 0 ? (
             <span>Keine Treffer für "{searchQuery}"</span>
           ) : (
@@ -147,75 +147,76 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
         </div>
       )}
 
-      {/* Chat List */}
-      {sortedChats.length === 0 && !searchQuery ? (
-        <div className="px-2 py-4 text-center text-muted-foreground">
-          <p className="text-sm">Keine Chats vorhanden</p>
-          <p className="text-xs">Starten Sie eine neue Unterhaltung</p>
-        </div>
-      ) : (
-        <div className="space-y-1">
-          {sortedChats.map((chat) => {
-            const firstMessage = chat.messages.length > 0 
-              ? chat.messages[0].content 
-              : 'Leerer Chat'
-            
-            return (
-              <div
-                key={chat.id}
-                className={cn(
-                  'group flex items-center gap-2 rounded-lg p-2 text-sm transition-colors hover:bg-accent',
-                  currentChatId === chat.id && 'bg-accent'
-                )}
-              >
-                <div className="flex-1 min-w-0">
-                  <button
-                    onClick={() => {
-                      setCurrentChatId(chat.id)
-                      navigate({ to: '/ollama-chat/$chatId', params: { chatId: chat.id } })
-                      setOpenMobile(false)
-                    }}
-                    className="flex-1 text-left min-w-0 w-full"
-                  >
-                    <div className="truncate font-normal text-xs">
-                      {highlightMatches(firstMessage.slice(0, 50), searchQuery)}
-                      {firstMessage.length > 50 && '...'}
-                    </div>
-                  </button>
-                </div>
+      {/* Scrollable Chat List */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {sortedChats.length === 0 && !searchQuery ? (
+          <div className="px-2 py-4 text-center text-muted-foreground">
+            <p className="text-sm">Keine Chats vorhanden</p>
+            <p className="text-xs">Starten Sie eine neue Unterhaltung</p>
+          </div>
+        ) : (
+          <div className="space-y-1 px-2">
+            {sortedChats.map((chat) => {
+              const firstMessage = chat.messages.length > 0 
+                ? chat.messages[0].content 
+                : 'Leerer Chat'
+              
+              return (
+                <div
+                  key={chat.id}
+                  className={cn(
+                    'group flex items-center gap-2 rounded-lg p-2 text-sm transition-colors hover:bg-accent',
+                    currentChatId === chat.id && 'bg-accent'
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => {
+                        setCurrentChatId(chat.id)
+                        navigate({ to: '/ollama-chat/$chatId', params: { chatId: chat.id } })
+                        setOpenMobile(false)
+                      }}
+                      className="flex-1 text-left min-w-0 w-full"
+                    >
+                      <div className="truncate font-normal text-xs">
+                        {highlightMatches(firstMessage.slice(0, 50), searchQuery)}
+                        {firstMessage.length > 50 && '...'}
+                      </div>
+                    </button>
+                  </div>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <MoreVertical className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => handleDeleteClick(chat.id)}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Löschen
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )
-          })}
-        </div>
-      )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <MoreVertical className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteClick(chat.id)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Löschen
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
+            <AlertDialogTitle>
               Chat löschen
             </AlertDialogTitle>
             <AlertDialogDescription>

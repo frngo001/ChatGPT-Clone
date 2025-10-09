@@ -108,7 +108,7 @@ export default function OllamaChatBottombar({
       <AnimatePresence initial={false}>
         <form
           onSubmit={handleSubmit}
-          className="w-full items-center flex flex-col  bg-accent dark:bg-card rounded-lg "
+          className="w-full items-center flex flex-col  bg-accent dark:bg-secondary rounded-lg "
         >
           <ChatInput
             value={isListening ? (transcript.length ? transcript : "") : input}
@@ -116,8 +116,8 @@ export default function OllamaChatBottombar({
             onKeyDown={handleKeyPress}
             onChange={handleInputChange}
             name="message"
-            placeholder={!isListening ? "Enter your prompt here" : "Listening"}
-            className="max-h-40 px-6 pt-6 border-0 shadow-none bg-accent rounded-lg text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed dark:bg-card"
+            placeholder={!isListening ? "Was willst du wissen?" : "Listening"}
+            className="max-h-40 px-6 pt-6 border-0 shadow-none bg-accent rounded-lg text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed dark:bg-secondary"
           />
 
           <div className="flex w-full items-center p-2">

@@ -25,6 +25,7 @@ interface Actions {
   getChatById: (chatId: string) => ChatSession | undefined;
   getMessagesById: (chatId: string) => Message[];
   saveMessages: (chatId: string, messages: Message[]) => void;
+  updateMessage: (chatId: string, messageId: string, content: string) => void;
   handleDelete: (chatId: string, messageId?: string) => void;
   setUserName: (userName: string) => void;
   startDownload: (modelName: string) => void;
@@ -97,6 +98,27 @@ const useOllamaChatStore = create<State & Actions>()(
           const { [chatId]: _, ...remainingChats } = state.chats;
           return {
             chats: remainingChats,
+          };
+        });
+      },
+
+      updateMessage: (chatId, messageId, content) => {
+        set((state) => {
+          const chat = state.chats[chatId];
+          if (!chat) return state;
+
+          const updatedMessages = chat.messages.map((message) =>
+            message.id === messageId ? { ...message, content } : message
+          );
+
+          return {
+            chats: {
+              ...state.chats,
+              [chatId]: {
+                ...chat,
+                messages: updatedMessages,
+              },
+            },
           };
         });
       },

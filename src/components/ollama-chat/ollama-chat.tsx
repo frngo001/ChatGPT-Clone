@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import useOllamaChatStore from "@/stores/ollama-chat-store";
 import { useNavigate } from "@tanstack/react-router";
+import { WifiOff } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Type definition for Attachment
 type Attachment = {
@@ -22,6 +24,7 @@ export interface ChatProps {
 
 export default function OllamaChat({ initialMessages, id }: ChatProps) {
   const navigate = useNavigate();
+  const [apiError, setApiError] = React.useState<string | null>(null);
   
   const {
     messages,
@@ -40,19 +43,46 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     onResponse: (response) => {
       if (response) {
         setLoadingSubmit(false);
+        setApiError(null); // Clear error on successful response
       }
     },
     onFinish: (message) => {
       const savedMessages = getMessagesById(id);
       saveMessages(id, [...savedMessages, message]);
       setLoadingSubmit(false);
+      setApiError(null); // Clear error on successful completion
       navigate({ to: `/ollama-chat/${id}` });
     },
     onError: (error) => {
       setLoadingSubmit(false);
-      navigate({ to: "/ollama-chat" });
       console.error(error.message);
       console.error(error);
+      
+      // Determine error type and show appropriate message
+      let errorMessage = "Ein unbekannter Fehler ist aufgetreten.";
+      
+      if (error.message.includes("Failed to fetch") || 
+          error.message.includes("NetworkError") ||
+          error.message.includes("Connection refused") ||
+          error.message.includes("ECONNREFUSED")) {
+        errorMessage = "Verbindungsproblem: Der Ollama-Server ist nicht erreichbar. Bitte überprüfen Sie, ob der Server läuft.";
+      } else if (error.message.includes("Internal Server Error") ||
+                 error.message.includes("500") ||
+                 error.message.includes("llama runner process has terminated")) {
+        errorMessage = "Server-Fehler: Der Ollama-Server hat ein Problem. Bitte starten Sie den Server neu oder überprüfen Sie die Modell-Konfiguration.";
+      } else if (error.message.includes("timeout") || 
+                 error.message.includes("TIMEOUT")) {
+        errorMessage = "Zeitüberschreitung: Die Anfrage dauert zu lange. Bitte versuchen Sie es erneut.";
+      } else if (error.message.includes("model") && 
+                 error.message.includes("not supported")) {
+        errorMessage = "Modell-Fehler: Das gewählte Modell wird nicht unterstützt. Bitte wählen Sie ein anderes Modell.";
+      }
+      
+      setApiError(errorMessage);
+      toast.error("Chat-Fehler", {
+        description: errorMessage,
+        duration: 8000,
+      });
     },
   });
   
@@ -130,7 +160,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   };
 
   return (
-    <div className="flex flex-col w-full max-w-5xl h-full">
+    <div className="flex flex-col w-full max-w-5xl h-full ollama-chat-container">
       <OllamaChatTopbar
         isLoading={isLoading}
         chatId={id}
@@ -138,18 +168,24 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
         setMessages={setMessages}
       />
 
+      {apiError && (
+        <div className="p-4">
+          <Alert variant="destructive">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              {apiError}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {messages.length === 0 ? (
         <div className="flex flex-col h-full w-full items-center gap-4 justify-center">
-          <img
-            src="/images/favicon.png"
-            alt="AI"
-            width={40}
-            height={40}
-            className="h-16 w-14 object-contain"
-          />
-          <p className="text-center text-base text-muted-foreground">
-            How can I help you today?
-          </p>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-semibold text-foreground mb-2 tracking-tight">
+              Was darf ich dir erleichtern?
+            </h1>
+          </div>
           <OllamaChatBottombar
             input={input}
             handleInputChange={handleInputChange}
@@ -174,10 +210,10 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
                   streamingConfig: {
                     temperature: 0.7,
                     topP: 0.9,
-                    maxTokens: 2048,
-                    batchSize: 3,
-                    throttleDelay: 50,
-                  },
+                    maxTokens: 10000,
+                    batchSize: 10,
+                    throttleDelay: 20,
+                  }
                 },
               };
 

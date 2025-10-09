@@ -1,5 +1,4 @@
 import {
-  Bot,
   Library,
   FolderPlus,
   SquarePen,
@@ -7,21 +6,15 @@ import {
 import { type SidebarData } from '../types'
 
 export const sidebarData: SidebarData = {
-  user: {
-    name: 'ChatGPT User',
-    email: 'user@chtgpt.com',
-    avatar: '/avatars/user.jpg',
-  },
   teams: [
     {
-      name: 'CHTGPT Clone',
-      logo: Bot,
+      name: 'Agent AI',
+      logo: '/images/logo.png',
       plan: 'AI Chat Assistant',
     },
   ],
   navGroups: [
     {
-      title: 'Chat',
       items: [
         {
           title: 'Neuer Chat',

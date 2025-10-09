@@ -3,7 +3,6 @@ import { useLocation } from '@tanstack/react-router'
 import {
   Sidebar,
   SidebarContent,
-  SidebarHeader,
   SidebarRail,
   SidebarGroup,
   SidebarGroupLabel,
@@ -25,24 +24,27 @@ export function AppSidebar() {
   
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
-      <SidebarHeader>
-        <TeamSwitcher teams={sidebarData.teams} />
-
-        {/* Replace <TeamSwitch /> with the following <AppTitle />
-         /* if you want to use the normal app title instead of TeamSwitch dropdown */}
-        {/* <AppTitle /> */}
-      </SidebarHeader>
-      <SidebarContent>
-        {sidebarData.navGroups.map((props) => (
-          <NavGroup key={props.title} {...props} />
-        ))}
+      <SidebarContent className="flex flex-col">
+        {/* Team Switcher */}
+        <div className="flex-shrink-0">
+          <TeamSwitcher teams={sidebarData.teams} />
+        </div>
+        
+        {/* Fixed navigation groups */}
+        <div className="flex-shrink-0">
+          {sidebarData.navGroups.map((props, index) => (
+            <NavGroup key={index} {...props} />
+          ))}
+        </div>
         
         {/* Only show Chat-Verlauf when sidebar is expanded (not collapsed) */}
         {/* On mobile, always show when sidebar is open */}
         {(state !== 'collapsed' || isMobile) && isOllamaChatPage && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Chat-Verlauf</SidebarGroupLabel>
-            <OllamaChatHistory />
+          <SidebarGroup className="flex-1 flex flex-col min-h-0">
+            <SidebarGroupLabel className="flex-shrink-0">Chat-Verlauf</SidebarGroupLabel>
+            <div className="flex-1 overflow-hidden">
+              <OllamaChatHistory />
+            </div>
           </SidebarGroup>
         )}
       </SidebarContent>
