@@ -19,7 +19,7 @@ export function setupChatApi(server: ViteDevServer) {
         const { createOllama } = await import('ollama-ai-provider');
         const { streamText, convertToCoreMessages } = await import('ai');
         
-        const { messages, selectedModel, data } = JSON.parse(body);
+        const { messages, selectedModel, data, streamingConfig } = JSON.parse(body);
 
         const ollamaUrl = process.env.VITE_OLLAMA_URL || 'http://imeso-ki-02:11434';
 
@@ -37,13 +37,16 @@ export function setupChatApi(server: ViteDevServer) {
           messageContent.push({ type: 'image', image });
         });
 
-        // Stream text using the ollama model
+        // Stream text using the ollama model with parameters
         const result = await streamText({
           model: ollama(selectedModel) as any,
           messages: [
             ...convertToCoreMessages(initialMessages),
             { role: 'user' as const, content: messageContent },
           ],
+          temperature: streamingConfig?.temperature ?? 0.7,
+          topP: streamingConfig?.topP ?? 0.9,
+          maxTokens: streamingConfig?.maxTokens ?? 2048,
         });
 
         // Convert to data stream response
@@ -56,16 +59,39 @@ export function setupChatApi(server: ViteDevServer) {
           });
         }
 
-        // Pipe the response
+        // Pipe the response with throttling and batch processing
         if (stream.body) {
           const reader = stream.body.getReader();
+          let buffer = '';
+          let batchSize = streamingConfig?.batchSize ?? 3; // Number of tokens to batch together
+          let tokenCount = 0;
+          
           const pump = async () => {
             const { done, value } = await reader.read();
             if (done) {
+              // Send any remaining buffered data
+              if (buffer) {
+                res.write(buffer);
+              }
               res.end();
               return;
             }
-            res.write(value);
+            
+            const chunk = new TextDecoder().decode(value);
+            buffer += chunk;
+            tokenCount++;
+            
+            // Send batch when we reach batch size or on natural breaks
+            if (tokenCount >= batchSize || chunk.includes('\n') || chunk.includes(' ')) {
+              res.write(buffer);
+              buffer = '';
+              tokenCount = 0;
+              
+              // Add throttling delay (configurable delay between batches)
+              const delay = streamingConfig?.throttleDelay ?? 50;
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            
             pump();
           };
           pump();

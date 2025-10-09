@@ -95,6 +95,13 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     const requestOptions: ChatRequestOptions = {
       body: {
         selectedModel: selectedModel,
+        streamingConfig: {
+          temperature: 0.7,
+          topP: 0.9,
+          maxTokens: 10000,
+          batchSize: 10,
+          throttleDelay: 20,
+        },
       },
       ...(base64Images && {
         data: {
@@ -123,7 +130,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   };
 
   return (
-    <div className="flex flex-col w-full max-w-3xl h-full">
+    <div className="flex flex-col w-full max-w-5xl h-full">
       <OllamaChatTopbar
         isLoading={isLoading}
         chatId={id}
@@ -164,6 +171,13 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
               const requestOptions: ChatRequestOptions = {
                 body: {
                   selectedModel: selectedModel,
+                  streamingConfig: {
+                    temperature: 0.7,
+                    topP: 0.9,
+                    maxTokens: 2048,
+                    batchSize: 3,
+                    throttleDelay: 50,
+                  },
                 },
               };
 

@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react'
-import { Link, useLocation, useNavigate } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
-import { useChatStore } from '@/stores/chat-store'
 import {
   Collapsible,
   CollapsibleContent,
@@ -65,31 +64,6 @@ function NavBadge({ children }: { children: ReactNode }) {
 
 function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
   const { setOpenMobile } = useSidebar()
-  const navigate = useNavigate()
-  const { createNewChat } = useChatStore()
-
-  const handleNewChatClick = () => {
-    // Create a new chat directly and navigate to it
-    const newChatId = createNewChat('gpt-4')
-    navigate({ to: '/chat/$id', params: { id: newChatId } })
-    setOpenMobile(false)
-  }
-
-  // Special handling for "Neuer Chat" button
-  if (item.title === 'Neuer Chat') {
-    return (
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          onClick={handleNewChatClick}
-          tooltip={item.title}
-        >
-          {item.icon && <item.icon />}
-          <span>{item.title}</span>
-          {item.badge && <NavBadge>{item.badge}</NavBadge>}
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    )
-  }
 
   return (
     <SidebarMenuItem>

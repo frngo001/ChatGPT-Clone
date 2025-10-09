@@ -2,7 +2,8 @@ import React, { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Message, ChatRequestOptions } from "ai/react";
+import { Message } from "ai/react";
+import type { ChatRequestOptions } from "ai";
 import { CheckIcon, CopyIcon } from "@radix-ui/react-icons";
 import { RefreshCcw } from "lucide-react";
 import {
@@ -27,7 +28,7 @@ const MOTION_CONFIG = {
   transition: {
     opacity: { duration: 0.1 },
     layout: {
-      type: "spring",
+      type: "spring" as const,
       bounce: 0.3,
       duration: 0.2,
     },
@@ -36,6 +37,8 @@ const MOTION_CONFIG = {
 
 function OllamaChatMessage({ message, isLast, isLoading, reload }: ChatMessageProps) {
   const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [isThinkCollapsed, setIsThinkCollapsed] = useState<boolean>(false);
+  const thinkContentRef = React.useRef<HTMLDivElement>(null);
 
   // Extract "think" content from Deepseek R1 models and clean message (rest) content
   const { thinkContent, cleanContent } = useMemo(() => {
@@ -49,6 +52,20 @@ function OllamaChatMessage({ message, isLast, isLoading, reload }: ChatMessagePr
       cleanContent: message.content.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim(),
     };
   }, [message.content, message.role]);
+
+  // Auto-collapse think content when streaming starts (when cleanContent has content)
+  React.useEffect(() => {
+    if (thinkContent && cleanContent && cleanContent.length > 0 && !isThinkCollapsed) {
+      setIsThinkCollapsed(true);
+    }
+  }, [thinkContent, cleanContent, isThinkCollapsed]);
+
+  // Auto-scroll think content to bottom when content changes
+  React.useEffect(() => {
+    if (thinkContentRef.current && thinkContent && !isThinkCollapsed) {
+      thinkContentRef.current.scrollTop = thinkContentRef.current.scrollHeight;
+    }
+  }, [thinkContent, isThinkCollapsed]);
 
   const contentParts = useMemo(() => cleanContent.split("```"), [cleanContent]);
 
@@ -77,11 +94,12 @@ function OllamaChatMessage({ message, isLast, isLoading, reload }: ChatMessagePr
 
   const renderThinkingProcess = () => (
     thinkContent && message.role === "assistant" && (
-      <details className="mb-2 text-xs" open>
+      <details className="mb-2 text-xs" open={!isThinkCollapsed}>
         <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
           Thinking process
         </summary>
-        <div className="mt-2 text-muted-foreground">
+        <div ref={thinkContentRef} className="mt-2 text-muted-foreground ml-4 max-h-48 overflow-y-auto relative">
+          <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent pointer-events-none z-10"></div>
           <Markdown remarkPlugins={[remarkGfm]}>{thinkContent}</Markdown>
         </div>
       </details>
@@ -109,7 +127,7 @@ function OllamaChatMessage({ message, isLast, isLoading, reload }: ChatMessagePr
               onClick={handleCopy}
               variant="ghost"
               size="icon"
-              className="h-4 w-4"
+              className="h-4 w-4 mt-2"
             >
               {isCopied ? (
                 <CheckIcon className="w-3.5 h-3.5 transition-all" />
@@ -124,7 +142,7 @@ function OllamaChatMessage({ message, isLast, isLoading, reload }: ChatMessagePr
             <Button
               variant="ghost"
               size="icon"
-              className="h-4 w-4"
+              className="h-4 w-4 mt-2"
               onClick={() => reload()}
             >
               <RefreshCcw className="w-3.5 h-3.5 scale-100 transition-all" />
@@ -136,9 +154,12 @@ function OllamaChatMessage({ message, isLast, isLoading, reload }: ChatMessagePr
   );
 
   return (
-    <motion.div {...MOTION_CONFIG} className="flex flex-col gap-2 whitespace-pre-wrap">
-      <ChatBubble variant={message.role === "user" ? "sent" : "received"}>
-        <ChatBubbleMessage>
+    <motion.div {...MOTION_CONFIG} className={`flex flex-col whitespace-pre-wrap ${message.role === "user" ? "gap-1" : "gap-2"}`}>
+      <ChatBubble 
+        variant={message.role === "user" ? "sent" : "received"}
+        className={message.role === "assistant" ? "max-w-[95%]" : ""}
+      >
+        <ChatBubbleMessage className={message.role === "user" ? "p-2" : ""}>
           {renderThinkingProcess()}
           {renderAttachments()}
           {renderContent()}

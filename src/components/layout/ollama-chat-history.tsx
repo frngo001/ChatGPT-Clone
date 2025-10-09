@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   Search,
   XCircle,
-  SquarePen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -68,11 +67,6 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
     setChatToDelete(null)
   }
 
-  const handleNewChat = () => {
-    navigate({ to: '/ollama-chat' })
-    setOpenMobile(false)
-  }
-
   // Convert chats object to array and filter based on search query
   const filteredChats = useMemo(() => {
     const chatsArray = chats ? Object.entries(chats).map(([id, chat]) => ({
@@ -119,18 +113,6 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
 
   return (
     <div className={cn('space-y-2', className)}>
-      {/* New Chat Button */}
-      <div className="px-2">
-        <Button
-          onClick={handleNewChat}
-          variant="outline"
-          className="w-full justify-start gap-2"
-        >
-          <SquarePen className="h-4 w-4" />
-          Neuer Chat
-        </Button>
-      </div>
-
       {/* Search Input */}
       <div className="px-2">
         <div className="relative">

@@ -1,9 +1,8 @@
 import {
   Bot,
-  MessageSquarePlus,
   Library,
   FolderPlus,
-  History,
+  SquarePen,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -26,13 +25,8 @@ export const sidebarData: SidebarData = {
       items: [
         {
           title: 'Neuer Chat',
-          url: '/chat',
-          icon: MessageSquarePlus,
-        },
-        {
-          title: 'Ollama Chat',
           url: '/ollama-chat',
-          icon: Bot,
+          icon: SquarePen,
         },
         {
           title: 'Bibliothek',

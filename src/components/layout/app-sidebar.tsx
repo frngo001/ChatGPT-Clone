@@ -13,7 +13,6 @@ import {
 import { sidebarData } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { TeamSwitcher } from './team-switcher'
-import { ChatHistory } from './chat-history'
 import { OllamaChatHistory } from './ollama-chat-history'
 
 export function AppSidebar() {
@@ -40,12 +39,10 @@ export function AppSidebar() {
         
         {/* Only show Chat-Verlauf when sidebar is expanded (not collapsed) */}
         {/* On mobile, always show when sidebar is open */}
-        {(state !== 'collapsed' || isMobile) && (
+        {(state !== 'collapsed' || isMobile) && isOllamaChatPage && (
           <SidebarGroup>
-            <SidebarGroupLabel>
-              {isOllamaChatPage ? 'Ollama Chat-Verlauf' : 'Chat-Verlauf'}
-            </SidebarGroupLabel>
-            {isOllamaChatPage ? <OllamaChatHistory /> : <ChatHistory />}
+            <SidebarGroupLabel>Chat-Verlauf</SidebarGroupLabel>
+            <OllamaChatHistory />
           </SidebarGroup>
         )}
       </SidebarContent>
