@@ -5,8 +5,13 @@ import type {
   PaginationState,
 } from '@tanstack/react-table'
 
+/** Generic search record type for URL parameters */
 type SearchRecord = Record<string, unknown>
 
+/**
+ * Navigation function type for URL state management
+ * @typedef {Function} NavigateFn
+ */
 export type NavigateFn = (opts: {
   search:
     | true
@@ -65,6 +70,15 @@ type UseTableUrlStateReturn = {
   ) => void
 }
 
+/**
+ * Hook for synchronizing table state with URL parameters
+ * 
+ * @description Provides comprehensive table state management with URL synchronization,
+ * including pagination, filtering, and sorting state persistence.
+ * 
+ * @param params - Configuration object for table state management
+ * @returns Object containing table state and change handlers
+ */
 export function useTableUrlState(
   params: UseTableUrlStateParams
 ): UseTableUrlStateReturn {

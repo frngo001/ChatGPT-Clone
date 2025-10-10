@@ -23,25 +23,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api/ollama': {
-        target: 'http://imeso-ki-02:11434',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/ollama/, ''),
-        configure: (proxy, options) => {
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            // Forward the request to Ollama
-          });
-        },
-      },
       '/api/tags': {
         target: 'http://imeso-ki-02:11434',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/tags/, '/api/tags'),
-      },
-      '/api': {
-        target: 'http://imeso-ki-02:11434',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api'),
       },
     },
   },

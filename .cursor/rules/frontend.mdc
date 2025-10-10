@@ -2,21 +2,21 @@
 alwaysApply: true
 ---
 
-## Organisation der Elemente 
+## Die Kommentare im Code müssen immer auf English geschrieben werden.
+## Aktualisiere immer die PACKAGE.json wenn du ein Neues Packet installierst
+## Aktualisiert immer die Change.Log Datei mit dem Fix oder Feature, dass du gemacht hast: 
 
-Elemente MÜSSEN wie folgt organisiert werden: 
- - Die Navbar und Sidebar muss fix sein. 
- - Neue Seiten werden nur im MAIN Bereich hinzugefügt. siehe frontendRule.jpg im HAUPTVERZEICHNIS
- - Für Chatkomponente, analysiere des OllamaChat Projekt und nehme meistens die Komponente von da.
- - OllamaChat beinhaltet die meinsten Komponente, die wir anwenden woll, also überprüfe immer was da vorher gemacht wird, bevor du irgendwas machst. 
- - Nutze IMMER Shadcn Komponente
+Nutze dieses Template :
 
- Aktualisierung des Package 
- - Wenn du ein neues Package nutzt, muss du immer die PACKAGE Dateien aktualisieren
+### Fix - 10.10.2025
 
-## Chatverlauf
- - Der ChatVerlauf musste immer in der Sidebar stehen, wie es aktuell ist. und es es auch in der OllamaChat App steht
- - Nutze den Exakten Chatverlauf wie in OllamaChat
- - Nutze die gleiche Logik und gleiche Elemente. Achte aber die obere Punkten über die Oragnisation der Elemente
- 
-Aktualisiere immer die PACKAGE.json wenn du ein Neues Packet installierst
+- optimize onComplete/onIncomplete invocation (#32)
+- solve asChild attribute issue in custom button (#31)
+- improve custom Button component (#28)
+
+### Feat 25-12-2024
+
+- implement chat page (#21)
+- add 401 error page (#12)
+- implement apps page
+- add otp page

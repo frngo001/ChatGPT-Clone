@@ -21,9 +21,7 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 
 const formSchema = z.object({
-  email: z.email({
-    error: (iss) => (iss.input === '' ? 'Please enter your email' : undefined),
-  }),
+  email: z.string().email('Please enter a valid email address'),
   password: z
     .string()
     .min(1, 'Please enter your password')
@@ -57,7 +55,7 @@ export function UserAuthForm({
     // Mock successful authentication
     const mockUser = {
       accountNo: 'ACC001',
-      email: data.email,
+      email: data.email as string,
       role: ['user'],
       exp: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
     }

@@ -1,6 +1,20 @@
 import type { ViteDevServer } from 'vite';
+import { config } from 'dotenv';
 
+// Load environment variables
+config();
+
+/**
+ * Sets up chat API endpoints for Ollama and DeepSeek providers
+ * 
+ * @description Configures Vite dev server middleware to handle chat API requests.
+ * Provides streaming chat functionality for both Ollama and DeepSeek AI providers
+ * with support for multimodal input (text and images).
+ * 
+ * @param server - Vite development server instance
+ */
 export function setupChatApi(server: ViteDevServer) {
+  // Ollama Chat API
   server.middlewares.use('/api/ollama/chat', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -63,7 +77,7 @@ export function setupChatApi(server: ViteDevServer) {
         if (stream.body) {
           const reader = stream.body.getReader();
           let buffer = '';
-          let batchSize = streamingConfig?.batchSize ?? 3; // Number of tokens to batch together
+          let batchSize = streamingConfig?.batchSize ?? 20; // Increased batch size for DeepSeek
           let tokenCount = 0;
           
           const pump = async () => {
@@ -104,5 +118,208 @@ export function setupChatApi(server: ViteDevServer) {
         res.end(JSON.stringify({ error: 'Internal Server Error' }));
       }
     });
+  });
+
+  // DeepSeek Chat API
+  server.middlewares.use('/api/deepseek/chat', async (req, res) => {
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.end('Method Not Allowed');
+      return;
+    }
+
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk.toString();
+    });
+
+    req.on('end', async () => {
+      try {
+        // Dynamic import to avoid TypeScript version conflicts
+        const { convertToCoreMessages } = await import('ai');
+        
+        const { messages, selectedModel, streamingConfig } = JSON.parse(body);
+
+        const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+        if (!deepseekApiKey) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: 'DeepSeek API Key nicht konfiguriert' }));
+          return;
+        }
+
+        const initialMessages = messages.slice(0, -1);
+        const currentMessage = messages[messages.length - 1];
+
+        // Prepare messages for DeepSeek API - handle different message formats
+        let deepseekMessages;
+        
+        try {
+          // Try to convert messages using AI SDK converter
+          deepseekMessages = [
+            ...convertToCoreMessages(initialMessages),
+            { role: 'user', content: currentMessage.content },
+          ];
+        } catch (error) {
+          // Fallback: use messages directly if conversion fails
+          console.log('Message conversion failed, using direct format:', error);
+          deepseekMessages = [
+            ...initialMessages.map((msg: any) => ({
+              role: msg.role,
+              content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+            })),
+            { role: 'user', content: currentMessage.content },
+          ];
+        }
+
+        // Debug logging
+        console.log('DeepSeek API Request:', {
+          model: selectedModel,
+          messages: deepseekMessages,
+          temperature: streamingConfig?.temperature ?? 0.7,
+          top_p: streamingConfig?.topP ?? 0.9,
+        });
+
+        // Stream text using DeepSeek API directly with AI SDK compatible format
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${deepseekApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: selectedModel,
+            messages: deepseekMessages,
+            temperature: streamingConfig?.temperature ?? 0.7,
+            top_p: streamingConfig?.topP ?? 0.9,
+            stream: true,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('DeepSeek API Error Response:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText,
+          });
+          throw new Error(`DeepSeek API Error: ${response.status} - ${errorText}`);
+        }
+
+        // Set headers compatible with AI SDK Data Stream format
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Transfer-Encoding', 'chunked');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        // Stream the response in AI SDK Data Stream format with batching
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('No response body');
+        }
+
+        let buffer = '';
+        let batchSize = streamingConfig?.batchSize ?? 20; // Increased batch size for DeepSeek
+        let tokenCount = 0;
+
+        const pump = async () => {
+          const { done, value } = await reader.read();
+          if (done) {
+            // Send any remaining buffered data
+            if (buffer) {
+              res.write(buffer);
+            }
+            res.end();
+            return;
+          }
+
+          const chunk = new TextDecoder().decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6).trim();
+              if (data === '[DONE]') {
+                // Send any remaining buffered data
+                if (buffer) {
+                  res.write(buffer);
+                }
+                res.end();
+                return;
+              }
+              
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) {
+                  // Convert to AI SDK Data Stream format
+                  // Format: 0:"content"
+                  const escapedContent = content.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+                  buffer += `0:"${escapedContent}"\n`;
+                  tokenCount++;
+                  
+                  // Send batch when we reach batch size or on natural breaks
+                  if (tokenCount >= batchSize || content.includes(' ') || content.includes('\n')) {
+                    res.write(buffer);
+                    buffer = '';
+                    tokenCount = 0;
+                    
+                    // Add throttling delay (configurable delay between batches)
+                    const delay = streamingConfig?.throttleDelay ?? 30; // Reduced delay for DeepSeek
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                  }
+                }
+              } catch (e) {
+                // Ignore parsing errors for incomplete chunks
+              }
+            }
+          }
+          
+          pump();
+        };
+        
+        pump();
+      } catch (error) {
+        console.error('DeepSeek Chat API Error:', error);
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: 'Internal Server Error' }));
+      }
+    });
+  });
+
+  // DeepSeek Models API
+  server.middlewares.use('/api/deepseek/models', async (req, res) => {
+    if (req.method !== 'GET') {
+      res.statusCode = 405;
+      res.end('Method Not Allowed');
+      return;
+    }
+
+    try {
+      const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+      if (!deepseekApiKey) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: 'DeepSeek API Key nicht konfiguriert' }));
+        return;
+      }
+
+      const response = await fetch('https://api.deepseek.com/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${deepseekApiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`DeepSeek API Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(data));
+    } catch (error) {
+      console.error('DeepSeek Models API Error:', error);
+      res.statusCode = 500;
+      res.end(JSON.stringify({ error: 'Internal Server Error' }));
+    }
   });
 }

@@ -1,4 +1,3 @@
-import React from "react";
 import { Message } from "ai/react";
 
 interface ChatTopbarProps {
@@ -8,12 +7,7 @@ interface ChatTopbarProps {
   setMessages: (messages: Message[]) => void;
 }
 
-export default function OllamaChatTopbar({
-  isLoading,
-  chatId,
-  messages,
-  setMessages,
-}: ChatTopbarProps) {
+export default function OllamaChatTopbar(_props: ChatTopbarProps) {
   // Topbar is now empty - sidebar is handled by main app sidebar
   return null;
 }

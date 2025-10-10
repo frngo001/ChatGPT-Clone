@@ -12,6 +12,7 @@ interface State {
   chats: Record<string, ChatSession>;
   currentChatId: string | null;
   selectedModel: string | null;
+  selectedProvider: 'ollama' | 'deepseek';
   userName: string | "Anonymous";
   isDownloading: boolean;
   downloadProgress: number;
@@ -22,6 +23,7 @@ interface Actions {
   setBase64Images: (base64Images: string[] | null) => void;
   setCurrentChatId: (chatId: string) => void;
   setSelectedModel: (selectedModel: string) => void;
+  setSelectedProvider: (provider: 'ollama' | 'deepseek') => void;
   getChatById: (chatId: string) => ChatSession | undefined;
   getMessagesById: (chatId: string) => Message[];
   saveMessages: (chatId: string, messages: Message[]) => void;
@@ -40,6 +42,7 @@ const useOllamaChatStore = create<State & Actions>()(
       chats: {},
       currentChatId: null,
       selectedModel: null,
+      selectedProvider: 'ollama',
       userName: "Anonymous",
       isDownloading: false,
       downloadProgress: 0,
@@ -50,6 +53,7 @@ const useOllamaChatStore = create<State & Actions>()(
 
       setCurrentChatId: (chatId) => set({ currentChatId: chatId }),
       setSelectedModel: (selectedModel) => set({ selectedModel }),
+      setSelectedProvider: (selectedProvider) => set({ selectedProvider }),
       getChatById: (chatId) => {
         const state = get();
         return state.chats[chatId];
@@ -135,6 +139,7 @@ const useOllamaChatStore = create<State & Actions>()(
         chats: state.chats,
         currentChatId: state.currentChatId,
         selectedModel: state.selectedModel,
+        selectedProvider: state.selectedProvider,
         userName: state.userName,
       }),
     }

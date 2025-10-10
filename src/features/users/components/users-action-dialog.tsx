@@ -33,9 +33,7 @@ const formSchema = z
     lastName: z.string().min(1, 'Last Name is required.'),
     username: z.string().min(1, 'Username is required.'),
     phoneNumber: z.string().min(1, 'Phone number is required.'),
-    email: z.email({
-      error: (iss) => (iss.input === '' ? 'Email is required.' : undefined),
-    }),
+    email: z.string().email('Please enter a valid email address'),
     password: z.string().transform((pwd) => pwd.trim()),
     role: z.string().min(1, 'Role is required.'),
     confirmPassword: z.string().transform((pwd) => pwd.trim()),
@@ -44,7 +42,7 @@ const formSchema = z
   .refine(
     (data) => {
       if (data.isEdit && !data.password) return true
-      return data.password.length > 0
+      return (data.password as string).length > 0
     },
     {
       message: 'Password is required.',
@@ -54,7 +52,7 @@ const formSchema = z
   .refine(
     ({ isEdit, password }) => {
       if (isEdit && !password) return true
-      return password.length >= 8
+      return (password as string).length >= 8
     },
     {
       message: 'Password must be at least 8 characters long.',
@@ -64,7 +62,7 @@ const formSchema = z
   .refine(
     ({ isEdit, password }) => {
       if (isEdit && !password) return true
-      return /[a-z]/.test(password)
+      return /[a-z]/.test(password as string)
     },
     {
       message: 'Password must contain at least one lowercase letter.',
@@ -74,7 +72,7 @@ const formSchema = z
   .refine(
     ({ isEdit, password }) => {
       if (isEdit && !password) return true
-      return /\d/.test(password)
+      return /\d/.test(password as string)
     },
     {
       message: 'Password must contain at least one number.',

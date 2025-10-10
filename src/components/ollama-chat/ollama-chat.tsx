@@ -26,6 +26,13 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   const navigate = useNavigate();
   const [apiError, setApiError] = React.useState<string | null>(null);
   
+  const base64Images = useOllamaChatStore((state) => state.base64Images);
+  const setBase64Images = useOllamaChatStore((state) => state.setBase64Images);
+  const selectedModel = useOllamaChatStore((state) => state.selectedModel);
+  const selectedProvider = useOllamaChatStore((state) => state.selectedProvider);
+  const saveMessages = useOllamaChatStore((state) => state.saveMessages);
+  const getMessagesById = useOllamaChatStore((state) => state.getMessagesById);
+  
   const {
     messages,
     input,
@@ -39,7 +46,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   } = useChat({
     id,
     initialMessages,
-    api: "/api/ollama/chat",
+    api: selectedProvider === 'ollama' ? "/api/ollama/chat" : "/api/deepseek/chat",
     onResponse: (response) => {
       if (response) {
         setLoadingSubmit(false);
@@ -87,11 +94,6 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   });
   
   const [loadingSubmit, setLoadingSubmit] = React.useState(false);
-  const base64Images = useOllamaChatStore((state) => state.base64Images);
-  const setBase64Images = useOllamaChatStore((state) => state.setBase64Images);
-  const selectedModel = useOllamaChatStore((state) => state.selectedModel);
-  const saveMessages = useOllamaChatStore((state) => state.saveMessages);
-  const getMessagesById = useOllamaChatStore((state) => state.getMessagesById);
 
   // Update messages when initialMessages or id changes
   useEffect(() => {

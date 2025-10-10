@@ -3,10 +3,6 @@ import { useNavigate } from '@tanstack/react-router'
 import {
   MoreVertical,
   Trash2,
-  Edit3,
-  Check,
-  X,
-  AlertTriangle,
   Search,
   XCircle,
 } from 'lucide-react'
@@ -165,7 +161,7 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
                 <div
                   key={chat.id}
                   className={cn(
-                    'group flex items-center gap-2 rounded-lg p-2 text-sm transition-colors hover:bg-accent',
+                    'group flex items-center gap-2 rounded-lg px-2 py-1 text-sm transition-colors hover:bg-accent',
                     currentChatId === chat.id && 'bg-accent'
                   )}
                 >

@@ -1,10 +1,14 @@
 import { useState } from 'react'
 
 /**
- * Custom hook for confirm dialog
- * @param initialState string | null
- * @returns A stateful value, and a function to update it.
- * @example const [open, setOpen] = useDialogState<"approve" | "reject">()
+ * Custom hook for managing dialog state with toggle functionality
+ * 
+ * @description Provides a stateful dialog management system that supports
+ * different dialog types and automatic toggle behavior.
+ * 
+ * @template T - Type of dialog state (string or boolean)
+ * @param initialState - Initial dialog state (optional)
+ * @returns Tuple containing current state and toggle function
  */
 export default function useDialogState<T extends string | boolean>(
   initialState: T | null = null

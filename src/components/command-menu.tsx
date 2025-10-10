@@ -34,8 +34,8 @@ export function CommandMenu() {
       <CommandList>
         <ScrollArea type='hover' className='h-72 pe-1'>
           <CommandEmpty>No results found.</CommandEmpty>
-          {sidebarData.navGroups.map((group) => (
-            <CommandGroup key={group.title} heading={group.title}>
+          {sidebarData.navGroups.map((group, groupIndex) => (
+            <CommandGroup key={groupIndex} heading={group.title || 'Navigation'}>
               {group.items.map((navItem, i) => {
                 if (navItem.url)
                   return (

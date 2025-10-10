@@ -6,10 +6,7 @@ import {
   MessageCircle, 
   Zap, 
   Shield, 
-  Globe, 
-  ArrowRight,
-  CheckCircle,
-  Star
+  ArrowRight
 } from 'lucide-react'
 
 export function LandingPage() {
@@ -180,9 +177,9 @@ export function LandingPage() {
               <span className="font-semibold">CHTGPT Clone</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link to="/privacy" className="hover:text-foreground">Datenschutz</Link>
-              <Link to="/terms" className="hover:text-foreground">Nutzungsbedingungen</Link>
-              <Link to="/contact" className="hover:text-foreground">Kontakt</Link>
+              <a href="#" className="hover:text-foreground">Datenschutz</a>
+              <a href="#" className="hover:text-foreground">Nutzungsbedingungen</a>
+              <a href="#" className="hover:text-foreground">Kontakt</a>
             </div>
           </div>
         </div>

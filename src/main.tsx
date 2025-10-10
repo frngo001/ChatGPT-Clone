@@ -6,35 +6,46 @@ import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
+
+// Internal imports
 import { useAuthStore } from '@/stores/auth-store'
 import { handleServerError } from '@/lib/handle-server-error'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
-// Generated Routes
+
+// Generated routes
 import { routeTree } from './routeTree.gen'
-// Styles
+
+// Global styles
 import './styles/index.css'
 
+// Query client configuration
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
+        // Debug logging in development
         // eslint-disable-next-line no-console
         if (import.meta.env.DEV) console.log({ failureCount, error })
 
+        // Development: no retries
         if (failureCount >= 0 && import.meta.env.DEV) return false
+        
+        // Production: max 3 retries
         if (failureCount > 3 && import.meta.env.PROD) return false
 
+        // Don't retry on auth errors
         return !(
           error instanceof AxiosError &&
           [401, 403].includes(error.response?.status ?? 0)
         )
       },
       refetchOnWindowFocus: import.meta.env.PROD,
-      staleTime: 10 * 1000, // 10s
+      staleTime: 10 * 1000, // 10 seconds
     },
     mutations: {
       onError: (error) => {
@@ -51,16 +62,21 @@ const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
       if (error instanceof AxiosError) {
+        // Handle authentication errors
         if (error.response?.status === 401) {
           toast.error('Session expired!')
           useAuthStore.getState().auth.reset()
           const redirect = `${router.history.location.href}`
           router.navigate({ to: '/sign-in', search: { redirect } })
         }
+        
+        // Handle server errors
         if (error.response?.status === 500) {
           toast.error('Internal Server Error!')
           router.navigate({ to: '/500' })
         }
+        
+        // Handle forbidden errors
         if (error.response?.status === 403) {
           // router.navigate("/forbidden", { replace: true });
         }
@@ -69,7 +85,7 @@ const queryClient = new QueryClient({
   }),
 })
 
-// Create a new router instance
+// Router configuration
 const router = createRouter({
   routeTree,
   context: { queryClient },
@@ -77,17 +93,19 @@ const router = createRouter({
   defaultPreloadStaleTime: 0,
 })
 
-// Register the router instance for type safety
+// Type safety declaration for router
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
   }
 }
 
-// Render the app
+// Application rendering
 const rootElement = document.getElementById('root')!
+
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
+  
   root.render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
@@ -98,6 +116,7 @@ if (!rootElement.innerHTML) {
             </DirectionProvider>
           </FontProvider>
         </ThemeProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </StrictMode>
   )
