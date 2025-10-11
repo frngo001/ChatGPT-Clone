@@ -33,7 +33,7 @@ export function setupChatApi(server: ViteDevServer) {
         const { createOllama } = await import('ollama-ai-provider');
         const { streamText, convertToCoreMessages } = await import('ai');
         
-        const { messages, selectedModel, data, streamingConfig } = JSON.parse(body);
+        const { messages, selectedModel, data, streamingConfig, systemPrompt } = JSON.parse(body);
 
         const ollamaUrl = process.env.VITE_OLLAMA_URL || 'http://imeso-ki-02:11434';
 
@@ -54,6 +54,7 @@ export function setupChatApi(server: ViteDevServer) {
         // Stream text using the ollama model with parameters
         const result = await streamText({
           model: ollama(selectedModel) as any,
+          system: systemPrompt || "You are a helpful AI assistant. Please provide accurate and helpful responses.",
           messages: [
             ...convertToCoreMessages(initialMessages),
             { role: 'user' as const, content: messageContent },
@@ -138,7 +139,7 @@ export function setupChatApi(server: ViteDevServer) {
         // Dynamic import to avoid TypeScript version conflicts
         const { convertToCoreMessages } = await import('ai');
         
-        const { messages, selectedModel, streamingConfig } = JSON.parse(body);
+        const { messages, selectedModel, data, streamingConfig, systemPrompt } = JSON.parse(body);
 
         const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
         if (!deepseekApiKey) {
@@ -150,34 +151,19 @@ export function setupChatApi(server: ViteDevServer) {
         const initialMessages = messages.slice(0, -1);
         const currentMessage = messages[messages.length - 1];
 
-        // Prepare messages for DeepSeek API - handle different message formats
-        let deepseekMessages;
-        
-        try {
-          // Try to convert messages using AI SDK converter
-          deepseekMessages = [
-            ...convertToCoreMessages(initialMessages),
-            { role: 'user', content: currentMessage.content },
-          ];
-        } catch (error) {
-          // Fallback: use messages directly if conversion fails
-          console.log('Message conversion failed, using direct format:', error);
-          deepseekMessages = [
-            ...initialMessages.map((msg: any) => ({
-              role: msg.role,
-              content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
-            })),
-            { role: 'user', content: currentMessage.content },
-          ];
+        // DeepSeek only supports text messages (no multimodal support)
+        // Convert multimodal content to text description if images are present
+        let messageText = currentMessage.content;
+        if (data?.images?.length > 0) {
+          messageText += `\n\n[Note: ${data.images.length} image(s) attached but DeepSeek doesn't support multimodal input]`;
         }
 
-        // Debug logging
-        console.log('DeepSeek API Request:', {
-          model: selectedModel,
-          messages: deepseekMessages,
-          temperature: streamingConfig?.temperature ?? 0.7,
-          top_p: streamingConfig?.topP ?? 0.9,
-        });
+        // Use simple text format for DeepSeek API with system prompt
+        const deepseekMessages = [
+          { role: 'system' as const, content: systemPrompt || "You are a helpful AI assistant. Please provide accurate and helpful responses." },
+          ...convertToCoreMessages(initialMessages),
+          { role: 'user' as const, content: messageText },
+        ];
 
         // Stream text using DeepSeek API directly with AI SDK compatible format
         const response = await fetch('https://api.deepseek.com/v1/chat/completions', {

@@ -32,6 +32,13 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   const selectedProvider = useOllamaChatStore((state) => state.selectedProvider);
   const saveMessages = useOllamaChatStore((state) => state.saveMessages);
   const getMessagesById = useOllamaChatStore((state) => state.getMessagesById);
+  // Chat settings from store
+  const temperature = useOllamaChatStore((state) => state.temperature);
+  const topP = useOllamaChatStore((state) => state.topP);
+  const maxTokens = useOllamaChatStore((state) => state.maxTokens);
+  const batchSize = useOllamaChatStore((state) => state.batchSize);
+  const throttleDelay = useOllamaChatStore((state) => state.throttleDelay);
+  const systemPrompt = useOllamaChatStore((state) => state.systemPrompt);
   
   const {
     messages,
@@ -127,12 +134,13 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     const requestOptions: ChatRequestOptions = {
       body: {
         selectedModel: selectedModel,
+        systemPrompt: systemPrompt,
         streamingConfig: {
-          temperature: 0.7,
-          topP: 0.9,
-          maxTokens: 10000,
-          batchSize: 10,
-          throttleDelay: 20,
+          temperature: temperature,
+          topP: topP,
+          maxTokens: maxTokens,
+          batchSize: batchSize,
+          throttleDelay: throttleDelay,
         },
       },
       ...(base64Images && {

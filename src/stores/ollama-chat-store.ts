@@ -17,6 +17,13 @@ interface State {
   isDownloading: boolean;
   downloadProgress: number;
   downloadingModel: string | null;
+  // Chat settings
+  temperature: number;
+  topP: number;
+  maxTokens: number;
+  batchSize: number;
+  throttleDelay: number;
+  systemPrompt: string;
 }
 
 interface Actions {
@@ -33,6 +40,13 @@ interface Actions {
   startDownload: (modelName: string) => void;
   stopDownload: () => void;
   setDownloadProgress: (progress: number) => void;
+  // Chat settings actions
+  setTemperature: (temperature: number) => void;
+  setTopP: (topP: number) => void;
+  setMaxTokens: (maxTokens: number) => void;
+  setBatchSize: (batchSize: number) => void;
+  setThrottleDelay: (throttleDelay: number) => void;
+  setSystemPrompt: (systemPrompt: string) => void;
 }
 
 const useOllamaChatStore = create<State & Actions>()(
@@ -46,7 +60,14 @@ const useOllamaChatStore = create<State & Actions>()(
       userName: "Anonymous",
       isDownloading: false,
       downloadProgress: 0,
-      downloadingModel: null, 
+      downloadingModel: null,
+      // Chat settings defaults
+      temperature: 0.7,
+      topP: 0.9,
+      maxTokens: 1000000,
+      batchSize: 20,
+      throttleDelay: 50,
+      systemPrompt: "You are a helpful AI assistant. Please provide accurate and helpful responses.", 
 
       setBase64Images: (base64Images) => set({ base64Images }),
       setUserName: (userName) => set({ userName }),
@@ -132,6 +153,13 @@ const useOllamaChatStore = create<State & Actions>()(
       stopDownload: () =>
         set({ isDownloading: false, downloadingModel: null, downloadProgress: 0 }),
       setDownloadProgress: (progress) => set({ downloadProgress: progress }),
+      // Chat settings actions
+      setTemperature: (temperature) => set({ temperature }),
+      setTopP: (topP) => set({ topP }),
+      setMaxTokens: (maxTokens) => set({ maxTokens }),
+      setBatchSize: (batchSize) => set({ batchSize }),
+      setThrottleDelay: (throttleDelay) => set({ throttleDelay }),
+      setSystemPrompt: (systemPrompt) => set({ systemPrompt }),
     }),
     {
       name: "nextjs-ollama-ui-state",
@@ -141,6 +169,12 @@ const useOllamaChatStore = create<State & Actions>()(
         selectedModel: state.selectedModel,
         selectedProvider: state.selectedProvider,
         userName: state.userName,
+        temperature: state.temperature,
+        topP: state.topP,
+        maxTokens: state.maxTokens,
+        batchSize: state.batchSize,
+        throttleDelay: state.throttleDelay,
+        systemPrompt: state.systemPrompt,
       }),
     }
   )

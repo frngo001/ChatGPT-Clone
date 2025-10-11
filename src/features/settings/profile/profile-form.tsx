@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,17 +22,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useProfileStore } from '@/stores/profile-store'
 
 const profileFormSchema = z.object({
   username: z
     .string()
-    .min(2, 'Username must be at least 2 characters.')
-    .max(30, 'Username must not be longer than 30 characters.'),
-  email: z.string().email('Please enter a valid email address.'),
+    .min(2, 'Benutzername muss mindestens 2 Zeichen lang sein.')
+    .max(30, 'Benutzername darf nicht länger als 30 Zeichen sein.'),
+  email: z.string().email('Bitte gib eine gültige E-Mail-Adresse ein.'),
   urls: z
     .array(
       z.object({
-        value: z.string().url('Please enter a valid URL.'),
+        value: z.string().url('Bitte gib eine gültige URL ein.'),
       })
     )
     .optional(),
@@ -40,18 +41,19 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
-// This can come from your database or API.
-const defaultValues: Partial<ProfileFormValues> = {
-  urls: [
-    { value: 'https://shadcn.com' },
-    { value: 'http://twitter.com/shadcn' },
-  ],
-}
-
 export function ProfileForm() {
+  const { profileData, updateProfileData } = useProfileStore()
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    defaultValues,
+    defaultValues: {
+      username: profileData.username,
+      email: profileData.email,
+      urls: profileData.urls.length > 0 ? profileData.urls : [
+        { value: 'https://shadcn.com' },
+        { value: 'http://twitter.com/shadcn' },
+      ],
+    },
     mode: 'onChange',
   })
 
@@ -63,7 +65,16 @@ export function ProfileForm() {
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit((data) => showSubmittedData(data))}
+        onSubmit={form.handleSubmit((data) => {
+          // Save to store
+          updateProfileData({
+            username: data.username,
+            email: data.email,
+            urls: data.urls || [],
+          })
+          
+          toast.success('Profil erfolgreich aktualisiert!')
+        })}
         className='space-y-8'
       >
         <FormField
@@ -71,13 +82,13 @@ export function ProfileForm() {
           name='username'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>Benutzername</FormLabel>
               <FormControl>
-                <Input placeholder='shadcn' {...field} />
+                <Input placeholder='benutzername' {...field} />
               </FormControl>
               <FormDescription>
-                This is your public display name. It can be your real name or a
-                pseudonym. You can only change this once every 30 days.
+                Das ist dein öffentlicher Anzeigename. Es kann dein echter Name oder ein
+                Pseudonym sein. Du kannst dies nur alle 30 Tage ändern.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -88,11 +99,11 @@ export function ProfileForm() {
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>E-Mail</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder='Select a verified email to display' />
+                    <SelectValue placeholder='Verifizierte E-Mail auswählen' />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -102,8 +113,8 @@ export function ProfileForm() {
                 </SelectContent>
               </Select>
               <FormDescription>
-                You can manage verified email addresses in your{' '}
-                <Link to='/'>email settings</Link>.
+                Du kannst verifizierte E-Mail-Adressen in deinen{' '}
+                <Link to='/'>E-Mail-Einstellungen</Link> verwalten.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -121,7 +132,7 @@ export function ProfileForm() {
                     URLs
                   </FormLabel>
                   <FormDescription className={cn(index !== 0 && 'sr-only')}>
-                    Add links to your website, blog, or social media profiles.
+                    Füge Links zu deiner Website, deinem Blog oder deinen Social-Media-Profilen hinzu.
                   </FormDescription>
                   <FormControl>
                     <Input {...field} />
@@ -138,10 +149,10 @@ export function ProfileForm() {
             className='mt-2'
             onClick={() => append({ value: '' })}
           >
-            Add URL
+            URL hinzufügen
           </Button>
         </div>
-        <Button type='submit'>Update profile</Button>
+        <Button type='submit'>Profil aktualisieren</Button>
       </form>
     </Form>
   )

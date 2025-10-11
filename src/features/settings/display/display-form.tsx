@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -13,19 +13,29 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useDisplayStore } from '@/stores/display-store'
+import { useFont } from '@/context/font-provider'
+import { fonts } from '@/config/fonts'
 
 const items = [
   {
     id: 'recents',
-    label: 'Recents',
+    label: 'Zuletzt verwendet',
   },
   {
     id: 'home',
-    label: 'Home',
+    label: 'Startseite',
   },
   {
     id: 'applications',
-    label: 'Applications',
+    label: 'Anwendungen',
   },
   {
     id: 'desktop',
@@ -37,44 +47,96 @@ const items = [
   },
   {
     id: 'documents',
-    label: 'Documents',
+    label: 'Dokumente',
+  },
+  {
+    id: 'theme-settings',
+    label: 'Theme-Einstellungen',
   },
 ] as const
 
 const displayFormSchema = z.object({
   items: z.array(z.string()).refine((value) => value.some((item) => item), {
-    message: 'You have to select at least one item.',
+    message: 'Du musst mindestens ein Element auswählen.',
   }),
+  font: z.enum(fonts),
 })
 
 type DisplayFormValues = z.infer<typeof displayFormSchema>
 
-// This can come from your database or API.
-const defaultValues: Partial<DisplayFormValues> = {
-  items: ['recents', 'home'],
-}
-
 export function DisplayForm() {
+  const { showThemeSettings, setShowThemeSettings, selectedFont, setSelectedFont } = useDisplayStore()
+  const { font, setFont } = useFont()
+  
   const form = useForm<DisplayFormValues>({
     resolver: zodResolver(displayFormSchema),
-    defaultValues,
+    defaultValues: {
+      items: showThemeSettings 
+        ? ['recents', 'home', 'theme-settings']
+        : ['recents', 'home'],
+      font: selectedFont || font,
+    },
   })
 
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit((data) => showSubmittedData(data))}
+        onSubmit={form.handleSubmit((data) => {
+          // Check if theme-settings is selected and update store immediately
+          const showThemeSettings = data.items.includes('theme-settings')
+          setShowThemeSettings(showThemeSettings)
+          
+          // Update font if changed
+          if (data.font !== font) {
+            setFont(data.font)
+            setSelectedFont(data.font)
+          }
+          
+          toast.success('Anzeigeelement erfolgreich aktualisiert!')
+        })}
         className='space-y-8'
       >
+        {/* Font Selection */}
+        <FormField
+          control={form.control}
+          name='font'
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-sm font-medium">Schriftart</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="w-48 h-8">
+                      <SelectValue placeholder="Schriftart auswählen" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {fonts.map((font) => (
+                      <SelectItem key={font} value={font}>
+                        <span className="capitalize">{font}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Wähle die Schriftart aus, die in der gesamten Anwendung verwendet werden soll.
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Sidebar Items */}
         <FormField
           control={form.control}
           name='items'
           render={() => (
             <FormItem>
               <div className='mb-4'>
-                <FormLabel className='text-base'>Sidebar</FormLabel>
+                <FormLabel className='text-base'>Seitenleiste</FormLabel>
                 <FormDescription>
-                  Select the items you want to display in the sidebar.
+                  Wähle die Elemente aus, die in der Seitenleiste angezeigt werden sollen.
                 </FormDescription>
               </div>
               {items.map((item) => (
@@ -114,7 +176,7 @@ export function DisplayForm() {
             </FormItem>
           )}
         />
-        <Button type='submit'>Update display</Button>
+        <Button type='submit'>Anzeige aktualisieren</Button>
       </form>
     </Form>
   )

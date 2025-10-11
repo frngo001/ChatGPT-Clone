@@ -19,8 +19,6 @@ export function ForgotPasswordPage() {
     setTimeout(() => {
       setIsLoading(false)
       setIsSubmitted(true)
-      // In a real app, you would send a password reset email here
-      console.log('Password reset requested for:', email)
     }, 1000)
   }
 

@@ -39,6 +39,7 @@ import { Route as ClerkAuthenticatedUserManagementRouteImport } from './routes/c
 import { Route as ClerkauthSignUpRouteImport } from './routes/clerk/(auth)/sign-up'
 import { Route as ClerkauthSignInRouteImport } from './routes/clerk/(auth)/sign-in'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
+import { Route as AuthenticatedSettingsChatRouteImport } from './routes/_authenticated/settings.chat'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedOllamaChatChatIdRouteImport } from './routes/_authenticated/ollama-chat.$chatId'
@@ -197,6 +198,12 @@ const AuthenticatedSettingsDisplayRoute =
     path: '/display',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedSettingsChatRoute =
+  AuthenticatedSettingsChatRouteImport.update({
+    id: '/chat',
+    path: '/chat',
+    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
 const AuthenticatedSettingsAppearanceRoute =
   AuthenticatedSettingsAppearanceRouteImport.update({
     id: '/appearance',
@@ -245,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/ollama-chat/$chatId': typeof AuthenticatedOllamaChatChatIdRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/settings/chat': typeof AuthenticatedSettingsChatRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
@@ -276,6 +284,7 @@ export interface FileRoutesByTo {
   '/ollama-chat/$chatId': typeof AuthenticatedOllamaChatChatIdRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/settings/chat': typeof AuthenticatedSettingsChatRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
@@ -313,6 +322,7 @@ export interface FileRoutesById {
   '/_authenticated/ollama-chat/$chatId': typeof AuthenticatedOllamaChatChatIdRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
+  '/_authenticated/settings/chat': typeof AuthenticatedSettingsChatRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/clerk/(auth)/sign-in': typeof ClerkauthSignInRoute
   '/clerk/(auth)/sign-up': typeof ClerkauthSignUpRoute
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/ollama-chat/$chatId'
     | '/settings/account'
     | '/settings/appearance'
+    | '/settings/chat'
     | '/settings/display'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
@@ -380,6 +391,7 @@ export interface FileRouteTypes {
     | '/ollama-chat/$chatId'
     | '/settings/account'
     | '/settings/appearance'
+    | '/settings/chat'
     | '/settings/display'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
@@ -416,6 +428,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ollama-chat/$chatId'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
+    | '/_authenticated/settings/chat'
     | '/_authenticated/settings/display'
     | '/clerk/(auth)/sign-in'
     | '/clerk/(auth)/sign-up'
@@ -659,6 +672,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsDisplayRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/settings/chat': {
+      id: '/_authenticated/settings/chat'
+      path: '/chat'
+      fullPath: '/settings/chat'
+      preLoaderRoute: typeof AuthenticatedSettingsChatRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
+    }
     '/_authenticated/settings/appearance': {
       id: '/_authenticated/settings/appearance'
       path: '/appearance'
@@ -693,6 +713,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedSettingsRouteRouteChildren {
   AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
   AuthenticatedSettingsAppearanceRoute: typeof AuthenticatedSettingsAppearanceRoute
+  AuthenticatedSettingsChatRoute: typeof AuthenticatedSettingsChatRoute
   AuthenticatedSettingsDisplayRoute: typeof AuthenticatedSettingsDisplayRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
 }
@@ -701,6 +722,7 @@ const AuthenticatedSettingsRouteRouteChildren: AuthenticatedSettingsRouteRouteCh
   {
     AuthenticatedSettingsAccountRoute: AuthenticatedSettingsAccountRoute,
     AuthenticatedSettingsAppearanceRoute: AuthenticatedSettingsAppearanceRoute,
+    AuthenticatedSettingsChatRoute: AuthenticatedSettingsChatRoute,
     AuthenticatedSettingsDisplayRoute: AuthenticatedSettingsDisplayRoute,
     AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   }

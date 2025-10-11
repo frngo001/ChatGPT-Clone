@@ -19,8 +19,10 @@ export function AppSidebar() {
   const { state, isMobile } = useSidebar()
   const location = useLocation()
   
-  // Check if we're on the ollama-chat page
+  // Check if we're on the ollama-chat page or settings page
   const isOllamaChatPage = location.pathname.startsWith('/ollama-chat')
+  const isSettingsPage = location.pathname.startsWith('/settings')
+  const shouldShowChatHistory = isOllamaChatPage || isSettingsPage
   
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
@@ -39,7 +41,7 @@ export function AppSidebar() {
         
         {/* Only show Chat-Verlauf when sidebar is expanded (not collapsed) */}
         {/* On mobile, always show when sidebar is open */}
-        {(state !== 'collapsed' || isMobile) && isOllamaChatPage && (
+        {(state !== 'collapsed' || isMobile) && shouldShowChatHistory && (
           <SidebarGroup className="flex-1 flex flex-col min-h-0">
             <SidebarGroupLabel className="flex-shrink-0">Chat-Verlauf</SidebarGroupLabel>
             <div className="flex-1 overflow-hidden">

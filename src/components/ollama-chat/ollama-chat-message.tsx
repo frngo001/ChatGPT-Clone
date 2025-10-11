@@ -1,7 +1,5 @@
 import React, { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { Message } from "ai/react";
 import type { ChatRequestOptions } from "ai";
 import { CheckIcon, CopyIcon } from "@radix-ui/react-icons";
@@ -14,6 +12,7 @@ import ButtonWithTooltip from "@/components/button-with-tooltip";
 import { Button } from "@/components/ui/button";
 import CodeDisplayBlock from "@/components/code-display-block";
 import TableDisplayBlock from "@/components/table-display-block";
+import { Response } from "@/components/ui/response";
 import {
   Dialog,
   DialogContent,
@@ -179,24 +178,9 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
         </summary>
         <div ref={thinkContentRef} className="mt-2 text-muted-foreground ml-4 max-h-48 overflow-y-auto relative">
           <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent pointer-events-none z-10"></div>
-          <Markdown 
-            remarkPlugins={[remarkGfm]}
-            components={{
-              a: ({ children, href, ...props }) => (
-                <a 
-                  href={href} 
-                  className="text-blue-500 hover:text-blue-700 underline" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  {...props}
-                >
-                  {children}
-                </a>
-              ),
-            }}
-          >
+          <Response className="text-xs leading-relaxed text-muted-foreground [&>h1]:text-sm [&>h1]:font-bold [&>h1]:mb-1 [&>h2]:text-xs [&>h2]:font-semibold [&>h2]:mb-1 [&>h3]:text-xs [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-1 [&>ul]:list-disc [&>ul]:ml-2 [&>ol]:list-decimal [&>ol]:ml-2 [&>li]:mb-0.5 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-xs [&>pre]:bg-muted [&>pre]:p-2 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-2 [&>blockquote]:border-border [&>blockquote]:pl-2 [&>blockquote]:italic [&>a]:text-blue-400 [&>a]:hover:text-blue-600 [&>a]:underline">
             {thinkContent}
-          </Markdown>
+          </Response>
         </div>
       </details>
     )
@@ -245,25 +229,12 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
                     tableMarkdown={partItem.tableData.markdown}
                   />
                 ) : (
-                  <Markdown 
+                  <Response 
                     key={`${index}-${partIndex}`}
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      a: ({ children, href, ...props }) => (
-                        <a 
-                          href={href} 
-                          className="text-blue-500 hover:text-blue-700 underline" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          {...props}
-                        >
-                          {children}
-                        </a>
-                      ),
-                    }}
+                    className="text-sm leading-relaxed [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4 [&>li]:mb-1 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-4 [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:italic [&>a]:text-blue-500 [&>a]:hover:text-blue-700 [&>a]:underline"
                   >
                     {partItem.content}
-                  </Markdown>
+                  </Response>
                 )
               ))}
             </div>
@@ -271,25 +242,12 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
         } else {
           // No tables found, render normally
           return (
-            <Markdown 
+            <Response 
               key={index} 
-              remarkPlugins={[remarkGfm]}
-              components={{
-                a: ({ children, href, ...props }) => (
-                  <a 
-                    href={href} 
-                    className="text-blue-500 hover:text-blue-700 underline" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    {...props}
-                  >
-                    {children}
-                  </a>
-                ),
-              }}
+              className="text-sm leading-relaxed [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4 [&>li]:mb-1 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-4 [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:italic [&>a]:text-blue-500 [&>a]:hover:text-blue-700 [&>a]:underline"
             >
               {part}
-            </Markdown>
+            </Response>
           );
         }
       } else {

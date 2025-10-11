@@ -2,7 +2,7 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import MessageLoading from "./message-loading";
+import AnimatedLogoLoading from "./animated-logo-loading";
 import { Button, ButtonProps } from "../button";
 
 // ChatBubble
@@ -124,7 +124,7 @@ const ChatBubbleMessage = React.forwardRef<
     >
       {isLoading ? (
         <div className="flex items-center space-x-2">
-          <MessageLoading />
+          <AnimatedLogoLoading />
         </div>
       ) : (
         children

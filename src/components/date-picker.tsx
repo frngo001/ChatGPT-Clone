@@ -17,7 +17,8 @@ type DatePickerProps = {
 export function DatePicker({
   selected,
   onSelect,
-  placeholder = 'Pick a date',
+  // Default placeholder text translated to German
+  placeholder = 'Datum auswählen',
 }: DatePickerProps) {
   return (
     <Popover>

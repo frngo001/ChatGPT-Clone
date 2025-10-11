@@ -30,8 +30,6 @@ export function RegisterPage() {
     // Simulate registration process
     setTimeout(() => {
       setIsLoading(false)
-      // In a real app, you would handle registration here
-      console.log('Registration attempt:', formData)
     }, 1000)
   }
 

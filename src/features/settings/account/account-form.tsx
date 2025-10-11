@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { CaretSortIcon, CheckIcon } from '@radix-ui/react-icons'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -29,44 +29,53 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { DatePicker } from '@/components/date-picker'
+import { useAccountStore } from '@/stores/account-store'
 
 const languages = [
+  { label: 'Deutsch', value: 'de' },
   { label: 'English', value: 'en' },
-  { label: 'French', value: 'fr' },
-  { label: 'German', value: 'de' },
-  { label: 'Spanish', value: 'es' },
-  { label: 'Portuguese', value: 'pt' },
-  { label: 'Russian', value: 'ru' },
-  { label: 'Japanese', value: 'ja' },
-  { label: 'Korean', value: 'ko' },
-  { label: 'Chinese', value: 'zh' },
+  { label: 'Français', value: 'fr' },
+  { label: 'Español', value: 'es' },
+  { label: 'Português', value: 'pt' },
+  { label: 'Русский', value: 'ru' },
+  { label: '日本語', value: 'ja' },
+  { label: '한국어', value: 'ko' },
+  { label: '中文', value: 'zh' },
 ] as const
 
 const accountFormSchema = z.object({
   name: z
     .string()
-    .min(1, 'Please enter your name.')
-    .min(2, 'Name must be at least 2 characters.')
-    .max(30, 'Name must not be longer than 30 characters.'),
-  dob: z.date({ required_error: 'Please select your date of birth.' }),
-  language: z.string({ required_error: 'Please select a language.' }),
+    .min(1, 'Bitte gib deinen Namen ein.')
+    .min(2, 'Name muss mindestens 2 Zeichen lang sein.')
+    .max(30, 'Name darf nicht länger als 30 Zeichen sein.'),
+  dob: z.date({ required_error: 'Bitte wähle dein Geburtsdatum aus.' }),
+  language: z.string({ required_error: 'Bitte wähle eine Sprache aus.' }),
 })
 
 type AccountFormValues = z.infer<typeof accountFormSchema>
 
-// This can come from your database or API.
-const defaultValues: Partial<AccountFormValues> = {
-  name: '',
-}
-
 export function AccountForm() {
+  const { accountData, updateAccountData } = useAccountStore()
+
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
-    defaultValues,
+    defaultValues: {
+      name: accountData.name,
+      dob: accountData.dob || undefined,
+      language: accountData.language,
+    },
   })
 
   function onSubmit(data: AccountFormValues) {
-    showSubmittedData(data)
+    // Save to store
+    updateAccountData({
+      name: data.name,
+      dob: data.dob,
+      language: data.language,
+    })
+    
+    toast.success('Konto erfolgreich aktualisiert!')
   }
 
   return (
@@ -79,11 +88,10 @@ export function AccountForm() {
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
-                <Input placeholder='Your name' {...field} />
+                <Input placeholder='Dein Name' {...field} />
               </FormControl>
               <FormDescription>
-                This is the name that will be displayed on your profile and in
-                emails.
+                Das ist der Name, der in deinem Profil und in E-Mails angezeigt wird.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -94,10 +102,10 @@ export function AccountForm() {
           name='dob'
           render={({ field }) => (
             <FormItem className='flex flex-col'>
-              <FormLabel>Date of birth</FormLabel>
+              <FormLabel>Geburtsdatum</FormLabel>
               <DatePicker selected={field.value} onSelect={field.onChange} />
               <FormDescription>
-                Your date of birth is used to calculate your age.
+                Dein Geburtsdatum wird verwendet, um dein Alter zu berechnen.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -108,7 +116,7 @@ export function AccountForm() {
           name='language'
           render={({ field }) => (
             <FormItem className='flex flex-col'>
-              <FormLabel>Language</FormLabel>
+              <FormLabel>Sprache</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -124,15 +132,15 @@ export function AccountForm() {
                         ? languages.find(
                             (language) => language.value === field.value
                           )?.label
-                        : 'Select language'}
+                        : 'Sprache auswählen'}
                       <CaretSortIcon className='ms-2 h-4 w-4 shrink-0 opacity-50' />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent className='w-[200px] p-0'>
                   <Command>
-                    <CommandInput placeholder='Search language...' />
-                    <CommandEmpty>No language found.</CommandEmpty>
+                    <CommandInput placeholder='Sprache suchen...' />
+                    <CommandEmpty>Keine Sprache gefunden.</CommandEmpty>
                     <CommandGroup>
                       <CommandList>
                         {languages.map((language) => (
@@ -160,13 +168,13 @@ export function AccountForm() {
                 </PopoverContent>
               </Popover>
               <FormDescription>
-                This is the language that will be used in the dashboard.
+                Das ist die Sprache, die im Dashboard verwendet wird.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type='submit'>Update account</Button>
+        <Button type='submit'>Konto aktualisieren</Button>
       </form>
     </Form>
   )

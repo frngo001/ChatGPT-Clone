@@ -19,8 +19,6 @@ export function LoginPage() {
     // Simulate login process
     setTimeout(() => {
       setIsLoading(false)
-      // In a real app, you would handle authentication here
-      console.log('Login attempt:', { email, password })
     }, 1000)
   }
 

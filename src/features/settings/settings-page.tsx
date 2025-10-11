@@ -50,8 +50,6 @@ export default function SettingsPage() {
   });
 
   const handleSave = () => {
-    // Save settings logic here
-    console.log("Settings saved", { profile, notifications, preferences });
   };
 
   return (
