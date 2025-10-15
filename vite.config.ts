@@ -48,6 +48,12 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/tags/, '/api/tags'),
       },
+      // Proxy Cognee API requests to avoid CORS issues
+      '/api/v1': {
+        target: 'http://imeso-ki-02:8080',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })

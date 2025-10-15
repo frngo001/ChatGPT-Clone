@@ -2,6 +2,8 @@ import {
   Library,
   FolderPlus,
   SquarePen,
+  Database,
+  FileText,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 
@@ -23,8 +25,19 @@ export const sidebarData: SidebarData = {
         },
         {
           title: 'Bibliothek',
-          url: '/library',
           icon: Library,
+          items: [
+            {
+              title: 'Datasets',
+              url: '/library/datasets',
+              icon: Database,
+            },
+            {
+              title: 'Dokumente',
+              url: '/library/documents',
+              icon: FileText,
+            },
+          ],
         },
         {
           title: 'Projekte',

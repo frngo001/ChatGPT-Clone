@@ -16,6 +16,8 @@ const Response = memo(({ children, className, ...props }: ResponseProps) => {
       className={cn(
         // Remove top margin from first child and bottom margin from last child
         "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        // Ensure proper list styling
+        "[&_ul]:list-disc [&_ol]:list-decimal [&_li]:leading-relaxed",
         className
       )}
       {...props}

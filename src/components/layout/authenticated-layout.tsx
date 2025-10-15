@@ -1,11 +1,16 @@
-import { Outlet } from '@tanstack/react-router'
+import { Outlet, useLocation } from '@tanstack/react-router'
 import { getCookie } from '@/lib/cookies'
 import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
+import { Header } from '@/components/layout/header'
 import { SkipToMain } from '@/components/skip-to-main'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { ConfigDrawer } from '@/components/config-drawer'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+import { ModelSelector } from '@/components/ollama-chat/model-selector'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -13,6 +18,11 @@ type AuthenticatedLayoutProps = {
 
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const defaultOpen = getCookie('sidebar_state') !== 'false'
+  const location = useLocation()
+  
+  // Check if we're on a chat page to show chat-specific components
+  const isChatPage = location.pathname.startsWith('/ollama-chat')
+  
   return (
     <SearchProvider>
       <LayoutProvider>
@@ -33,7 +43,21 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
               'peer-data-[variant=inset]:has-[[data-layout=fixed]]:h-[calc(100svh-(var(--spacing)*4))]'
             )}
           >
-            {children ?? <Outlet />}
+            <Header fixed>
+              {isChatPage && (
+                <div className='mx-auto flex items-center'>
+                  <ModelSelector />
+                </div>
+              )}
+              <div className='ms-auto flex items-center space-x-4'>
+                <ThemeSwitch />
+                <ConfigDrawer />
+                <ProfileDropdown />
+              </div>
+            </Header>
+            <div className="flex flex-1 flex-col">
+              {children ?? <Outlet />}
+            </div>
           </SidebarInset>
         </SidebarProvider>
       </LayoutProvider>

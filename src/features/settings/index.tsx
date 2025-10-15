@@ -1,11 +1,6 @@
 import { Outlet } from '@tanstack/react-router'
 import { Monitor, Palette, Wrench, UserCog, Bot } from 'lucide-react'
-import { Separator } from '@/components/ui/separator'
-import { ConfigDrawer } from '@/components/config-drawer'
-import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { ThemeSwitch } from '@/components/theme-switch'
 import { SidebarNav } from './components/sidebar-nav'
 
 // All titles translated to German
@@ -39,26 +34,15 @@ const sidebarNavItems = [
 
 export function Settings() {
   return (
-    <>
-      {/* ===== Top Heading ===== */}
-      <Header>
-        <div className='ms-auto flex items-center space-x-4'>
-          <ThemeSwitch />
-          <ConfigDrawer />
-          <ProfileDropdown />
+    <Main fixed>
+      <div className='flex flex-1 flex-col space-y-2 overflow-hidden md:space-y-2 lg:flex-row lg:space-y-0 lg:space-x-12'>
+        <aside className='top-0 lg:sticky lg:w-1/5'>
+          <SidebarNav items={sidebarNavItems} />
+        </aside>
+        <div className='flex w-full overflow-y-hidden p-1'>
+          <Outlet />
         </div>
-      </Header>
-
-      <Main fixed>
-        <div className='flex flex-1 flex-col space-y-2 overflow-hidden md:space-y-2 lg:flex-row lg:space-y-0 lg:space-x-12'>
-          <aside className='top-0 lg:sticky lg:w-1/5'>
-            <SidebarNav items={sidebarNavItems} />
-          </aside>
-          <div className='flex w-full overflow-y-hidden p-1'>
-            <Outlet />
-          </div>
-        </div>
-      </Main>
-    </>
+      </div>
+    </Main>
   )
 }

@@ -3,7 +3,7 @@
 import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "./ui/button";
-import { ImageIcon } from "lucide-react";
+import { Images } from "lucide-react";
 
 interface MultiImagePickerProps {
   onImagesPick: (base64Images: string[]) => void;
@@ -45,7 +45,7 @@ const MultiImagePicker: React.FC<MultiImagePickerProps> = ({ onImagesPick, disab
     <div {...getRootProps()} className="cursor-pointer">
       <input disabled={disabled} {...getInputProps()} />
       <Button disabled={disabled} type="button" variant="ghost" size="icon" className="rounded-full shrink-0">
-        <ImageIcon className="w-5 h-5" />
+        <Images className="size-5" />
         {isDragActive && <span className="sr-only">Drop the images here</span>}
       </Button>
     </div>

@@ -2,8 +2,16 @@ import { Message } from "ai";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+// Extended Message type that includes attachments for persistence
+interface ExtendedMessage extends Message {
+  experimental_attachments?: Array<{
+    contentType?: string;
+    url: string;
+  }>;
+}
+
 interface ChatSession {
-  messages: Message[];
+  messages: ExtendedMessage[];
   createdAt: string;
 }
 
@@ -32,8 +40,8 @@ interface Actions {
   setSelectedModel: (selectedModel: string) => void;
   setSelectedProvider: (provider: 'ollama' | 'deepseek') => void;
   getChatById: (chatId: string) => ChatSession | undefined;
-  getMessagesById: (chatId: string) => Message[];
-  saveMessages: (chatId: string, messages: Message[]) => void;
+  getMessagesById: (chatId: string) => ExtendedMessage[];
+  saveMessages: (chatId: string, messages: ExtendedMessage[]) => void;
   updateMessage: (chatId: string, messageId: string, content: string) => void;
   handleDelete: (chatId: string, messageId?: string) => void;
   setUserName: (userName: string) => void;

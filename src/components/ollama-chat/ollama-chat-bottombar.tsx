@@ -5,7 +5,7 @@ import {
   Cross2Icon,
   StopIcon,
 } from "@radix-ui/react-icons";
-import { Mic, SendHorizonal, X } from "lucide-react";
+import { Mic, CircleArrowUp, X } from "lucide-react";
 import useSpeechToText from "@/hooks/useSpeechRecognition";
 import MultiImagePicker from "@/components/image-embedder";
 import useOllamaChatStore from "@/stores/ollama-chat-store";
@@ -170,7 +170,7 @@ export default function OllamaChatBottombar({
                     onClick={handleListenClick}
                     disabled={isLoading}
                   >
-                    <Mic className="w-5 h-5" />
+                    <Mic className="size-6" />
                     {isListening && (
                       <span className="animate-pulse absolute h-[120%] w-[120%] rounded-full bg-blue-500/30" />
                     )}
@@ -189,7 +189,7 @@ export default function OllamaChatBottombar({
                       !selectedModel
                     }
                   >
-                    <SendHorizonal className="w-5 h-5" />
+                    <CircleArrowUp className="size-6" />
                   </Button>
                 </div>
               </div>
@@ -206,9 +206,9 @@ export default function OllamaChatBottombar({
                     <div className="flex text-sm">
                       <img
                         src={image}
-                        width={20}
-                        height={20}
-                        className="h-auto rounded-md w-auto max-w-[100px] max-h-[100px]"
+                        width={40}
+                        height={40}
+                        className="h-auto rounded-md w-auto max-w-[200px] max-h-[200px]"
                         alt=""
                       />
                     </div>

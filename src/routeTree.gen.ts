@@ -29,12 +29,9 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_authenticated/route'
 import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
-import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
-import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedOllamaChatIndexRouteImport } from './routes/_authenticated/ollama-chat.index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
-import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authenticated/apps/index'
 import { Route as ClerkAuthenticatedUserManagementRouteImport } from './routes/clerk/_authenticated/user-management'
 import { Route as ClerkauthSignUpRouteImport } from './routes/clerk/(auth)/sign-up'
 import { Route as ClerkauthSignInRouteImport } from './routes/clerk/(auth)/sign-in'
@@ -44,6 +41,10 @@ import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_a
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedOllamaChatChatIdRouteImport } from './routes/_authenticated/ollama-chat.$chatId'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedLibraryDocumentsIndexRouteImport } from './routes/_authenticated/library/documents/index'
+import { Route as AuthenticatedLibraryDatasetsIndexRouteImport } from './routes/_authenticated/library/datasets/index'
+import { Route as AuthenticatedLibraryDatasetsDatasetIdRouteImport } from './routes/_authenticated/library/datasets/$datasetId'
+import { Route as AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRouteImport } from './routes/_authenticated/library/datasets/$datasetId/files/$fileId'
 
 const LandingRoute = LandingRouteImport.update({
   id: '/landing',
@@ -143,16 +144,6 @@ const AuthenticatedSettingsRouteRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
-  id: '/users/',
-  path: '/users/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedTasksIndexRoute = AuthenticatedTasksIndexRouteImport.update({
-  id: '/tasks/',
-  path: '/tasks/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedSettingsIndexRoute =
   AuthenticatedSettingsIndexRouteImport.update({
     id: '/',
@@ -171,11 +162,6 @@ const AuthenticatedHelpCenterIndexRoute =
     path: '/help-center/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAppsIndexRoute = AuthenticatedAppsIndexRouteImport.update({
-  id: '/apps/',
-  path: '/apps/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const ClerkAuthenticatedUserManagementRoute =
   ClerkAuthenticatedUserManagementRouteImport.update({
     id: '/user-management',
@@ -228,6 +214,30 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedLibraryDocumentsIndexRoute =
+  AuthenticatedLibraryDocumentsIndexRouteImport.update({
+    id: '/library/documents/',
+    path: '/library/documents/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLibraryDatasetsIndexRoute =
+  AuthenticatedLibraryDatasetsIndexRouteImport.update({
+    id: '/library/datasets/',
+    path: '/library/datasets/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLibraryDatasetsDatasetIdRoute =
+  AuthenticatedLibraryDatasetsDatasetIdRouteImport.update({
+    id: '/library/datasets/$datasetId',
+    path: '/library/datasets/$datasetId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute =
+  AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRouteImport.update({
+    id: '/files/$fileId',
+    path: '/files/$fileId',
+    getParentRoute: () => AuthenticatedLibraryDatasetsDatasetIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -257,12 +267,13 @@ export interface FileRoutesByFullPath {
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
-  '/apps': typeof AuthenticatedAppsIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/ollama-chat/': typeof AuthenticatedOllamaChatIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
-  '/tasks': typeof AuthenticatedTasksIndexRoute
-  '/users': typeof AuthenticatedUsersIndexRoute
+  '/library/datasets/$datasetId': typeof AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren
+  '/library/datasets': typeof AuthenticatedLibraryDatasetsIndexRoute
+  '/library/documents': typeof AuthenticatedLibraryDocumentsIndexRoute
+  '/library/datasets/$datasetId/files/$fileId': typeof AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -289,12 +300,13 @@ export interface FileRoutesByTo {
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
-  '/apps': typeof AuthenticatedAppsIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/ollama-chat': typeof AuthenticatedOllamaChatIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
-  '/tasks': typeof AuthenticatedTasksIndexRoute
-  '/users': typeof AuthenticatedUsersIndexRoute
+  '/library/datasets/$datasetId': typeof AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren
+  '/library/datasets': typeof AuthenticatedLibraryDatasetsIndexRoute
+  '/library/documents': typeof AuthenticatedLibraryDocumentsIndexRoute
+  '/library/datasets/$datasetId/files/$fileId': typeof AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -327,12 +339,13 @@ export interface FileRoutesById {
   '/clerk/(auth)/sign-in': typeof ClerkauthSignInRoute
   '/clerk/(auth)/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/_authenticated/user-management': typeof ClerkAuthenticatedUserManagementRoute
-  '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/_authenticated/ollama-chat/': typeof AuthenticatedOllamaChatIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
-  '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
-  '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/library/datasets/$datasetId': typeof AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren
+  '/_authenticated/library/datasets/': typeof AuthenticatedLibraryDatasetsIndexRoute
+  '/_authenticated/library/documents/': typeof AuthenticatedLibraryDocumentsIndexRoute
+  '/_authenticated/library/datasets/$datasetId/files/$fileId': typeof AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -364,12 +377,13 @@ export interface FileRouteTypes {
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
-    | '/apps'
     | '/help-center'
     | '/ollama-chat/'
     | '/settings/'
-    | '/tasks'
-    | '/users'
+    | '/library/datasets/$datasetId'
+    | '/library/datasets'
+    | '/library/documents'
+    | '/library/datasets/$datasetId/files/$fileId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -396,12 +410,13 @@ export interface FileRouteTypes {
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
-    | '/apps'
     | '/help-center'
     | '/ollama-chat'
     | '/settings'
-    | '/tasks'
-    | '/users'
+    | '/library/datasets/$datasetId'
+    | '/library/datasets'
+    | '/library/documents'
+    | '/library/datasets/$datasetId/files/$fileId'
   id:
     | '__root__'
     | '/'
@@ -433,12 +448,13 @@ export interface FileRouteTypes {
     | '/clerk/(auth)/sign-in'
     | '/clerk/(auth)/sign-up'
     | '/clerk/_authenticated/user-management'
-    | '/_authenticated/apps/'
     | '/_authenticated/help-center/'
     | '/_authenticated/ollama-chat/'
     | '/_authenticated/settings/'
-    | '/_authenticated/tasks/'
-    | '/_authenticated/users/'
+    | '/_authenticated/library/datasets/$datasetId'
+    | '/_authenticated/library/datasets/'
+    | '/_authenticated/library/documents/'
+    | '/_authenticated/library/datasets/$datasetId/files/$fileId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -602,20 +618,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/users/': {
-      id: '/_authenticated/users/'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof AuthenticatedUsersIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/tasks/': {
-      id: '/_authenticated/tasks/'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof AuthenticatedTasksIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/settings/': {
       id: '/_authenticated/settings/'
       path: '/'
@@ -635,13 +637,6 @@ declare module '@tanstack/react-router' {
       path: '/help-center'
       fullPath: '/help-center'
       preLoaderRoute: typeof AuthenticatedHelpCenterIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/apps/': {
-      id: '/_authenticated/apps/'
-      path: '/apps'
-      fullPath: '/apps'
-      preLoaderRoute: typeof AuthenticatedAppsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/clerk/_authenticated/user-management': {
@@ -707,6 +702,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/library/documents/': {
+      id: '/_authenticated/library/documents/'
+      path: '/library/documents'
+      fullPath: '/library/documents'
+      preLoaderRoute: typeof AuthenticatedLibraryDocumentsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/library/datasets/': {
+      id: '/_authenticated/library/datasets/'
+      path: '/library/datasets'
+      fullPath: '/library/datasets'
+      preLoaderRoute: typeof AuthenticatedLibraryDatasetsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/library/datasets/$datasetId': {
+      id: '/_authenticated/library/datasets/$datasetId'
+      path: '/library/datasets/$datasetId'
+      fullPath: '/library/datasets/$datasetId'
+      preLoaderRoute: typeof AuthenticatedLibraryDatasetsDatasetIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/library/datasets/$datasetId/files/$fileId': {
+      id: '/_authenticated/library/datasets/$datasetId/files/$fileId'
+      path: '/files/$fileId'
+      fullPath: '/library/datasets/$datasetId/files/$fileId'
+      preLoaderRoute: typeof AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRouteImport
+      parentRoute: typeof AuthenticatedLibraryDatasetsDatasetIdRoute
+    }
   }
 }
 
@@ -748,24 +771,42 @@ const AuthenticatedOllamaChatRouteWithChildren =
     AuthenticatedOllamaChatRouteChildren,
   )
 
+interface AuthenticatedLibraryDatasetsDatasetIdRouteChildren {
+  AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute: typeof AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute
+}
+
+const AuthenticatedLibraryDatasetsDatasetIdRouteChildren: AuthenticatedLibraryDatasetsDatasetIdRouteChildren =
+  {
+    AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute:
+      AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute,
+  }
+
+const AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren =
+  AuthenticatedLibraryDatasetsDatasetIdRoute._addFileChildren(
+    AuthenticatedLibraryDatasetsDatasetIdRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedOllamaChatRoute: typeof AuthenticatedOllamaChatRouteWithChildren
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
-  AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
-  AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
-  AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
+  AuthenticatedLibraryDatasetsDatasetIdRoute: typeof AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren
+  AuthenticatedLibraryDatasetsIndexRoute: typeof AuthenticatedLibraryDatasetsIndexRoute
+  AuthenticatedLibraryDocumentsIndexRoute: typeof AuthenticatedLibraryDocumentsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedOllamaChatRoute: AuthenticatedOllamaChatRouteWithChildren,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
-  AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
-  AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
-  AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
+  AuthenticatedLibraryDatasetsDatasetIdRoute:
+    AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren,
+  AuthenticatedLibraryDatasetsIndexRoute:
+    AuthenticatedLibraryDatasetsIndexRoute,
+  AuthenticatedLibraryDocumentsIndexRoute:
+    AuthenticatedLibraryDocumentsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

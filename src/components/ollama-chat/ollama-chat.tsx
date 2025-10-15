@@ -17,9 +17,17 @@ type Attachment = {
   url: string;
 };
 
+// Extended Message type that includes attachments for persistence
+interface ExtendedMessage extends Message {
+  experimental_attachments?: Array<{
+    contentType?: string;
+    url: string;
+  }>;
+}
+
 export interface ChatProps {
   id: string;
-  initialMessages: Message[] | [];
+  initialMessages: ExtendedMessage[] | [];
 }
 
 export default function OllamaChat({ initialMessages, id }: ChatProps) {
@@ -62,7 +70,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     },
     onFinish: (message) => {
       const savedMessages = getMessagesById(id);
-      saveMessages(id, [...savedMessages, message]);
+      saveMessages(id, [...savedMessages, message as ExtendedMessage]);
       setLoadingSubmit(false);
       setApiError(null); // Clear error on successful completion
       navigate({ to: `/ollama-chat/${id}` });
@@ -120,6 +128,12 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       id: uuidv4(),
       role: "user",
       content: input,
+      ...(base64Images && {
+        experimental_attachments: base64Images.map((image) => ({
+          contentType: "image/base64",
+          url: image,
+        })),
+      }),
     };
 
     setLoadingSubmit(true);
@@ -152,20 +166,20 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     };
 
     handleSubmit(e, requestOptions);
-    saveMessages(id, [...messages, userMessage]);
+    saveMessages(id, [...messages as ExtendedMessage[], userMessage as ExtendedMessage]);
     setBase64Images(null);
   };
 
   const removeLatestMessage = () => {
     const updatedMessages = messages.slice(0, -1);
     setMessages(updatedMessages);
-    saveMessages(id, updatedMessages);
+    saveMessages(id, updatedMessages as ExtendedMessage[]);
     return updatedMessages;
   };
 
   const handleStop = () => {
     stop();
-    saveMessages(id, [...messages]);
+    saveMessages(id, [...messages as ExtendedMessage[]]);
     setLoadingSubmit(false);
   };
 

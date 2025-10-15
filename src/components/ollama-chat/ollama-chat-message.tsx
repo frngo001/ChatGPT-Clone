@@ -2,6 +2,14 @@ import React, { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Message } from "ai/react";
 import type { ChatRequestOptions } from "ai";
+
+// Extended Message type that includes attachments for persistence
+interface ExtendedMessage extends Message {
+  experimental_attachments?: Array<{
+    contentType?: string;
+    url: string;
+  }>;
+}
 import { CheckIcon, CopyIcon } from "@radix-ui/react-icons";
 import { RefreshCcw } from "lucide-react";
 import {
@@ -10,7 +18,6 @@ import {
 } from "@/components/ui/chat/chat-bubble";
 import ButtonWithTooltip from "@/components/button-with-tooltip";
 import { Button } from "@/components/ui/button";
-import CodeDisplayBlock from "@/components/code-display-block";
 import TableDisplayBlock from "@/components/table-display-block";
 import { Response } from "@/components/ui/response";
 import {
@@ -20,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 
 export type ChatMessageProps = {
-  message: Message;
+  message: ExtendedMessage;
   isLast: boolean;
   isLoading: boolean | undefined;
   reload: (chatRequestOptions?: ChatRequestOptions) => Promise<string | null | undefined>;
@@ -157,7 +164,7 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
         .map((attachment, index) => (
           <div
             key={`${message.id}-${index}`}
-            className="w-10 h-10 flex-shrink-0 overflow-hidden rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
+            className="w-25 h-25 flex-shrink-0 overflow-hidden rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => setSelectedImage(attachment.url)}
           >
             <img
@@ -178,7 +185,7 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
         </summary>
         <div ref={thinkContentRef} className="mt-2 text-muted-foreground ml-4 max-h-48 overflow-y-auto relative">
           <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent pointer-events-none z-10"></div>
-          <Response className="text-xs leading-relaxed text-muted-foreground [&>h1]:text-sm [&>h1]:font-bold [&>h1]:mb-1 [&>h2]:text-xs [&>h2]:font-semibold [&>h2]:mb-1 [&>h3]:text-xs [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-1 [&>ul]:list-disc [&>ul]:ml-2 [&>ol]:list-decimal [&>ol]:ml-2 [&>li]:mb-0.5 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-xs [&>pre]:bg-muted [&>pre]:p-2 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-2 [&>blockquote]:border-border [&>blockquote]:pl-2 [&>blockquote]:italic [&>a]:text-blue-400 [&>a]:hover:text-blue-600 [&>a]:underline">
+          <Response className="text-xs leading-relaxed text-muted-foreground [&>h1]:text-sm [&>h1]:font-bold [&>h1]:mb-1 [&>h2]:text-xs [&>h2]:font-semibold [&>h2]:mb-1 [&>h3]:text-xs [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-1 [&_ul]:list-disc [&_ul]:ml-8 [&_ul]:space-y-0 [&_ol]:list-decimal [&_ol]:ml-8 [&_ol]:space-y-0 [&_li]:mb-0 [&_li]:leading-6 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-xs [&>pre]:bg-muted [&>pre]:p-2 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-2 [&>blockquote]:border-border [&>blockquote]:pl-2 [&>blockquote]:italic [&>a]:text-blue-400 [&>a]:hover:text-blue-600 [&>a]:underline">
             {thinkContent}
           </Response>
         </div>
@@ -231,7 +238,7 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
                 ) : (
                   <Response 
                     key={`${index}-${partIndex}`}
-                    className="text-sm leading-relaxed [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4 [&>li]:mb-1 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-4 [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:italic [&>a]:text-blue-500 [&>a]:hover:text-blue-700 [&>a]:underline"
+                    className="text-sm leading-relaxed [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&_ul]:list-disc [&_ul]:ml-10 [&_ul]:space-y-0 [&_ol]:list-decimal [&_ol]:ml-10 [&_ol]:space-y-0 [&_li]:mb-0 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-4 [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:italic [&>a]:text-blue-500 [&>a]:hover:text-blue-700 [&>a]:underline"
                   >
                     {partItem.content}
                   </Response>
@@ -244,7 +251,7 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
           return (
             <Response 
               key={index} 
-              className="text-sm leading-relaxed [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4 [&>li]:mb-1 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-4 [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:italic [&>a]:text-blue-500 [&>a]:hover:text-blue-700 [&>a]:underline"
+              className="text-sm leading-relaxed [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&_ul]:list-disc [&_ul]:ml-10 [&_ul]:space-y-0 [&_ol]:list-decimal [&_ol]:ml-10 [&_ol]:space-y-0 [&_li]:mb-0 [&_li]:leading-7 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-4 [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:italic [&>a]:text-blue-500 [&>a]:hover:text-blue-700 [&>a]:underline"
             >
               {part}
             </Response>
@@ -253,9 +260,12 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
       } else {
         // Code block
         return (
-          <pre className="whitespace-pre-wrap" key={index}>
-            <CodeDisplayBlock code={part} />
-          </pre>
+          <Response 
+            key={index} 
+            className="text-sm leading-relaxed [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>pre]:border [&>pre]:border-border [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm"
+          >
+            {`\`\`\`${part}\`\`\``}
+          </Response>
         );
       }
     });
@@ -318,7 +328,7 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
               <img
                 src={selectedImage}
                 alt="Full size image"
-                className="max-w-full max-h-[70vh] object-contain rounded-md"
+                className="max-w-full max-h-[100vh] object-contain rounded-md"
               />
             )}
           </div>

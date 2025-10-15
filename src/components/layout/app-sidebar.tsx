@@ -1,5 +1,4 @@
 import { useLayout } from '@/context/layout-provider'
-import { useLocation } from '@tanstack/react-router'
 import {
   Sidebar,
   SidebarContent,
@@ -9,20 +8,18 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 // import { AppTitle } from './app-title'
-import { sidebarData } from './data/sidebar-data'
-import { NavGroup } from './nav-group'
+import { useDynamicSidebarData } from './data/dynamic-sidebar-data'
+import { NavGroupExtended } from './nav-group-extended'
 import { TeamSwitcher } from './team-switcher'
 import { OllamaChatHistory } from './ollama-chat-history'
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
   const { state, isMobile } = useSidebar()
-  const location = useLocation()
+  const sidebarData = useDynamicSidebarData()
   
-  // Check if we're on the ollama-chat page or settings page
-  const isOllamaChatPage = location.pathname.startsWith('/ollama-chat')
-  const isSettingsPage = location.pathname.startsWith('/settings')
-  const shouldShowChatHistory = isOllamaChatPage || isSettingsPage
+  // Show chat history on all pages
+  const shouldShowChatHistory = true
   
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
@@ -35,9 +32,10 @@ export function AppSidebar() {
         {/* Fixed navigation groups */}
         <div className="flex-shrink-0">
           {sidebarData.navGroups.map((props, index) => (
-            <NavGroup key={index} {...props} />
+            <NavGroupExtended key={index} {...props} />
           ))}
         </div>
+
         
         {/* Only show Chat-Verlauf when sidebar is expanded (not collapsed) */}
         {/* On mobile, always show when sidebar is open */}
