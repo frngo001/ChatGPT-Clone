@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Frontend - Agent AI
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agent-ai-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - cognee
+    networks:
+      - agent-ai-network
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - OLLAMA_URL=http://imeso-ki-02:11434
+      - COGNEE_URL=http://imeso-ki-02:8080
+      # Cognee Environment Variables for Frontend
+      - LLM_PROVIDER=${LLM_PROVIDER}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_ENDPOINT=${LLM_ENDPOINT}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
+      - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS}
+      - EMBEDDING_ENDPOINT=${EMBEDDING_ENDPOINT}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - COGNEE_DATA_DIR=${COGNEE_DATA_DIR}
+      # Frontend specific Cognee config
+      - VITE_COGNEE_URL=http://imeso-ki-02:8080
+      - VITE_OLLAMA_URL=http://imeso-ki-02:11434
+    volumes:
+      - frontend_logs:/var/log/nginx
+
+  # Cognee - AI Memory System
+  cognee:
+    image: cognee/cognee:main
+    container_name: cognee-container
+    ports:
+      - "8080:8000"
+    environment:
+      # LLM Configuration
+      - LLM_PROVIDER=${LLM_PROVIDER}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_ENDPOINT=${LLM_ENDPOINT}
+      - LLM_API_KEY=${LLM_API_KEY}
+      # Embedding Configuration
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
+      - EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS}
+      - EMBEDDING_ENDPOINT=${EMBEDDING_ENDPOINT}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY}
+      # Database Configuration
+      - DATABASE_URL=${DATABASE_URL}
+      - COGNEE_DATA_DIR=${COGNEE_DATA_DIR}
+    volumes:
+      - cognee_data:/app/data
+    networks:
+      - agent-ai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    extra_hosts:
+      - "imeso-ki-02:host-gateway"
+
+volumes:
+  cognee_data:
+  frontend_logs:
+
+networks:
+  agent-ai-network:
+    driver: bridge
