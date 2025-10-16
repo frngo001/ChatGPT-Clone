@@ -67,9 +67,9 @@ export const InlineCitationText = ({
 export type InlineCitationCardProps = ComponentProps<typeof HoverCard>;
 
 export const InlineCitationCard = React.forwardRef<
-  React.ElementRef<typeof HoverCard>,
+  HTMLDivElement,
   InlineCitationCardProps
->((props, ref) => (
+>((props, _ref) => (
   <HoverCard closeDelay={0} openDelay={0} {...props} />
 ));
 InlineCitationCard.displayName = "InlineCitationCard";
@@ -117,7 +117,7 @@ export const InlineCitationCardBody = ({
   className,
   ...props
 }: InlineCitationCardBodyProps) => (
-  <HoverCardContent className={cn('relative w-80 p-0', className)} {...props} />
+  <HoverCardContent className={cn('relative w-80 p-0', className)} {...props} ref={undefined} />
 );
 
 export type InlineCitationCarouselProps = ComponentProps<typeof Carousel>;

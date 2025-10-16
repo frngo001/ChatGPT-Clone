@@ -1,0 +1,1 @@
+import{p as s}from"./middleware-BFCXRDQO.js";import{d as o}from"./index-Dh7oQLGv.js";const r=o()(s(e=>({showThemeSettings:!0,selectedFont:"inter",setShowThemeSettings:t=>e({showThemeSettings:t}),setSelectedFont:t=>e({selectedFont:t})}),{name:"display-settings-store",partialize:e=>({showThemeSettings:e.showThemeSettings,selectedFont:e.selectedFont})}));export{r as u};

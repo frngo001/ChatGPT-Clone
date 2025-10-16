@@ -529,7 +529,6 @@ Das vorliegende Dokument beschreibt die Installation des Systems [CITATION:1]. D
         console.log('Using DeepSeek with enhanced context...');
         
         // Step 3: Use existing DeepSeek logic directly
-        const { convertToCoreMessages } = await import('ai');
         
         const deepseekMessages = [
           { role: 'system' as const, content: enhancedSystemPrompt },

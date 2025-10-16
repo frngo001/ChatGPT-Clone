@@ -1,5 +1,22 @@
 ### Fix - 16.10.2025
 
+- **TypeScript Build Errors:** Behebung aller TypeScript-Kompilierungsfehler
+  - NavGroup Type-Kompatibilitätsprobleme behoben
+  - Ungenutzte Imports in ai-markdown.tsx und cognee-markdown.tsx entfernt
+  - @types/react-syntax-highlighter installiert für fehlende Type-Definitionen
+  - Inline-citation.tsx ref-Type-Probleme behoben
+  - Appearance-form.tsx Form-Type-Issues korrigiert
+  - Chat-api.ts ungenutzte Imports entfernt
+  - SyntaxHighlighter Style-Type-Probleme behoben
+  - NavGroup-Extended map-Property-Fehler korrigiert
+  - Alle TypeScript-Fehler erfolgreich behoben, Build läuft ohne Fehler
+
+- **Dependencies Update:** Fehlende Bibliotheken zur package.json hinzugefügt
+  - rehype-slug (^6.0.0) für Markdown-Slug-Generierung
+  - embla-carousel-react (^8.6.0) für Carousel-Komponenten
+  - shiki (^3.13.0) für Syntax-Highlighting
+  - Alle verwendeten Bibliotheken sind jetzt in package.json vorhanden
+
 - **Docker Setup:** Vollständige Docker-Integration mit Cognee und Ollama
   - Docker Compose Konfiguration für Production und Development
   - Cognee-Integration mit DeepSeek LLM und OpenAI Embeddings
@@ -7,6 +24,8 @@
   - Alle Services konfiguriert für imeso-ki-02
   - Umfassende Dokumentation und Deployment-Skripte
   - Behebung von dotenv-Dependency-Problem in Development-Container
+  - Hinzufügung fehlender Markdown-Dependencies (remark-emoji, rehype-highlight, rehype-raw)
+  - Node.js 22 Support für Vite 7.x Kompatibilität
 
 ### Feat - 15.01.2025
 

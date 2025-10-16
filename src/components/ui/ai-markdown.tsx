@@ -11,7 +11,6 @@ import rehypeSlug from "rehype-slug"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  Suggestion,
   Suggestions,
   SuggestionItem,
 } from "@/components/ai-elements/suggestion"
@@ -366,54 +365,6 @@ const renderContentWithCitations = (
   )
 }
 
-/**
- * Enhanced code block rendering with improved syntax highlighting
- */
-const renderCodeBlock = (content: string, language?: string): React.ReactNode => {
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkMath, remarkEmoji]}
-      rehypePlugins={[rehypeRaw, rehypeSlug, rehypeHighlight]}
-      components={{
-        code: ({ node, inline, className, children, ...props }) => {
-          const match = /language-(\w+)/.exec(className || "")
-          const language = match ? match[1] : ""
-          
-          if (!inline && language) {
-            return (
-              <div className="relative">
-                <pre className="bg-muted p-3 rounded overflow-x-auto">
-                  <code className={`language-${language}`} {...props}>
-                    {String(children).replace(/\n$/, "")}
-                  </code>
-                </pre>
-                <button
-                  className="absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => {
-                    navigator.clipboard.writeText(String(children))
-                  }}
-                >
-                  Copy
-                </button>
-              </div>
-            )
-          }
-          
-          return (
-            <code
-              className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
-              {...props}
-            >
-              {children}
-            </code>
-          )
-        },
-      }}
-    >
-      {`\`\`\`${language || 'text'}\n${content}\n\`\`\``}
-    </ReactMarkdown>
-  )
-}
 
 const AIMarkdown: React.FC<AIMarkdownProps> = ({
   content,

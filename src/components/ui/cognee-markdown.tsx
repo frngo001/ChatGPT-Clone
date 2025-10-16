@@ -11,7 +11,6 @@ import rehypeSlug from "rehype-slug"
 import MarkdownRenderer from "./markdown"
 import AIMarkdown from "./ai-markdown"
 import {
-  Suggestion,
   Suggestions,
   SuggestionItem,
 } from "@/components/ai-elements/suggestion"

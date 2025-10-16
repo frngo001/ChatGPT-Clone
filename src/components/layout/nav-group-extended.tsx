@@ -121,7 +121,7 @@ function SidebarMenuCollapsibleExtended({
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-4 space-y-1">
-                          {subItem.items.map((nestedItem: any) => (
+                          {('items' in subItem && subItem.items) ? subItem.items.map((nestedItem: any) => (
                             <Link
                               key={nestedItem.title}
                               to={nestedItem.url}
@@ -132,7 +132,7 @@ function SidebarMenuCollapsibleExtended({
                               <span className="truncate">{nestedItem.title}</span>
                               {nestedItem.badge && <NavBadge>{nestedItem.badge}</NavBadge>}
                             </Link>
-                          ))}
+                          )) : null}
                         </div>
                       </CollapsibleContent>
                     </SidebarMenuSubItem>

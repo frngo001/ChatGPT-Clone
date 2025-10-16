@@ -1,0 +1,1 @@
+import{p as o}from"./middleware-BFCXRDQO.js";import{d as i}from"./index-Dh7oQLGv.js";const e={username:"",email:"m@example.com",urls:[]},f=i()(o(a=>({profileData:e,updateProfileData:r=>a(t=>({profileData:{...t.profileData,...r}})),resetProfileData:()=>a({profileData:e})}),{name:"profile-settings-store",partialize:a=>({profileData:a.profileData})}));export{f as u};

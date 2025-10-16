@@ -36,7 +36,7 @@ export function AppearanceForm() {
     resolver: zodResolver(appearanceFormSchema),
     defaultValues: {
       theme: (appearanceData.theme as 'light' | 'dark') || (theme as 'light' | 'dark'),
-      font: appearanceData.font || font,
+      font: (appearanceData.font as 'inter' | 'manrope' | 'system') || (font as 'inter' | 'manrope' | 'system'),
     },
   })
 
