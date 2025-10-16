@@ -37,14 +37,14 @@ VITE_COGNEE_URL=http://imeso-ki-02:8080
 LLM_PROVIDER=custom
 LLM_MODEL=deepseek/deepseek-chat
 LLM_ENDPOINT=https://api.deepseek.com/v1
-LLM_API_KEY=sk-..
+LLM_API_KEY=
 
 # Cognee Embedding Configuration
 EMBEDDING_PROVIDER=openai
 EMBEDDING_MODEL=openai/text-embedding-3-large
 EMBEDDING_DIMENSIONS=3072
 EMBEDDING_ENDPOINT=https://api.openai.com/v1
-EMBEDDING_API_KEY=sk-..
+EMBEDDING_API_KEY=
 
 # Cognee Database Configuration
 DATABASE_URL=sqlite:///app/data/cognee.db

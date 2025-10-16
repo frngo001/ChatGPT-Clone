@@ -41,18 +41,16 @@ export default defineConfig({
 
   // Development server configuration
   server: {
-    host: '0.0.0.0', // Allow external connections in Docker
-    port: 5173,
     proxy: {
-      // Proxy Ollama API requests to local server (development)
+      // Proxy Ollama API requests to local server
       '/api/tags': {
-        target: process.env.VITE_OLLAMA_URL || 'http://imeso-ki-02:11434',
+        target: 'http://imeso-ki-02:11434',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/tags/, '/api/tags'),
       },
-      // Proxy Cognee API requests to avoid CORS issues (development)
+      // Proxy Cognee API requests to avoid CORS issues
       '/api/v1': {
-        target: process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8080',
+        target: 'http://imeso-ki-02:8080',
         changeOrigin: true,
         secure: false,
       },
