@@ -4,8 +4,15 @@ FROM node:22-alpine
 # Set working directory
 WORKDIR /app
 
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package*.json ./
+COPY pnpm-lock.yaml ./
+
 # Install dependencies
-RUN npm install
+RUN pnpm install 
 
 # Copy source code
 COPY . .
@@ -14,4 +21,4 @@ COPY . .
 EXPOSE 5173
 
 # Start development server
-CMD ["npm", "run", "dev"]
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]
