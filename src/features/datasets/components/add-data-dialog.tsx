@@ -56,7 +56,7 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || [])
-    const maxSize = 10 * 1024 * 1024 // 10MB in bytes
+    const maxSize = 50 * 1024 * 1024 // 50MB in bytes
     const allowedTypes = [
       'application/pdf',
       'application/msword',
@@ -78,7 +78,7 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
 
     selectedFiles.forEach(file => {
       if (file.size > maxSize) {
-        invalidFiles.push(`${file.name} (zu groß: ${formatFileSize(file.size)}, max. 10MB)`)
+        invalidFiles.push(`${file.name} (zu groß: ${formatFileSize(file.size)}, max. 50MB)`)
         return
       }
 
@@ -147,6 +147,7 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
     if (totalItems === 0) return
 
     setIsUploading(true)
+    let hasErrors = false
     
     // Upload files
     for (let i = 0; i < files.length; i++) {
@@ -174,6 +175,7 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
           idx === i ? { ...f, status: 'completed', progress: 100 } : f
         ))
       } catch (error) {
+        hasErrors = true
         setFiles(prev => prev.map((f, idx) => 
           idx === i ? { 
             ...f, 
@@ -206,6 +208,7 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
           idx === i ? { ...t, status: 'completed', progress: 100 } : t
         ))
       } catch (error) {
+        hasErrors = true
         setTexts(prev => prev.map((t, idx) => 
           idx === i ? { 
             ...t, 
@@ -238,6 +241,7 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
           idx === i ? { ...u, status: 'completed', progress: 100 } : u
         ))
       } catch (error) {
+        hasErrors = true
         setUrls(prev => prev.map((u, idx) => 
           idx === i ? { 
             ...u, 
@@ -250,22 +254,20 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
 
     setIsUploading(false)
     
-    // Auto-close dialog when all items are successfully uploaded
-    setTimeout(() => {
-      const allFilesCompleted = files.every(f => f.status === 'completed')
-      const allTextsCompleted = texts.every(t => t.status === 'completed')
-      const allUrlsCompleted = urls.every(u => u.status === 'completed')
-      const hasErrors = files.some(f => f.status === 'error') || 
-                       texts.some(t => t.status === 'error') || 
-                       urls.some(u => u.status === 'error')
+    // Auto-close dialog only if no errors occurred
+    if (!hasErrors) {
+      // Show success toast
+      toast.success(`${totalItems} Element${totalItems !== 1 ? 'e' : ''} erfolgreich hinzugefügt`)
       
-      if (allFilesCompleted && allTextsCompleted && allUrlsCompleted && !hasErrors && totalItems > 0) {
-        onOpenChange(false)
-        setFiles([])
-        setTexts([])
-        setUrls([])
-      }
-    }, 100)
+      // Close dialog and reset state
+      onOpenChange(false)
+      setFiles([])
+      setTexts([])
+      setUrls([])
+    } else {
+      // Show error toast
+      toast.error('Einige Elemente konnten nicht hinzugefügt werden')
+    }
   }, [files, texts, urls, datasetId, uploadFileToDataset, addTextToDataset, addUrlToDataset, onOpenChange])
 
   const formatFileSize = (bytes: number) => {
@@ -301,8 +303,21 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
 
   const totalItems = files.length + texts.length + urls.length
 
+  // Reset state when dialog closes
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setFiles([])
+      setTexts([])
+      setUrls([])
+      setNewText('')
+      setNewUrl('')
+      setIsUploading(false)
+    }
+    onOpenChange(open)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Daten zu Dataset hinzufügen</DialogTitle>
@@ -339,7 +354,7 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
                   Klicken Sie, um Dateien auszuwählen oder ziehen Sie sie hierher
                 </p>
                 <div className="text-xs text-muted-foreground">
-                  Unterstützte Formate: PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX, JPG, PNG, GIF, WEBP (max. 10MB)
+                  Unterstützte Formate: PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX, JPG, PNG, GIF, WEBP (max. 50MB)
                 </div>
                 <input
                   ref={fileInputRef}
@@ -508,7 +523,7 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
         </Tabs>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleDialogClose(false)}>
             Abbrechen
           </Button>
           <Button 

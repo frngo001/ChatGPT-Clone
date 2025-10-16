@@ -54,7 +54,7 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
       handleDelete(chatToDelete)
       setDeleteDialogOpen(false)
       setChatToDelete(null)
-      navigate({ to: '/ollama-chat' })
+      navigate({ to: '/chat' })
     }
   }
 
@@ -169,7 +169,7 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
                     <button
                       onClick={() => {
                         setCurrentChatId(chat.id)
-                        navigate({ to: '/ollama-chat/$chatId', params: { chatId: chat.id } })
+                        navigate({ to: '/chat/$chatId', params: { chatId: chat.id } })
                         setOpenMobile(false)
                       }}
                       className="flex-1 text-left min-w-0 w-full"

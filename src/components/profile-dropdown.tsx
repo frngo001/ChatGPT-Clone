@@ -49,7 +49,7 @@ export function ProfileDropdown() {
         case 'n':
           if (event.shiftKey) {
             event.preventDefault()
-            navigate({ to: '/ollama-chat' })
+            navigate({ to: '/chat' })
           }
           break
         case 'p':

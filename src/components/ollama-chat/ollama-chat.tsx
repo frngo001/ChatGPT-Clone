@@ -30,6 +30,16 @@ export interface ChatProps {
   initialMessages: ExtendedMessage[] | [];
 }
 
+// Helper function to format message history for Cognee
+const formatMessageHistoryForCognee = (messages: Message[]): string => {
+  return messages
+    .map((message) => {
+      const role = message.role === 'user' ? 'User' : 'AI';
+      return `${role}: ${message.content}`;
+    })
+    .join('\n\n');
+};
+
 export default function OllamaChat({ initialMessages, id }: ChatProps) {
   const navigate = useNavigate();
   const [apiError, setApiError] = React.useState<string | null>(null);
@@ -47,6 +57,9 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   const batchSize = useOllamaChatStore((state) => state.batchSize);
   const throttleDelay = useOllamaChatStore((state) => state.throttleDelay);
   const systemPrompt = useOllamaChatStore((state) => state.systemPrompt);
+  // Cognee settings from store
+  const chatMode = useOllamaChatStore((state) => state.chatMode);
+  const selectedDataset = useOllamaChatStore((state) => state.selectedDataset);
   
   const {
     messages,
@@ -61,11 +74,12 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   } = useChat({
     id,
     initialMessages,
-    api: selectedProvider === 'ollama' ? "/api/ollama/chat" : "/api/deepseek/chat",
+    api: chatMode === 'cognee' ? "/api/cognee/search" : (selectedProvider === 'ollama' ? "/api/ollama/chat" : "/api/deepseek/chat"),
     onResponse: (response) => {
       if (response) {
         setLoadingSubmit(false);
         setApiError(null); // Clear error on successful response
+        
       }
     },
     onFinish: (message) => {
@@ -73,12 +87,15 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       saveMessages(id, [...savedMessages, message as ExtendedMessage]);
       setLoadingSubmit(false);
       setApiError(null); // Clear error on successful completion
-      navigate({ to: `/ollama-chat/${id}` });
+      
+      
+      navigate({ to: `/chat/${id}` });
     },
     onError: (error) => {
       setLoadingSubmit(false);
       console.error(error.message);
       console.error(error);
+      
       
       // Determine error type and show appropriate message
       let errorMessage = "Ein unbekannter Fehler ist aufgetreten.";
@@ -117,10 +134,16 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    window.history.replaceState({}, "", `/ollama-chat/${id}`);
+    window.history.replaceState({}, "", `/chat/${id}`);
 
-    if (!selectedModel) {
+    // Validation based on chat mode
+    if (chatMode === 'general' && !selectedModel) {
       toast.error("Please select a model");
+      return;
+    }
+    
+    if (chatMode === 'cognee' && !selectedDataset) {
+      toast.error("Please select a dataset");
       return;
     }
 
@@ -145,7 +168,15 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
         }))
       : [];
 
-    const requestOptions: ChatRequestOptions = {
+    // Different request body based on chat mode
+    const requestOptions: ChatRequestOptions = chatMode === 'cognee' ? {
+      body: {
+        searchType: "CHUNKS",
+        query: formatMessageHistoryForCognee([...messages as ExtendedMessage[], userMessage as ExtendedMessage]),
+        datasets: [selectedDataset],
+        systemPrompt: systemPrompt,
+      },
+    } : {
       body: {
         selectedModel: selectedModel,
         systemPrompt: systemPrompt,
@@ -164,6 +195,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
         experimental_attachments: attachments,
       }),
     };
+
 
     handleSubmit(e, requestOptions);
     saveMessages(id, [...messages as ExtendedMessage[], userMessage as ExtendedMessage]);
@@ -184,7 +216,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   };
 
   return (
-    <div className="flex flex-col w-full max-w-5xl h-full ollama-chat-container">
+    <div className="flex flex-col w-full max-w-5xl h-full chat-container">
       <OllamaChatTopbar
         isLoading={isLoading}
         chatId={id}
@@ -225,10 +257,29 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
             messages={messages}
             isLoading={isLoading}
             loadingSubmit={loadingSubmit}
+            isCogneeMode={chatMode === 'cognee'}
+            useAIElements={true} // Enable AI Elements for better inline code support
+            onQuestionSelect={(question) => {
+              // Set the question as input and submit
+              setInput(question);
+              // Trigger form submission programmatically
+              setTimeout(() => {
+                const form = document.querySelector('form');
+                if (form) {
+                  form.requestSubmit();
+                }
+              }, 100);
+            }}
             reload={async () => {
               removeLatestMessage();
 
-              const requestOptions: ChatRequestOptions = {
+              const requestOptions: ChatRequestOptions = chatMode === 'cognee' ? {
+                body: {
+                  query: messages[messages.length - 1]?.content || '',
+                  datasets: [selectedDataset],
+                  systemPrompt: systemPrompt,
+                },
+              } : {
                 body: {
                   selectedModel: selectedModel,
                   streamingConfig: {

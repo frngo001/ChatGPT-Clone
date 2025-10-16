@@ -96,6 +96,11 @@ export function DatasetDetailPage() {
     try {
       await processDatasets([datasetId])
       toast.success(`Dataset "${dataset.name}" wird verarbeitet.`)
+      
+      // Check dataset status after 1 second to see if processing started
+      setTimeout(() => {
+        checkDatasetStatus(datasetId)
+      }, 50)
     } catch (error) {
       toast.error(`Verarbeitung fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`)
     } finally {

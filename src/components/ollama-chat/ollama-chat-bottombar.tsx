@@ -5,12 +5,18 @@ import {
   Cross2Icon,
   StopIcon,
 } from "@radix-ui/react-icons";
-import { Mic, CircleArrowUp, X } from "lucide-react";
+import { Mic, CircleArrowUp, X, ChevronDown } from "lucide-react";
 import useSpeechToText from "@/hooks/useSpeechRecognition";
 import MultiImagePicker from "@/components/image-embedder";
 import useOllamaChatStore from "@/stores/ollama-chat-store";
 import type { ChatRequestOptions } from "ai";
 import { ChatInput } from "@/components/ui/chat/chat-input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ChatBottombarProps {
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
@@ -36,6 +42,9 @@ export default function OllamaChatBottombar({
   const base64Images = useOllamaChatStore((state) => state.base64Images);
   const setBase64Images = useOllamaChatStore((state) => state.setBase64Images);
   const selectedModel = useOllamaChatStore((state) => state.selectedModel);
+  const chatMode = useOllamaChatStore((state) => state.chatMode);
+  const setChatMode = useOllamaChatStore((state) => state.setChatMode);
+  const selectedDataset = useOllamaChatStore((state) => state.selectedDataset);
   
   const [showError, setShowError] = useState(false);
 
@@ -152,10 +161,39 @@ export default function OllamaChatBottombar({
             ) : (
               // Default state
               <div className="flex w-full justify-between">
-                <MultiImagePicker
-                  disabled={isLoading}
-                  onImagesPick={setBase64Images}
-                />
+                <div className="flex items-center gap-2">
+                  <MultiImagePicker
+                    disabled={isLoading}
+                    onImagesPick={setBase64Images}
+                  />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-3 text-xs"
+                        disabled={isLoading}
+                      >
+                        {chatMode === 'general' ? 'General' : 'Cognee'}
+                        <ChevronDown className="ml-1 h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem
+                        onClick={() => setChatMode('general')}
+                        className={chatMode === 'general' ? 'bg-accent' : ''}
+                      >
+                        General Chat
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setChatMode('cognee')}
+                        className={chatMode === 'cognee' ? 'bg-accent' : ''}
+                      >
+                        Cognee Search
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
                 <div>
                   {/* Microphone button with animation when listening */}
                   <Button
@@ -186,7 +224,8 @@ export default function OllamaChatBottombar({
                       isLoading ||
                       !input?.trim() ||
                       isListening ||
-                      !selectedModel
+                      (chatMode === 'general' && !selectedModel) ||
+                      (chatMode === 'cognee' && !selectedDataset)
                     }
                   >
                     <CircleArrowUp className="size-6" />

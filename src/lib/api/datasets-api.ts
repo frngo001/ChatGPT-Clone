@@ -122,6 +122,17 @@ export class DatasetsApiService {
     return response.json()
   }
 
+  // Sanitize dataset name to comply with backend requirements
+  private sanitizeDatasetName(name: string): string {
+    // Replace spaces with underscores and remove dots
+    return name
+      .replace(/\s+/g, '_')  // Replace spaces with underscores
+      .replace(/\./g, '')    // Remove dots
+      .replace(/[^a-zA-Z0-9_-]/g, '_') // Replace any other special characters with underscores
+      .replace(/_+/g, '_')   // Replace multiple consecutive underscores with single underscore
+      .replace(/^_|_$/g, '') // Remove leading and trailing underscores
+  }
+
   // GET /api/v1/datasets - Get all datasets
   async getDatasets(): Promise<DatasetResponse[]> {
     const response = await fetch(`${this.baseUrl}/datasets`, {
@@ -134,10 +145,16 @@ export class DatasetsApiService {
 
   // POST /api/v1/datasets - Create new dataset
   async createDataset(data: CreateDatasetRequest): Promise<DatasetResponse> {
+    // Sanitize dataset name before creating to prevent backend validation errors
+    const sanitizedData = {
+      ...data,
+      name: this.sanitizeDatasetName(data.name)
+    }
+    
     const response = await fetch(`${this.baseUrl}/datasets`, {
       method: 'POST',
       headers: this.getHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify(sanitizedData),
     })
 
     return this.handleResponse<DatasetResponse>(response)
@@ -235,7 +252,9 @@ export class DatasetsApiService {
     
     // Add optional parameters
     if (request.datasetName) {
-      formData.append('datasetName', request.datasetName)
+      // Sanitize dataset name to prevent backend validation errors
+      const sanitizedDatasetName = this.sanitizeDatasetName(request.datasetName)
+      formData.append('datasetName', sanitizedDatasetName)
     }
     
     if (request.node_set && request.node_set.length > 0) {

@@ -18,7 +18,7 @@ export { DatasetDetailPage }
 
 export function DatasetsPage() {
   const navigate = useNavigate()
-  const { datasets, searchDatasets, fetchDatasets, isLoading, error, processDatasets, getUnprocessedDatasets, startStatusPolling, stopStatusPolling } = useDatasetStore()
+  const { datasets, searchDatasets, fetchDatasets, isLoading, error, processDatasets, getUnprocessedDatasets, stopStatusPolling, checkAllDatasetStatuses } = useDatasetStore()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -107,6 +107,11 @@ export function DatasetsPage() {
         description: `${unprocessedDatasets.length} Dataset${unprocessedDatasets.length !== 1 ? 's' : ''} werden verarbeitet.`,
         variant: "success",
       })
+      
+      // Check all dataset statuses after 1 second to see if processing started
+      setTimeout(() => {
+        checkAllDatasetStatuses()
+      }, 1000)
     } catch (error) {
       toast({
         title: "Verarbeitung fehlgeschlagen",

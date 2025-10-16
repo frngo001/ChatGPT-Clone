@@ -32,6 +32,9 @@ export type ChatMessageProps = {
   isLoading: boolean | undefined;
   reload: (chatRequestOptions?: ChatRequestOptions) => Promise<string | null | undefined>;
   isSecondLast?: boolean;
+  isCogneeMode?: boolean;
+  onQuestionSelect?: (question: string) => void;
+  useAIElements?: boolean; // New prop to enable AI Elements
 };
 
 const MOTION_CONFIG = {
@@ -48,7 +51,7 @@ const MOTION_CONFIG = {
   },
 };
 
-function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
+function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false, onQuestionSelect, useAIElements = false }: ChatMessageProps) {
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [isThinkCollapsed, setIsThinkCollapsed] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -110,6 +113,17 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
     
     while ((match = tableRegex.exec(content)) !== null) {
       const tableMarkdown = match[1].trim();
+      
+      // Skip if this is a Citations section (contains [NUMBER] MANUAL: pattern)
+      if (tableMarkdown.includes('[1] MANUAL:') || tableMarkdown.includes('### Citations')) {
+        continue;
+      }
+      
+      // Skip if this looks like a citation entry (contains | SECTION: | TOPIC: | CONTENT: pattern)
+      if (tableMarkdown.includes('| SECTION:') && tableMarkdown.includes('| TOPIC:') && tableMarkdown.includes('| CONTENT:')) {
+        continue;
+      }
+      
       if (tableMarkdown.includes('|') && tableMarkdown.split('\n').length >= 2) {
         // Convert markdown table to HTML
         const lines = tableMarkdown.split('\n').filter(line => line.trim());
@@ -239,6 +253,9 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
                   <Response 
                     key={`${index}-${partIndex}`}
                     className="text-sm leading-relaxed [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&_ul]:list-disc [&_ul]:ml-10 [&_ul]:space-y-0 [&_ol]:list-decimal [&_ol]:ml-10 [&_ol]:space-y-0 [&_li]:mb-0 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-4 [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:italic [&>a]:text-blue-500 [&>a]:hover:text-blue-700 [&>a]:underline"
+                    isCogneeMode={isCogneeMode}
+                    onQuestionSelect={onQuestionSelect}
+                    useAIElements={useAIElements}
                   >
                     {partItem.content}
                   </Response>
@@ -252,6 +269,9 @@ function OllamaChatMessage({ message, isLast, reload }: ChatMessageProps) {
             <Response 
               key={index} 
               className="text-sm leading-relaxed [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&_ul]:list-disc [&_ul]:ml-10 [&_ul]:space-y-0 [&_ol]:list-decimal [&_ol]:ml-10 [&_ol]:space-y-0 [&_li]:mb-0 [&_li]:leading-7 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-4 [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:italic [&>a]:text-blue-500 [&>a]:hover:text-blue-700 [&>a]:underline"
+              isCogneeMode={isCogneeMode}
+              onQuestionSelect={onQuestionSelect}
+              useAIElements={useAIElements}
             >
               {part}
             </Response>

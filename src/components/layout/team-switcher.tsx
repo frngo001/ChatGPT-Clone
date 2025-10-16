@@ -25,7 +25,7 @@ export function TeamSwitcher({ teams }: TeamSwitcherProps) {
             ? 'justify-center' 
             : 'gap-3'
         }`}>
-          <div className='bg-gray-200 dark:bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg'>
+          <div className='bg-secondary dark:bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg'>
             <img src={activeTeam.logo} alt={activeTeam.name} className='size-4' />
           </div>
           {/* Show text only when sidebar is expanded or on mobile */}

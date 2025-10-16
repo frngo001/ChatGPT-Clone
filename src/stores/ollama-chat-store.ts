@@ -32,6 +32,9 @@ interface State {
   batchSize: number;
   throttleDelay: number;
   systemPrompt: string;
+  // Cognee settings
+  chatMode: 'general' | 'cognee';
+  selectedDataset: string | null;
 }
 
 interface Actions {
@@ -55,6 +58,9 @@ interface Actions {
   setBatchSize: (batchSize: number) => void;
   setThrottleDelay: (throttleDelay: number) => void;
   setSystemPrompt: (systemPrompt: string) => void;
+  // Cognee settings actions
+  setChatMode: (chatMode: 'general' | 'cognee') => void;
+  setSelectedDataset: (selectedDataset: string | null) => void;
 }
 
 const useOllamaChatStore = create<State & Actions>()(
@@ -65,7 +71,7 @@ const useOllamaChatStore = create<State & Actions>()(
       currentChatId: null,
       selectedModel: null,
       selectedProvider: 'ollama',
-      userName: "Anonymous",
+      userName: "Imeso",
       isDownloading: false,
       downloadProgress: 0,
       downloadingModel: null,
@@ -75,7 +81,10 @@ const useOllamaChatStore = create<State & Actions>()(
       maxTokens: 1000000,
       batchSize: 20,
       throttleDelay: 50,
-      systemPrompt: "You are a helpful AI assistant. Please provide accurate and helpful responses.", 
+      systemPrompt: "You are a helpful AI assistant. Provide very long, detailed, and comprehensive responses using Markdown formatting. Include ALL relevant information from the provided context without exception. Do not omit any details, no matter how small or seemingly insignificant. Be thorough and exhaustive in your explanations. Structure your response with proper headings, lists, and formatting to ensure clarity and completeness. Always respond in the same language as the user's question. Prioritize completeness over brevity - longer responses are preferred. min length: 1000 words",
+      // Cognee settings defaults
+      chatMode: 'general',
+      selectedDataset: null, 
 
       setBase64Images: (base64Images) => set({ base64Images }),
       setUserName: (userName) => set({ userName }),
@@ -168,6 +177,9 @@ const useOllamaChatStore = create<State & Actions>()(
       setBatchSize: (batchSize) => set({ batchSize }),
       setThrottleDelay: (throttleDelay) => set({ throttleDelay }),
       setSystemPrompt: (systemPrompt) => set({ systemPrompt }),
+      // Cognee settings actions
+      setChatMode: (chatMode) => set({ chatMode }),
+      setSelectedDataset: (selectedDataset) => set({ selectedDataset }),
     }),
     {
       name: "nextjs-ollama-ui-state",
@@ -183,6 +195,8 @@ const useOllamaChatStore = create<State & Actions>()(
         batchSize: state.batchSize,
         throttleDelay: state.throttleDelay,
         systemPrompt: state.systemPrompt,
+        chatMode: state.chatMode,
+        selectedDataset: state.selectedDataset,
       }),
     }
   )

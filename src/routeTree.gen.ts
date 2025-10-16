@@ -13,7 +13,7 @@ import { Route as LandingRouteImport } from './routes/landing'
 import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedOllamaChatRouteImport } from './routes/_authenticated/ollama-chat'
+import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -30,17 +30,16 @@ import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_aut
 import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
-import { Route as AuthenticatedOllamaChatIndexRouteImport } from './routes/_authenticated/ollama-chat.index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
-import { Route as ClerkAuthenticatedUserManagementRouteImport } from './routes/clerk/_authenticated/user-management'
+import { Route as AuthenticatedChatIndexRouteImport } from './routes/_authenticated/chat.index'
 import { Route as ClerkauthSignUpRouteImport } from './routes/clerk/(auth)/sign-up'
 import { Route as ClerkauthSignInRouteImport } from './routes/clerk/(auth)/sign-in'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsChatRouteImport } from './routes/_authenticated/settings.chat'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
-import { Route as AuthenticatedOllamaChatChatIdRouteImport } from './routes/_authenticated/ollama-chat.$chatId'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedChatChatIdRouteImport } from './routes/_authenticated/chat.$chatId'
 import { Route as AuthenticatedLibraryDocumentsIndexRouteImport } from './routes/_authenticated/library/documents/index'
 import { Route as AuthenticatedLibraryDatasetsIndexRouteImport } from './routes/_authenticated/library/datasets/index'
 import { Route as AuthenticatedLibraryDatasetsDatasetIdRouteImport } from './routes/_authenticated/library/datasets/$datasetId'
@@ -65,9 +64,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedOllamaChatRoute = AuthenticatedOllamaChatRouteImport.update({
-  id: '/ollama-chat',
-  path: '/ollama-chat',
+const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const errors503Route = errors503RouteImport.update({
@@ -150,24 +149,17 @@ const AuthenticatedSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
-const AuthenticatedOllamaChatIndexRoute =
-  AuthenticatedOllamaChatIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedOllamaChatRoute,
-  } as any)
 const AuthenticatedHelpCenterIndexRoute =
   AuthenticatedHelpCenterIndexRouteImport.update({
     id: '/help-center/',
     path: '/help-center/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const ClerkAuthenticatedUserManagementRoute =
-  ClerkAuthenticatedUserManagementRouteImport.update({
-    id: '/user-management',
-    path: '/user-management',
-    getParentRoute: () => ClerkAuthenticatedRouteRoute,
-  } as any)
+const AuthenticatedChatIndexRoute = AuthenticatedChatIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedChatRoute,
+} as any)
 const ClerkauthSignUpRoute = ClerkauthSignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
@@ -202,18 +194,17 @@ const AuthenticatedSettingsAccountRoute =
     path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
-const AuthenticatedOllamaChatChatIdRoute =
-  AuthenticatedOllamaChatChatIdRouteImport.update({
-    id: '/$chatId',
-    path: '/$chatId',
-    getParentRoute: () => AuthenticatedOllamaChatRoute,
-  } as any)
 const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedChatChatIdRoute = AuthenticatedChatChatIdRouteImport.update({
+  id: '/$chatId',
+  path: '/$chatId',
+  getParentRoute: () => AuthenticatedChatRoute,
+} as any)
 const AuthenticatedLibraryDocumentsIndexRoute =
   AuthenticatedLibraryDocumentsIndexRouteImport.update({
     id: '/library/documents/',
@@ -241,7 +232,7 @@ const AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
+  '/clerk': typeof ClerkAuthenticatedRouteRoute
   '/landing': typeof LandingRoute
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/clerk/': typeof ClerkauthRouteRouteWithChildren
@@ -257,18 +248,17 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
-  '/ollama-chat': typeof AuthenticatedOllamaChatRouteWithChildren
+  '/chat': typeof AuthenticatedChatRouteWithChildren
+  '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
-  '/ollama-chat/$chatId': typeof AuthenticatedOllamaChatChatIdRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/chat': typeof AuthenticatedSettingsChatRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
-  '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
+  '/chat/': typeof AuthenticatedChatIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
-  '/ollama-chat/': typeof AuthenticatedOllamaChatIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/library/datasets/$datasetId': typeof AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren
   '/library/datasets': typeof AuthenticatedLibraryDatasetsIndexRoute
@@ -278,7 +268,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/landing': typeof LandingRoute
-  '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
+  '/clerk': typeof ClerkAuthenticatedRouteRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
   '/otp': typeof authOtpRoute
@@ -291,17 +281,16 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
-  '/ollama-chat/$chatId': typeof AuthenticatedOllamaChatChatIdRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/chat': typeof AuthenticatedSettingsChatRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
-  '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
+  '/chat': typeof AuthenticatedChatIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
-  '/ollama-chat': typeof AuthenticatedOllamaChatIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/library/datasets/$datasetId': typeof AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren
   '/library/datasets': typeof AuthenticatedLibraryDatasetsIndexRoute
@@ -316,7 +305,7 @@ export interface FileRoutesById {
   '/landing': typeof LandingRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/clerk/(auth)': typeof ClerkauthRouteRouteWithChildren
-  '/clerk/_authenticated': typeof ClerkAuthenticatedRouteRouteWithChildren
+  '/clerk/_authenticated': typeof ClerkAuthenticatedRouteRoute
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/otp': typeof authOtpRoute
@@ -329,18 +318,17 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
-  '/_authenticated/ollama-chat': typeof AuthenticatedOllamaChatRouteWithChildren
+  '/_authenticated/chat': typeof AuthenticatedChatRouteWithChildren
+  '/_authenticated/chat/$chatId': typeof AuthenticatedChatChatIdRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
-  '/_authenticated/ollama-chat/$chatId': typeof AuthenticatedOllamaChatChatIdRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/chat': typeof AuthenticatedSettingsChatRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/clerk/(auth)/sign-in': typeof ClerkauthSignInRoute
   '/clerk/(auth)/sign-up': typeof ClerkauthSignUpRoute
-  '/clerk/_authenticated/user-management': typeof ClerkAuthenticatedUserManagementRoute
+  '/_authenticated/chat/': typeof AuthenticatedChatIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
-  '/_authenticated/ollama-chat/': typeof AuthenticatedOllamaChatIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/library/datasets/$datasetId': typeof AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren
   '/_authenticated/library/datasets/': typeof AuthenticatedLibraryDatasetsIndexRoute
@@ -367,18 +355,17 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
-    | '/ollama-chat'
+    | '/chat'
+    | '/chat/$chatId'
     | '/errors/$error'
-    | '/ollama-chat/$chatId'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/chat'
     | '/settings/display'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
-    | '/clerk/user-management'
+    | '/chat/'
     | '/help-center'
-    | '/ollama-chat/'
     | '/settings/'
     | '/library/datasets/$datasetId'
     | '/library/datasets'
@@ -401,17 +388,16 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/chat/$chatId'
     | '/errors/$error'
-    | '/ollama-chat/$chatId'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/chat'
     | '/settings/display'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
-    | '/clerk/user-management'
+    | '/chat'
     | '/help-center'
-    | '/ollama-chat'
     | '/settings'
     | '/library/datasets/$datasetId'
     | '/library/datasets'
@@ -438,18 +424,17 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
-    | '/_authenticated/ollama-chat'
+    | '/_authenticated/chat'
+    | '/_authenticated/chat/$chatId'
     | '/_authenticated/errors/$error'
-    | '/_authenticated/ollama-chat/$chatId'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/chat'
     | '/_authenticated/settings/display'
     | '/clerk/(auth)/sign-in'
     | '/clerk/(auth)/sign-up'
-    | '/clerk/_authenticated/user-management'
+    | '/_authenticated/chat/'
     | '/_authenticated/help-center/'
-    | '/_authenticated/ollama-chat/'
     | '/_authenticated/settings/'
     | '/_authenticated/library/datasets/$datasetId'
     | '/_authenticated/library/datasets/'
@@ -506,11 +491,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/ollama-chat': {
-      id: '/_authenticated/ollama-chat'
-      path: '/ollama-chat'
-      fullPath: '/ollama-chat'
-      preLoaderRoute: typeof AuthenticatedOllamaChatRouteImport
+    '/_authenticated/chat': {
+      id: '/_authenticated/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof AuthenticatedChatRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/(errors)/503': {
@@ -625,13 +610,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
-    '/_authenticated/ollama-chat/': {
-      id: '/_authenticated/ollama-chat/'
-      path: '/'
-      fullPath: '/ollama-chat/'
-      preLoaderRoute: typeof AuthenticatedOllamaChatIndexRouteImport
-      parentRoute: typeof AuthenticatedOllamaChatRoute
-    }
     '/_authenticated/help-center/': {
       id: '/_authenticated/help-center/'
       path: '/help-center'
@@ -639,12 +617,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHelpCenterIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/clerk/_authenticated/user-management': {
-      id: '/clerk/_authenticated/user-management'
-      path: '/user-management'
-      fullPath: '/clerk/user-management'
-      preLoaderRoute: typeof ClerkAuthenticatedUserManagementRouteImport
-      parentRoute: typeof ClerkAuthenticatedRouteRoute
+    '/_authenticated/chat/': {
+      id: '/_authenticated/chat/'
+      path: '/'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof AuthenticatedChatIndexRouteImport
+      parentRoute: typeof AuthenticatedChatRoute
     }
     '/clerk/(auth)/sign-up': {
       id: '/clerk/(auth)/sign-up'
@@ -688,19 +666,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
-    '/_authenticated/ollama-chat/$chatId': {
-      id: '/_authenticated/ollama-chat/$chatId'
-      path: '/$chatId'
-      fullPath: '/ollama-chat/$chatId'
-      preLoaderRoute: typeof AuthenticatedOllamaChatChatIdRouteImport
-      parentRoute: typeof AuthenticatedOllamaChatRoute
-    }
     '/_authenticated/errors/$error': {
       id: '/_authenticated/errors/$error'
       path: '/errors/$error'
       fullPath: '/errors/$error'
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chat/$chatId': {
+      id: '/_authenticated/chat/$chatId'
+      path: '/$chatId'
+      fullPath: '/chat/$chatId'
+      preLoaderRoute: typeof AuthenticatedChatChatIdRouteImport
+      parentRoute: typeof AuthenticatedChatRoute
     }
     '/_authenticated/library/documents/': {
       id: '/_authenticated/library/documents/'
@@ -755,21 +733,18 @@ const AuthenticatedSettingsRouteRouteWithChildren =
     AuthenticatedSettingsRouteRouteChildren,
   )
 
-interface AuthenticatedOllamaChatRouteChildren {
-  AuthenticatedOllamaChatChatIdRoute: typeof AuthenticatedOllamaChatChatIdRoute
-  AuthenticatedOllamaChatIndexRoute: typeof AuthenticatedOllamaChatIndexRoute
+interface AuthenticatedChatRouteChildren {
+  AuthenticatedChatChatIdRoute: typeof AuthenticatedChatChatIdRoute
+  AuthenticatedChatIndexRoute: typeof AuthenticatedChatIndexRoute
 }
 
-const AuthenticatedOllamaChatRouteChildren: AuthenticatedOllamaChatRouteChildren =
-  {
-    AuthenticatedOllamaChatChatIdRoute: AuthenticatedOllamaChatChatIdRoute,
-    AuthenticatedOllamaChatIndexRoute: AuthenticatedOllamaChatIndexRoute,
-  }
+const AuthenticatedChatRouteChildren: AuthenticatedChatRouteChildren = {
+  AuthenticatedChatChatIdRoute: AuthenticatedChatChatIdRoute,
+  AuthenticatedChatIndexRoute: AuthenticatedChatIndexRoute,
+}
 
-const AuthenticatedOllamaChatRouteWithChildren =
-  AuthenticatedOllamaChatRoute._addFileChildren(
-    AuthenticatedOllamaChatRouteChildren,
-  )
+const AuthenticatedChatRouteWithChildren =
+  AuthenticatedChatRoute._addFileChildren(AuthenticatedChatRouteChildren)
 
 interface AuthenticatedLibraryDatasetsDatasetIdRouteChildren {
   AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute: typeof AuthenticatedLibraryDatasetsDatasetIdFilesFileIdRoute
@@ -788,7 +763,7 @@ const AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
-  AuthenticatedOllamaChatRoute: typeof AuthenticatedOllamaChatRouteWithChildren
+  AuthenticatedChatRoute: typeof AuthenticatedChatRouteWithChildren
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedLibraryDatasetsDatasetIdRoute: typeof AuthenticatedLibraryDatasetsDatasetIdRouteWithChildren
@@ -798,7 +773,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
-  AuthenticatedOllamaChatRoute: AuthenticatedOllamaChatRouteWithChildren,
+  AuthenticatedChatRoute: AuthenticatedChatRouteWithChildren,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedLibraryDatasetsDatasetIdRoute:
@@ -826,29 +801,14 @@ const ClerkauthRouteRouteWithChildren = ClerkauthRouteRoute._addFileChildren(
   ClerkauthRouteRouteChildren,
 )
 
-interface ClerkAuthenticatedRouteRouteChildren {
-  ClerkAuthenticatedUserManagementRoute: typeof ClerkAuthenticatedUserManagementRoute
-}
-
-const ClerkAuthenticatedRouteRouteChildren: ClerkAuthenticatedRouteRouteChildren =
-  {
-    ClerkAuthenticatedUserManagementRoute:
-      ClerkAuthenticatedUserManagementRoute,
-  }
-
-const ClerkAuthenticatedRouteRouteWithChildren =
-  ClerkAuthenticatedRouteRoute._addFileChildren(
-    ClerkAuthenticatedRouteRouteChildren,
-  )
-
 interface ClerkRouteRouteChildren {
   ClerkauthRouteRoute: typeof ClerkauthRouteRouteWithChildren
-  ClerkAuthenticatedRouteRoute: typeof ClerkAuthenticatedRouteRouteWithChildren
+  ClerkAuthenticatedRouteRoute: typeof ClerkAuthenticatedRouteRoute
 }
 
 const ClerkRouteRouteChildren: ClerkRouteRouteChildren = {
   ClerkauthRouteRoute: ClerkauthRouteRouteWithChildren,
-  ClerkAuthenticatedRouteRoute: ClerkAuthenticatedRouteRouteWithChildren,
+  ClerkAuthenticatedRouteRoute: ClerkAuthenticatedRouteRoute,
 }
 
 const ClerkRouteRouteWithChildren = ClerkRouteRoute._addFileChildren(

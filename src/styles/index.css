@@ -108,18 +108,18 @@
 }
 
 /* Chat-Scrollbar mit gleicher Hintergrundfarbe wie Input-Textfeld im Dark-Modus */
-.ollama-chat-container {
+.chat-container {
   position: relative;
 }
 
-.ollama-chat-container .ollama-chat-list {
+.chat-container .chat-list {
   margin-right: 0;
   padding-right: 0;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-.ollama-chat-container .ollama-chat-list::-webkit-scrollbar {
+.chat-container .ollama-chat-list::-webkit-scrollbar {
   width: 3px;
   position: fixed;
   right: 0;
@@ -128,33 +128,33 @@
   z-index: 1000;
 }
 
-.ollama-chat-container .ollama-chat-list::-webkit-scrollbar-track {
+.chat-container .ollama-chat-list::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.ollama-chat-container .ollama-chat-list::-webkit-scrollbar-thumb {
+.chat-container .ollama-chat-list::-webkit-scrollbar-thumb {
   background-color: transparent;
   border-radius: 6px;
   transition: background-color 0.3s ease;
 }
 
-.ollama-chat-container .ollama-chat-list:hover::-webkit-scrollbar-thumb {
+.chat-container .ollama-chat-list:hover::-webkit-scrollbar-thumb {
   background-color: hsl(var(--background));
 }
 
 /* Hide scrollbar on larger screens */
 @media (min-width: 1024px) {
-  .ollama-chat-container .ollama-chat-list::-webkit-scrollbar {
+  .chat-container .ollama-chat-list::-webkit-scrollbar {
     display: none;
   }
 }
 
-.ollama-chat-container .chat-message-list {
+.chat-container .chat-message-list {
   margin-right: 0;
   padding-right: 0;
 }
 
-.ollama-chat-container .chat-message-list::-webkit-scrollbar {
+.chat-container .chat-message-list::-webkit-scrollbar {
   width: 3px;
   position: fixed;
   right: 0;
@@ -163,23 +163,23 @@
   z-index: 1000;
 }
 
-.ollama-chat-container .chat-message-list::-webkit-scrollbar-track {
+.chat-container .chat-message-list::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.ollama-chat-container .chat-message-list::-webkit-scrollbar-thumb {
+.chat-container .chat-message-list::-webkit-scrollbar-thumb {
   background-color: transparent;
   border-radius: 6px;
   transition: background-color 0.3s ease;
 }
 
-.ollama-chat-container .chat-message-list:hover::-webkit-scrollbar-thumb {
+.chat-container .chat-message-list:hover::-webkit-scrollbar-thumb {
   background-color: hsl(var(--background));
 }
 
 /* Hide scrollbar on larger screens */
 @media (min-width: 1024px) {
-  .ollama-chat-container .chat-message-list::-webkit-scrollbar {
+  .chat-container .chat-message-list::-webkit-scrollbar {
     display: none;
   }
 }

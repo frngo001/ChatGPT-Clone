@@ -1,4 +1,222 @@
+### Feat - 15.01.2025
+
+- **Route Refactoring:** Umbenennung der Chat-Routen von `/ollama-chat` zu `/chat` für bessere Benutzerfreundlichkeit
+  - Alle Routen von `ollama-chat` zu `chat` umbenannt
+  - Navigation und Links entsprechend aktualisiert
+  - CSS-Klassen von `ollama-chat-container` zu `chat-container` geändert
+  - Route-Tree-Generierung aktualisiert
+  - Dokumentation mit neuen Chat-Endpunkten erweitert
+  - Beibehaltung aller bestehenden Funktionalitäten
+
+- **Enhanced Markdown Rendering:** Verbessertes Markdown-Rendering mit optimierter Inline-Code-Darstellung
+  - Neue `AIMarkdown` Komponente mit verbesserter Inline-Code-Unterstützung in Zitaten
+  - Erweiterte Citation-Badge-Komponente mit detaillierten Tooltip-Informationen
+  - Verbesserte Codeblock-Darstellung mit Syntax-Highlighting und Copy-Funktionalität
+  - Neue `useAIElements` Prop in Response, CogneeMarkdown und Chat-Komponenten
+  - Aktiviert standardmäßig in OllamaChat für bessere Code-Formatierung
+  - Beibehaltung der bestehenden Funktionalität mit erweiterten Rendering-Optionen
+  - Professionelle Suggestion-Komponenten mit verbesserter UX
+  - Optimierte Markdown-Parsing-Logik für bessere Inline-Code-Erkennung
+
+- **AI SDK Suggestion Components:** Implementiert moderne Suggestion-Komponenten basierend auf AI SDK Elements
+  - Ersetzt benutzerdefinierte Suggestion-Komponente durch AI SDK-konforme Implementierung
+  - Neue `Suggestions` und `SuggestionItem` Komponenten mit verbesserter UX
+  - Vertikale Suggestion-Liste für bessere Lesbarkeit und Übersichtlichkeit
+  - Sichtbare Borders für bessere visuelle Abgrenzung der Suggestion-Buttons
+  - Verbesserte Hover-Effekte und moderne Button-Styles
+  - Responsive Design mit Touch-freundlichen Zielen
+  - TypeScript-Unterstützung mit korrekten Typdefinitionen
+  - Suggestion-Komponenten nur in Chat-Antworten, nicht im leeren Chat-Zustand
+
+### Fix - 15.01.2025
+
+- **Debug Information Removal:** Entfernt Debug-Informationen aus der CogneeMarkdown-Komponente
+  - Debug-Box mit Citation-Details, Content-Längen und Parsing-Informationen entfernt
+  - Saubere Benutzeroberfläche ohne Entwicklungshinweise
+  - Verbessert die Benutzererfahrung durch Entfernung von technischen Details
+  - Komponente zeigt nur noch relevante Inhalte für Endbenutzer an
+
+- **Muted Color Update:** Ändert `--muted` Farbe zu `hsl(0, 0%, 98%)` in der gesamten Anwendung
+  - `--muted` verwendet jetzt `oklch(0.98 0 0)` (entspricht `hsl(0, 0%, 98%)`)
+  - Änderung gilt für beide Themes (Light und Dark Mode)
+  - Alle Komponenten mit `bg-muted` werden automatisch aktualisiert
+  - Avatar-Fallbacks, subtile Hintergründe und andere muted-Elemente verwenden jetzt die hellere Farbe
+  - Verbessert die visuelle Konsistenz und Lesbarkeit der Anwendung
+
+- **Citation Badge Display Fix:** Behebt das Problem, dass Citation-Placeholder anstatt echte Badges angezeigt werden
+  - Citation-Placeholder (`__CITATION_PLACEHOLDER_N__`) werden jetzt korrekt durch echte Citation-Badges ersetzt
+  - Implementiert direkte Citation-Badge-Integration ohne Placeholder-System
+  - Zitate erscheinen als klickbare Badges mit Hover-Tooltips direkt im Textfluss
+  - Ersetzt komplexes Placeholder-System durch einfache, direkte Badge-Rendering
+  - Verbessert die Zuverlässigkeit der Citation-Anzeige
+  - Behebt das Problem, dass nur Placeholder-Text anstatt funktionale Badges angezeigt wurden
+
+- **Inline Citation Display Fix:** Behebt das Problem, dass Zitate in separaten Zeilen angezeigt werden
+  - Zitate werden jetzt inline mit dem Text angezeigt anstatt in eigenen Zeilen
+  - Implementiert custom Markdown-Renderer mit spezieller Paragraph-Behandlung für Citation-Placeholder
+  - Ersetzt separate MarkdownRenderer-Komponenten durch inline Text-Rendering
+  - Zitate erscheinen direkt neben dem Text als klickbare Badges mit Hover-Tooltips
+  - Verbessert die Lesbarkeit und Benutzerfreundlichkeit der Citation-Anzeige
+  - Behebt Linter-Fehler und TypeScript-Probleme in der CogneeMarkdown-Komponente
+
+### Feat - 15.01.2025
+
+- **Dynamische Zitat-Erkennung mit shadcn Hover-Tooltips:** Vollständige Überarbeitung der Citation-Implementierung
+  - **Erweiterte DeepSeek Antwort-Parsing:** Robuste Regex-Patterns für verschiedene Citation-Formate
+  - **shadcn Tooltip Integration:** Professionelle Hover-Tooltips mit detaillierten Zitat-Informationen
+  - **Verbesserte Citation-Parsing:** Unterstützt verschiedene Formatierungsvarianten und Fallback-Modi
+  - **Dynamische Badge-Rendering:** Intelligente Zitat-Badges mit Hover-Informationen
+  - **Enhanced Debug-Modus:** Detaillierte Parsing-Informationen für Development
+  - **Robuste Suggested Questions Parsing:** Unterstützt verschiedene Listenformate (*, -, 1.)
+  - **Fallback-Parsing:** Graceful Degradation bei unerwarteten Citation-Formaten
+  - **Professional Citation Display:** Strukturierte Anzeige von Dokumenttyp, Sektion und Inhalt
+  - **Citation-Table-Konflikt-Lösung:** Verhindert dass Citations-Sektionen als Tabellen interpretiert werden
+  - **Markdown-Rendering-Fix:** Verbesserte Erkennungslogik für normale Markdown-Texte vs. Cognee-Content
+  - **Streaming-Content-Fix:** Korrekte Markdown-Erkennung während und nach dem Streaming-Prozess
+  - **Citation-Markdown-Integration:** Markdown-Formatierung wird auch in Citation-Texten korrekt angewendet
+
+- **Cognee CHUNKS-Modus mit DeepSeek Integration und Streaming Inline-Citations:** Implementiert erweiterte RAG-Funktionalität mit professionellen Zitierungen
+  - Cognee liefert relevante Chunks zur Benutzeranfrage (unsichtbar für User)
+  - Nutzt bestehende DeepSeek-Server-Middleware-Logik direkt
+  - **Robuster RAG-System-Prompt** mit strengen Formatierungsregeln und Qualitätschecks
+  - **Streaming Inline-Citations** als klickbare Badges mit Details
+  - **Neues Citation-Format:** [CITATION:1], [CITATION:2] im Text + separate "### Citations" Sektion mit Details
+  - **Echte Inline-Citations während Streaming** - klickbare Badges erscheinen direkt im Text
+  - **Robustes Citation-Parsing** aus "### Citations" Sektion mit vollständigen Quellen-Informationen
+  - **Citation-Informationen aus Document Chunks** extrahiert
+  - **Debug-Modus** für Development (zeigt Citation-Count)
+  - **Suggested Questions** im Perplexity-Stil als klickbare Buttons
+  - Automatisches Parsing von Inline-Citations und Suggestions aus Streaming-Content
+  - Streaming der DeepSeek-Antwort an den User mit AI SDK Data Stream Format
+  - Robuste Chunk-Extraktion mit Unterstützung verschiedener Cognee-Response-Formate
+  - Separate Fehlerbehandlung für Cognee und DeepSeek APIs
+  - Verbesserte Antwortqualität durch Kombination von RAG und LLM-Stärken
+  - Effiziente Server-Middleware-Integration ohne HTTP-Overhead
+  - **Neue UI-Komponenten:** HoverCard, Carousel, InlineCitation, Suggestion
+  - **CogneeMarkdown-Komponente** für intelligentes Rendering von Streaming RAG-Antworten
+  - **Neue Dependencies:** @radix-ui/react-hover-card, embla-carousel-react
+
+### Fix - 15.01.2025
+
+- **Cognee Message History Context:** Implementiert vollständige Nachrichtenhistorie für Cognee RAG-Suche
+  - Ersetzt einzelne Nachricht durch formatierte Nachrichtenhistorie als String
+  - Klare Unterscheidung zwischen User- und AI-Nachrichten im Format "User: [message]" und "AI: [message]"
+  - System-Prompt erweitert um Erklärung der Nachrichtenhistorie-Formatierung
+  - Cognee erhält jetzt vollständigen Kontext aus vorherigen Nachrichten für bessere Antworten
+  - Verbessert die Qualität und Relevanz der RAG-basierten Antworten durch Kontext-Bewusstsein
+
+- **Cognee System-Prompt auf Deutsch:** Vollständige Übersetzung und Erweiterung des System-Prompts für RAG-Optimierung
+  - System-Prompt komplett auf Deutsch übersetzt für bessere Verständlichkeit
+  - Erweiterte Anweisungen speziell für RAG-Nutzung mit 10 detaillierten Punkten
+  - Betont Kontext-Integration zwischen Konversationshistorie und Dokumenten
+  - Explizite Anweisungen für Vollständigkeit, Detailliertheit und Strukturierung
+  - RAG-optimierte Anweisungen für intelligente Nutzung der Wissensdatenbank
+  - Konversationskontext-Berücksichtigung für kohärente Antworten
+  - Benutzerorientierte Anpassung basierend auf Gesprächsverlauf
+  - Verbesserte Qualität und Relevanz der deutschen RAG-Antworten
+
+- **File Upload Size Limit Increase:** Erhöht die Datei-Upload-Beschränkung von 10MB auf 50MB
+  - Aktualisiert `maxSize` in `upload-file-dialog.tsx` von 10MB auf 50MB
+  - Aktualisiert `maxSize` in `add-data-dialog.tsx` von 10MB auf 50MB
+  - Aktualisiert `maxSize` in `image-embedder.tsx` von 10MB auf 50MB
+  - Fehlermeldungen und UI-Texte entsprechend angepasst
+  - Benutzer können jetzt größere Dateien (bis zu 50MB) hochladen
+  - Betrifft alle Upload-Komponenten: Dataset-Dateien, Bilder und allgemeine Dateien
+
+- **Cognee System Prompt Update:** Ändert den Systemprompt für sehr lange und vollständige Antworten
+  - Neuer Systemprompt fordert **sehr lange**, detaillierte und umfassende Antworten mit Markdown-Formatierung
+  - Explizite Anweisung, **ALLE** relevanten Informationen aus dem bereitgestellten Kontext ohne Ausnahme zu inkludieren
+  - Keine Details sollen weggelassen werden, egal wie klein oder scheinbar unbedeutend
+  - **Gründliche und erschöpfende Erklärungen** werden gefordert
+  - Strukturierte Antworten mit Überschriften, Listen und Formatierung für bessere Klarheit
+  - **Sprachkonsistenz**: Antworten müssen immer in der gleichen Sprache wie die Benutzerfrage erfolgen
+  - **Vollständigkeit vor Kürze**: Längere Antworten werden bevorzugt
+  - Betrifft sowohl den Standard-Systemprompt im Store als auch den Fallback-Systemprompt in der API
+  - Verbessert die Qualität, Vollständigkeit, Länge und Sprachkonsistenz der Cognee-Antworten
+
+- **Light Theme Primary Color Update:** Ändert die Button-Hintergrundfarbe von schwarz zu der grauen Farbe des Textarea-Hintergrunds
+  - Verwendet `var(--accent)` für `--primary` anstatt der schwarzen Farbe
+  - Diese Farbe (oklch(0.968 0.007 247.896)) wird bereits für `bg-accent` im Chat-Textarea verwendet
+  - Button-Hintergründe (`bg-primary`) verwenden jetzt die gleiche helle graue Farbe wie das Chat-Input-Feld
+  - Button-Text (`text-primary-foreground`) verwendet jetzt dunkle Farbe (oklch(0.129 0.042 264.695)) für bessere Lesbarkeit auf hellem Hintergrund
+  - Konsistente Verwendung der bereits definierten Theme-Farben für bessere Wartbarkeit
+  - Verbessert die Lesbarkeit und reduziert die Helligkeit für angenehmere Augen
+  - Behält alle anderen Theme-Eigenschaften und das Dark Theme unverändert bei
+
+- **Streamdown Copy Toast Support:** Fügt Toast-Benachrichtigungen für Codeblock-Kopierfunktion hinzu
+  - Implementiert Toast-Benachrichtigung beim Kopieren von Codeblöcken in Streamdown-Komponente
+  - Verwendet Sonner Toast-Bibliothek für konsistente Benutzeroberfläche
+  - Aktiviert Copy-Controls in Streamdown für bessere UX
+  - Zeigt "Code wurde erfolgreich kopiert!" Nachricht nach erfolgreichem Kopieren
+  - Verwendet Event-Delegation für robuste Copy-Button-Erkennung
+
+- **Streamdown Catppuccin Theme Support:** Fügt Catppuccin Latte und Mocha Themes für Streamdown-Komponente hinzu
+  - Implementiert automatische Theme-Erkennung für Codeblöcke in Streamdown
+  - Verwendet Catppuccin Latte Theme für hellen Modus und Catppuccin Mocha Theme für dunklen Modus
+  - Verbessert die Lesbarkeit von Codeblöcken in beiden Theme-Modi
+  - Behält bestehende MarkdownRenderer-Funktionalität für nicht-Code-Inhalte bei
+
+- **Hybrid Markdown Rendering Fix:** Kombiniert shadcn-markdown und Streamdown für optimale Formatierung
+  - Verwendet shadcn-markdown (react-markdown) für normale Inhalte und Listen-Formatierung
+  - Behält Streamdown für Codeblöcke bei, da es bessere Code-Formatierung bietet
+  - Behebt Formatierungsprobleme bei nummerierten Listen während des AI-Streamings
+  - Fügt @tailwindcss/typography Plugin für bessere Typografie hinzu
+  - Intelligente Erkennung: Codeblöcke (```) verwenden Streamdown, andere Inhalte shadcn-markdown
+  - Unterstützt Syntax-Highlighting, Math-Rendering und Emoji-Integration
+
+- **Cognee Stream Format Fix:** Behebt "Failed to parse stream string" Fehler bei Cognee-Antworten
+  - Cognee API-Antworten werden jetzt im AI SDK Data Stream Format gestreamt
+  - Korrekte Formatierung mit `0:"content"\n` Präfix für jeden Chunk
+  - Escape-Sequenzen für Sonderzeichen (Backslash, Anführungszeichen, Zeilenumbrüche)
+  - Zusätzliche HTTP-Header für bessere Stream-Kompatibilität (Cache-Control, Connection)
+  - Frontend kann Cognee-Antworten jetzt korrekt parsen und anzeigen
+
+### Feat - 15.01.2025
+
+- **Cognee RAG Search Integration:** Implementiert RAG-basierte Suche mit Cognee API
+  - Neue Chat-Modi: "General Chat" (Ollama/DeepSeek) und "Cognee Search" (RAG-basiert)
+  - Chat-Modus Switcher in der BottomBar für einfachen Wechsel zwischen Modi
+  - Dataset-Selector für Cognee-Modus mit Filterung nach Datasets mit mindestens einem Dokument
+  - Conditional Rendering von Model-Selector (General) oder Dataset-Selector (Cognee) in der TopBar
+  - Streaming-Support für Cognee API mit GRAPH_COMPLETION Modus
+  - Validierung: Dataset-Auswahl erforderlich im Cognee-Modus, Model-Auswahl im General-Modus
+  - Persistierung von Chat-Modus und ausgewähltem Dataset im localStorage
+  - Kompatible Markdown-Response-Verarbeitung wie bei Ollama/DeepSeek
+
 ### Fix - 14.01.2025
+
+- **Dataset Name Validation Fix:** Behebt "Dataset name cannot contain spaces or dots" Fehler
+  - Implementiert `sanitizeDatasetName()` Methode zur automatischen Bereinigung von Dataset-Namen
+  - Ersetzt Leerzeichen durch Unterstriche und entfernt Punkte vor API-Aufrufen
+  - Dataset-Erstellung bereinigt Namen automatisch vor Backend-Übertragung
+  - Alle Upload-Methoden senden bereinigte Dataset-Namen an das Backend
+  - Verhindert Validierungsfehler bei Dataset-Namen mit Sonderzeichen
+
+- **Add Data Dialog UX Fix:** Verbessert Benutzererfahrung beim Hinzufügen von Daten
+  - Modal schließt sich automatisch nach erfolgreichem Upload aller Elemente
+  - Verhindert doppeltes Hinzufügen von Elementen durch verbesserte State-Verwaltung
+  - Toast-Benachrichtigungen für Erfolg und Fehler beim Upload
+  - Automatisches Zurücksetzen des Dialog-States beim Schließen
+  - Bessere Fehlerbehandlung mit detaillierten Fehlermeldungen
+
+- **Dataset Processing Toast Notifications:** Sofortige Benachrichtigungen bei Verarbeitungsabschluss
+  - Toast-Benachrichtigung wird sofort angezeigt, wenn API-Antwort vom Backend kommt
+  - Fehler-Toast wird sofort angezeigt, wenn Dataset-Verarbeitung fehlschlägt
+  - Toast wird direkt in `checkDatasetStatus()` ausgelöst, nicht erst beim nächsten Polling-Zyklus
+  - Intelligente Status-Erkennung: Toast nur bei tatsächlicher Status-Änderung von "STARTED" zu "COMPLETED"
+  - Dynamischer Import von Sonner Toast zur Vermeidung von zirkulären Abhängigkeiten
+
+- **Dataset Status Update After Upload:** Automatische Status-Aktualisierung nach Daten-Upload
+  - Dataset-Status wird sofort auf "DATASET_PROCESSING_INITIATED" gesetzt nach erfolgreichem Upload
+  - Betrifft alle Upload-Methoden: `uploadFileToDataset`, `addTextToDataset`, `addUrlToDataset`, `addUrlsToDataset`
+  - Benutzer sieht sofort, dass das Dataset verarbeitet werden muss
+  - Status-Badge wird automatisch aktualisiert ohne manuelle Aktualisierung
+
+- **Immediate Status Check After Processing:** Sofortige Status-Überprüfung nach Verarbeitungsstart
+  - Status wird automatisch nach 1 Sekunde überprüft, wenn "Dataset verarbeiten" geklickt wird
+  - Betrifft sowohl einzelne Dataset-Verarbeitung als auch "Alle verarbeiten" Funktion
+  - Benutzer sieht sofort, ob die Verarbeitung erfolgreich gestartet wurde
+  - Status-Badge wird automatisch von "Muss verarbeitet werden" zu "Wird verarbeitet..." aktualisiert
 
 - **Navbar File Count Synchronization Fix:** Korrigiert Synchronisation der Datei-Anzahl in der Navbar
   - `fetchDatasets()` lädt automatisch Dateien für alle Datasets um Navbar-Badges zu aktualisieren

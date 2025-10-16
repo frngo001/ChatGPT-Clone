@@ -3,11 +3,11 @@ import { ChatLayout } from '@/components/ollama-chat/chat-layout';
 import useOllamaChatStore from '@/stores/ollama-chat-store';
 import { useEffect } from 'react';
 
-export const Route = createFileRoute('/_authenticated/ollama-chat/$chatId')({
-  component: OllamaChatDetailPage,
+export const Route = createFileRoute('/_authenticated/chat/$chatId')({
+  component: ChatDetailPage,
 });
 
-function OllamaChatDetailPage() {
+function ChatDetailPage() {
   const { chatId } = Route.useParams();
   const getMessagesById = useOllamaChatStore((state) => state.getMessagesById);
   const setCurrentChatId = useOllamaChatStore((state) => state.setCurrentChatId);

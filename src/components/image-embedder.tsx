@@ -38,7 +38,7 @@ const MultiImagePicker: React.FC<MultiImagePickerProps> = ({ onImagesPick, disab
       'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
     },
     multiple: true, // Allow multiple file selection
-    maxSize: 10485760, // 10 MB per file
+    maxSize: 52428800, // 50 MB per file
   });
 
   return (

@@ -187,8 +187,17 @@ export const useDatasetStore = create<DatasetStore>()(
       uploadFileToDataset: async (datasetId, file, metadata) => {
         set({ isLoading: true, error: null })
         try {
-          // Upload file to API
-          const apiResponse: AddDataResponse = await datasetsApi.addFileToDataset(datasetId, file, metadata)
+          // Get dataset name for the API request
+          const dataset = get().datasets.find(d => d.id === datasetId) || get().currentDataset
+          const datasetName = dataset?.name
+          
+          // Upload file to API with dataset name
+          const apiResponse: AddDataResponse = await datasetsApi.addDataToDataset({
+            data: file,
+            datasetId,
+            datasetName,
+            metadata
+          })
 
           // Check if upload was successful
           if (apiResponse.status !== 'PipelineRunCompleted') {
@@ -212,6 +221,7 @@ export const useDatasetStore = create<DatasetStore>()(
                     ...dataset,
                     files: [...dataset.files, ...newFiles],
                     updatedAt: new Date(),
+                    processingStatus: 'DATASET_PROCESSING_INITIATED', // Mark as needs processing
                   }
                 : dataset
             ),
@@ -220,6 +230,7 @@ export const useDatasetStore = create<DatasetStore>()(
                   ...state.currentDataset,
                   files: [...state.currentDataset.files, ...newFiles],
                   updatedAt: new Date(),
+                  processingStatus: 'DATASET_PROCESSING_INITIATED', // Mark as needs processing
                 }
               : state.currentDataset,
             isLoading: false,
@@ -237,7 +248,16 @@ export const useDatasetStore = create<DatasetStore>()(
       addTextToDataset: async (datasetId, text, metadata) => {
         set({ isLoading: true, error: null })
         try {
-          const apiResponse: AddDataResponse = await datasetsApi.addTextToDataset(datasetId, text, metadata)
+          // Get dataset name for the API request
+          const dataset = get().datasets.find(d => d.id === datasetId) || get().currentDataset
+          const datasetName = dataset?.name
+          
+          const apiResponse: AddDataResponse = await datasetsApi.addDataToDataset({
+            data: text,
+            datasetId,
+            datasetName,
+            metadata
+          })
 
           if (apiResponse.status !== 'PipelineRunCompleted') {
             throw new Error(`Text upload failed with status: ${apiResponse.status}`)
@@ -261,6 +281,7 @@ export const useDatasetStore = create<DatasetStore>()(
                     ...dataset,
                     files: [...dataset.files, ...newFiles],
                     updatedAt: new Date(),
+                    processingStatus: 'DATASET_PROCESSING_INITIATED', // Mark as needs processing
                   }
                 : dataset
             ),
@@ -269,6 +290,7 @@ export const useDatasetStore = create<DatasetStore>()(
                   ...state.currentDataset,
                   files: [...state.currentDataset.files, ...newFiles],
                   updatedAt: new Date(),
+                  processingStatus: 'DATASET_PROCESSING_INITIATED', // Mark as needs processing
                 }
               : state.currentDataset,
             isLoading: false,
@@ -286,7 +308,16 @@ export const useDatasetStore = create<DatasetStore>()(
       addUrlToDataset: async (datasetId, url, metadata) => {
         set({ isLoading: true, error: null })
         try {
-          const apiResponse: AddDataResponse = await datasetsApi.addUrlToDataset(datasetId, url, metadata)
+          // Get dataset name for the API request
+          const dataset = get().datasets.find(d => d.id === datasetId) || get().currentDataset
+          const datasetName = dataset?.name
+          
+          const apiResponse: AddDataResponse = await datasetsApi.addDataToDataset({
+            data: url,
+            datasetId,
+            datasetName,
+            metadata
+          })
 
           if (apiResponse.status !== 'PipelineRunCompleted') {
             throw new Error(`URL upload failed with status: ${apiResponse.status}`)
@@ -310,6 +341,7 @@ export const useDatasetStore = create<DatasetStore>()(
                     ...dataset,
                     files: [...dataset.files, ...newFiles],
                     updatedAt: new Date(),
+                    processingStatus: 'DATASET_PROCESSING_INITIATED', // Mark as needs processing
                   }
                 : dataset
             ),
@@ -318,6 +350,7 @@ export const useDatasetStore = create<DatasetStore>()(
                   ...state.currentDataset,
                   files: [...state.currentDataset.files, ...newFiles],
                   updatedAt: new Date(),
+                  processingStatus: 'DATASET_PROCESSING_INITIATED', // Mark as needs processing
                 }
               : state.currentDataset,
             isLoading: false,
@@ -335,7 +368,16 @@ export const useDatasetStore = create<DatasetStore>()(
       addUrlsToDataset: async (datasetId, urls, metadata) => {
         set({ isLoading: true, error: null })
         try {
-          const apiResponse: AddDataResponse = await datasetsApi.addUrlsToDataset(datasetId, urls, metadata)
+          // Get dataset name for the API request
+          const dataset = get().datasets.find(d => d.id === datasetId) || get().currentDataset
+          const datasetName = dataset?.name
+          
+          const apiResponse: AddDataResponse = await datasetsApi.addDataToDataset({
+            data: urls,
+            datasetId,
+            datasetName,
+            metadata
+          })
 
           if (apiResponse.status !== 'PipelineRunCompleted') {
             throw new Error(`URLs upload failed with status: ${apiResponse.status}`)
@@ -359,6 +401,7 @@ export const useDatasetStore = create<DatasetStore>()(
                     ...dataset,
                     files: [...dataset.files, ...newFiles],
                     updatedAt: new Date(),
+                    processingStatus: 'DATASET_PROCESSING_INITIATED', // Mark as needs processing
                   }
                 : dataset
             ),
@@ -367,6 +410,7 @@ export const useDatasetStore = create<DatasetStore>()(
                   ...state.currentDataset,
                   files: [...state.currentDataset.files, ...newFiles],
                   updatedAt: new Date(),
+                  processingStatus: 'DATASET_PROCESSING_INITIATED', // Mark as needs processing
                 }
               : state.currentDataset,
             isLoading: false,
@@ -638,10 +682,19 @@ export const useDatasetStore = create<DatasetStore>()(
 
       checkDatasetStatus: async (datasetId) => {
         try {
+          const { datasets } = get()
+          const currentDataset = datasets.find(d => d.id === datasetId)
+          const previousStatus = currentDataset?.processingStatus
+
           const statusResponse = await datasetsApi.getDatasetProcessingStatus([datasetId])
           const apiStatus = statusResponse[datasetId]
 
           if (apiStatus) {
+            // Check if status changed to completed or failed
+            const wasProcessing = previousStatus === 'DATASET_PROCESSING_STARTED'
+            const isCompleted = apiStatus === 'DATASET_PROCESSING_COMPLETED'
+            const isFailed = apiStatus === 'DATASET_PROCESSING_ERRORED'
+
             // Use the exact API status value
             set((state) => ({
               datasets: state.datasets.map((dataset) =>
@@ -653,6 +706,17 @@ export const useDatasetStore = create<DatasetStore>()(
                 ? { ...state.currentDataset, processingStatus: apiStatus, updatedAt: new Date() }
                 : state.currentDataset,
             }))
+
+            // Show toast notification immediately when status changes
+            if (wasProcessing && isCompleted) {
+              import('sonner').then(({ toast }) => {
+                toast.success(`Dataset "${currentDataset?.name}" wurde erfolgreich verarbeitet!`)
+              })
+            } else if (wasProcessing && isFailed) {
+              import('sonner').then(({ toast }) => {
+                toast.error(`Verarbeitung von Dataset "${currentDataset?.name}" ist fehlgeschlagen!`)
+              })
+            }
           }
         } catch (error) {
           console.error('Failed to check dataset status:', error)

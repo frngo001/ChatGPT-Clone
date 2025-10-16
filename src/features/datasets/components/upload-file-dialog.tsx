@@ -35,7 +35,7 @@ export function UploadFileDialog({ open, onOpenChange, datasetId }: UploadFileDi
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || [])
-    const maxSize = 10 * 1024 * 1024 // 10MB in bytes
+    const maxSize = 50 * 1024 * 1024 // 50MB in bytes
     const allowedTypes = [
       'application/pdf',
       'application/msword',
@@ -58,7 +58,7 @@ export function UploadFileDialog({ open, onOpenChange, datasetId }: UploadFileDi
     selectedFiles.forEach(file => {
       // Check file size
       if (file.size > maxSize) {
-        invalidFiles.push(`${file.name} (zu groß: ${formatFileSize(file.size)}, max. 10MB)`)
+        invalidFiles.push(`${file.name} (zu groß: ${formatFileSize(file.size)}, max. 50MB)`)
         return
       }
 
@@ -209,7 +209,7 @@ export function UploadFileDialog({ open, onOpenChange, datasetId }: UploadFileDi
                 Klicken Sie, um Dateien auszuwählen oder ziehen Sie sie hierher
               </p>
               <div className="text-xs text-muted-foreground">
-                Unterstützte Formate: PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX, JPG, PNG, GIF, WEBP (max. 10MB)
+                Unterstützte Formate: PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX, JPG, PNG, GIF, WEBP (max. 50MB)
               </div>
               <input
                 ref={fileInputRef}

@@ -2,6 +2,15 @@
 
 Ein moderner ChatGPT-Klon mit React, TypeScript und TanStack Query.
 
+## Chat-Funktionalität
+
+Die Anwendung bietet eine vollständige Chat-Oberfläche unter `/chat` mit folgenden Features:
+- Unterstützung für verschiedene AI-Modelle (Ollama, DeepSeek)
+- RAG-basierte Suche mit Cognee
+- Streaming-Antworten
+- Chat-Historie
+- Datei-Uploads und Bild-Unterstützung
+
 ## Installation
 
 1. **Repository klonen**

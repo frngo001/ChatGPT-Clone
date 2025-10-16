@@ -11,6 +11,8 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ModelSelector } from '@/components/ollama-chat/model-selector'
+import { DatasetSelector } from '@/components/ollama-chat/dataset-selector'
+import useOllamaChatStore from '@/stores/ollama-chat-store'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -21,7 +23,10 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const location = useLocation()
   
   // Check if we're on a chat page to show chat-specific components
-  const isChatPage = location.pathname.startsWith('/ollama-chat')
+  const isChatPage = location.pathname.startsWith('/chat')
+  
+  // Get chat mode from store for conditional rendering
+  const chatMode = useOllamaChatStore((state) => state.chatMode)
   
   return (
     <SearchProvider>
@@ -46,7 +51,11 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
             <Header fixed>
               {isChatPage && (
                 <div className='mx-auto flex items-center'>
-                  <ModelSelector />
+                  {chatMode === 'general' ? (
+                    <ModelSelector />
+                  ) : (
+                    <DatasetSelector />
+                  )}
                 </div>
               )}
               <div className='ms-auto flex items-center space-x-4'>

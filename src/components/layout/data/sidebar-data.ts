@@ -20,7 +20,7 @@ export const sidebarData: SidebarData = {
       items: [
         {
           title: 'Neuer Chat',
-          url: '/ollama-chat',
+          url: '/chat',
           icon: SquarePen,
         },
         {

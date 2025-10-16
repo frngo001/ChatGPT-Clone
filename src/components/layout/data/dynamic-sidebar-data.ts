@@ -33,7 +33,7 @@ export function useDynamicSidebarData(): SidebarData {
         items: [
           {
             title: 'Neuer Chat',
-            url: '/ollama-chat',
+            url: '/chat',
             icon: SquarePen,
           },
           {
