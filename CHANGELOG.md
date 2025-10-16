@@ -15,7 +15,9 @@
   - rehype-slug (^6.0.0) für Markdown-Slug-Generierung
   - embla-carousel-react (^8.6.0) für Carousel-Komponenten
   - shiki (^3.13.0) für Syntax-Highlighting
+  - react-syntax-highlighter (^15.6.6) für Code-Syntax-Highlighting
   - Alle verwendeten Bibliotheken sind jetzt in package.json vorhanden
+  - Vite Dependency-Scan-Fehler behoben, Build läuft erfolgreich
 
 - **Docker Setup:** Vollständige Docker-Integration mit Cognee und Ollama
   - Docker Compose Konfiguration für Production und Development
