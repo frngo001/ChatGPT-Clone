@@ -4,10 +4,6 @@ FROM node:22-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY pnpm-lock.yaml ./
-
 # Install pnpm and dependencies
 RUN npm install
 
