@@ -1,8 +1,4 @@
 import type { ViteDevServer } from 'vite';
-import { config } from 'dotenv';
-
-// Load environment variables
-config();
 
 /**
  * Sets up chat API endpoints for Ollama and DeepSeek providers

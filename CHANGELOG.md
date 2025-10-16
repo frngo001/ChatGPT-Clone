@@ -1,3 +1,13 @@
+### Fix - 16.10.2025
+
+- **Docker Setup:** Vollständige Docker-Integration mit Cognee und Ollama
+  - Docker Compose Konfiguration für Production und Development
+  - Cognee-Integration mit DeepSeek LLM und OpenAI Embeddings
+  - Nginx-Proxy für API-Routing zwischen Services
+  - Alle Services konfiguriert für imeso-ki-02
+  - Umfassende Dokumentation und Deployment-Skripte
+  - Behebung von dotenv-Dependency-Problem in Development-Container
+
 ### Feat - 15.01.2025
 
 - **Route Refactoring:** Umbenennung der Chat-Routen von `/ollama-chat` zu `/chat` für bessere Benutzerfreundlichkeit
