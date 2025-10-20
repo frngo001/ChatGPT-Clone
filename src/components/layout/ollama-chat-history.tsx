@@ -161,7 +161,7 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
                 <div
                   key={chat.id}
                   className={cn(
-                    'group flex items-center gap-2 rounded-lg px-2 py-1 text-sm transition-colors hover:bg-accent',
+                    'group relative flex w-full items-center gap-2 rounded-lg px-2 py-1 pr-7 text-sm transition-colors hover:bg-accent',
                     currentChatId === chat.id && 'bg-accent'
                   )}
                 >
@@ -175,8 +175,8 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
                       className="flex-1 text-left min-w-0 w-full"
                     >
                       <div className="truncate font-normal text-xs">
-                        {highlightMatches(firstMessage.slice(0, 50), searchQuery)}
-                        {firstMessage.length > 50 && '...'}
+                        {highlightMatches(firstMessage.slice(0, 80), searchQuery)}
+                        {firstMessage.length > 80 && '...'}
                       </div>
                     </button>
                   </div>
@@ -186,7 +186,7 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <MoreVertical className="h-3 w-3" />
                       </Button>

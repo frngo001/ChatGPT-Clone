@@ -258,18 +258,6 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
             isLoading={isLoading}
             loadingSubmit={loadingSubmit}
             isCogneeMode={chatMode === 'cognee'}
-            useAIElements={true} // Enable AI Elements for better inline code support
-            onQuestionSelect={(question) => {
-              // Set the question as input and submit
-              setInput(question);
-              // Trigger form submission programmatically
-              setTimeout(() => {
-                const form = document.querySelector('form');
-                if (form) {
-                  form.requestSubmit();
-                }
-              }, 100);
-            }}
             reload={async () => {
               removeLatestMessage();
 

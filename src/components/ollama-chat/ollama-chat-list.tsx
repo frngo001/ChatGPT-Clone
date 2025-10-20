@@ -15,8 +15,6 @@ interface ChatListProps {
     chatRequestOptions?: ChatRequestOptions
   ) => Promise<string | null | undefined>;
   isCogneeMode?: boolean;
-  onQuestionSelect?: (question: string) => void;
-  useAIElements?: boolean; // New prop to enable AI Elements
 }
 
 export default function OllamaChatList({
@@ -25,8 +23,6 @@ export default function OllamaChatList({
   loadingSubmit,
   reload,
   isCogneeMode = false,
-  onQuestionSelect,
-  useAIElements = false,
 }: ChatListProps) {
   return (
     <div className="flex-1 w-full overflow-y-auto">
@@ -40,8 +36,6 @@ export default function OllamaChatList({
             isLoading={isLoading}
             reload={reload}
             isCogneeMode={isCogneeMode}
-            onQuestionSelect={onQuestionSelect}
-            useAIElements={useAIElements}
           />
         ))}
         {loadingSubmit && (

@@ -400,36 +400,23 @@ export function setupChatApi(server: ViteDevServer) {
         // Step 2: Use DeepSeek with chunks as context (reuse existing DeepSeek logic)
         const enhancedSystemPrompt = `---Role---
 
-You are a RAG assistant that MUST provide structured responses with inline citations and suggested questions.
+You are a RAG assistant that MUST provide structured responses with sources.
 
 ---CRITICAL OUTPUT FORMAT REQUIREMENTS---
 
 Your response MUST follow this EXACT structure (NO EXCEPTIONS):
 
 1. **Main Content Section:**
-   - Write comprehensive content with inline citations in special format
+   - Write comprehensive content in markdown
    - Use markdown formatting with headings (###, ####)
    - Write in the SAME LANGUAGE as the user's question
+   - NO inline citations or citation markers
 
-2. **Inline Citations - SPECIAL FORMAT:**
-   - Use this EXACT format: [CITATION:1] [CITATION:2] etc. for simple citations
-   - Place citations IMMEDIATELY after the statement they support
-   - Example: "The system requires Windows 7 [CITATION:1] and at least 1GB RAM [CITATION:2]."
-   - EVERY factual statement MUST have a citation in this format
-   - Each [CITATION:N] corresponds to the N-th document chunk provided below
-   - At the end, provide a CITATIONS section with the details
-
-3. **Citations Section (MANDATORY):**
-   - Start with EXACTLY "### Citations" (three hashes, one space, capital C)
-   - List ALL citations in order of appearance
-   - Format: "[NUMBER] (should match the [CITATION:N] format and the numbers must be in the same order as the [CITATION:N] format) DOCUMENT_TYPE: DOCUMENT_NAME | SECTION: SECTION_IDENTIFIER | TOPIC: MAIN_CONTENT_AREA | CONTENT: SPECIFIC_INFORMATION_SUMMARY"
-   - Extract information from the corresponding document chunks
-
-4. **Suggested Questions Section (MANDATORY):**
-   - Start with EXACTLY "### Suggested Questions" (three hashes, one space, capital S and Q)
-   - Provide EXACTLY 3-4 questions
-   - Format: "* Question text here?"
-   - Questions in SAME LANGUAGE as user's question
+2. **Sources Section (MANDATORY):**
+   - Start with EXACTLY "### Sources" (three hashes, one space, capital S)
+   - List only the filenames used in your response
+   - Format: "- filename.pdf" (one filename per line)
+   - Extract filenames from the document chunks provided below
 
 ---Document Chunks---
 
@@ -443,56 +430,24 @@ ${chunks}
    - If information is missing, state: "I don't have enough information to answer this"
    - Maintain conversation history continuity
 
-2. **Citation Format - MANDATORY STRUCTURE:**
-   
-   **Inline Citations:**
-   - Use [CITATION:1], [CITATION:2], [CITATION:3] etc. in the text
-   - Place IMMEDIATELY after the statement they support
-   - Each [CITATION:N] corresponds to the N-th document chunk provided
-   
-   **Citations Section Format:**
-   \`\`\`
-   [NUMBER] DOCUMENT_TYPE: DOCUMENT_NAME | SECTION: SECTION_IDENTIFIER | TOPIC: MAIN_CONTENT_AREA | CONTENT: SPECIFIC_INFORMATION_SUMMARY
-   \`\`\`
-   
-   **Field Requirements:**
-   - DOCUMENT_TYPE: One of [PDF, DOC, WEB, DATABASE, REPORT, MANUAL, GUIDE, OTHER]
-   - DOCUMENT_NAME: Complete filename with extension (e.g., "Systemhandbuch_v2.1.pdf")
-   - SECTION: Chapter/Section with number and title (e.g., "4.3 Datenbankverbindung")
-   - TOPIC: Primary category (e.g., "Konfiguration", "Installation", "Fehlerbehebung")
-   - CONTENT: 30-100 words of ORIGINAL text from source (DO NOT paraphrase)
-   
-   **Example:**
-   \`\`\`
-   [1] MANUAL: Administratorhandbuch_Rev004.pdf | SECTION: 2.1 Systemanforderungen | TOPIC: Hardware | CONTENT: Mindestens das folgende Betriebssystem: Microsoft Windows 7 Professional (32 und 64 Bit). Weitere Anforderungen sind mindestens Intel Core 2 Prozessor oder vergleichbare Prozessoren anderer Hersteller, mindestens 1 GB RAM, mindestens 20 GB freier Festplattenspeicher.
-   \`\`\`
+2. **Sources Format - MANDATORY STRUCTURE:**
+   - Extract filenames from the document chunks
+   - List each unique filename only once
+   - Use the exact filename as it appears in the chunks
+   - Example:
+     ### Sources
+     - Installation_Guide.pdf
+     - Administratorhandbuch_Rev004.pdf
+     - Systemhandbuch_v2.1.pdf
 
-3. **Suggested Questions - MANDATORY:**
-   - Generate 3-4 specific, actionable follow-up questions
-   - Questions must be related to the current topic
-   - Explore different aspects or deeper details
-   - Format: "* Specific question about topic?"
-   - Same language as user's question
-   - NO generic questions like "What else?" or "Tell me more"
-   
-   **Good Examples:**
-   - "* Welche konkreten Schritte sind zur Einrichtung des DRG-Arbeitsplatzes notwendig?"
-   - "* Wie werden die Scoring-Parameter in der Ape.xml-Datei konfiguriert?"
-   
-   **Bad Examples (AVOID):**
-   - "* What can you tell me more about this?"
-   - "* Any other information?"
-
-4. **Language Consistency:**
+3. **Language Consistency:**
    - If user asks in German → respond in German
    - If user asks in English → respond in English
    - ALL sections in SAME language
 
-5. **Quality Checks (MUST PASS):**
-   - ✓ Every factual statement has a [CITATION:N] format
-   - ✓ Citations section exists with "### Citations"
-   - ✓ Suggested Questions section exists with "### Suggested Questions"
-   - ✓ 3-4 questions provided
+4. **Quality Checks (MUST PASS):**
+   - ✓ Sources section exists with "### Sources"
+   - ✓ Only filenames listed (no additional details)
    - ✓ All sections in same language as user's question
 
 ---User Context---
@@ -500,19 +455,12 @@ ${chunks}
 
 ---RESPONSE FORMAT EXAMPLE---
 
-### Dokumentübersicht
 
-Das vorliegende Dokument beschreibt die Installation des Systems [CITATION:1]. Die Mindestanforderungen umfassen Windows 7 Professional [CITATION:2] und mindestens 1GB RAM [CITATION:3].
+Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanforderungen umfassen Windows 7 Professional und mindestens 1GB RAM.
 
-### Citations
-[1] MANUAL: Installation_Guide.pdf | SECTION: 1.0 Einführung | TOPIC: Dokumentation | CONTENT: Das vorliegende Dokument ist das Installationshandbuch für die Softwareplattform KISData Version 7.8.0. Es richtet sich an Administratoren in Kliniken und beschreibt die Einrichtung und Konfiguration des Systems.
-[2] MANUAL: Installation_Guide.pdf | SECTION: 2.1 Systemvoraussetzungen | TOPIC: Betriebssystem | CONTENT: Mindestens das folgende Betriebssystem: Microsoft Windows 7 Professional (32 und 64 Bit). Die Software ist mit Windows 10 getestet und kompatibel.
-[3] MANUAL: Installation_Guide.pdf | SECTION: 2.1 Systemvoraussetzungen | TOPIC: Hardware | CONTENT: Weitere Systemanforderungen sind mindestens Intel Core 2 Prozessor, mindestens 1 GB RAM, mindestens 20 GB freier Festplattenspeicher.
-
-### Suggested Questions
-* Welche konkreten Schritte sind zur Installation erforderlich?
-* Wie wird die Software nach der Installation konfiguriert?
-* Welche Netzwerkports müssen für den Betrieb freigegeben werden?
+### Sources
+- Installation_Guide.pdf
+- Administratorhandbuch_Rev004.pdf
 
 ---Response---`;
 

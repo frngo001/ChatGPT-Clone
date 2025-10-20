@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
-import MarkdownRenderer from "./markdown"
+import { AIResponse } from "./ai/response"
 import CogneeMarkdown from "./cognee-markdown"
 import { Streamdown } from "streamdown"
 import { type BundledTheme } from "shiki/themes"
@@ -12,27 +12,51 @@ interface ResponseProps {
   children: React.ReactNode
   className?: string
   isCogneeMode?: boolean
-  onQuestionSelect?: (question: string) => void
   originalChunks?: string
-  useAIElements?: boolean // New prop to enable AI Elements
+  sources?: string[] // New prop for sources
   [key: string]: any
 }
 
-const Response = memo(({ children, className, isCogneeMode = false, onQuestionSelect, originalChunks, useAIElements = false, ...props }: ResponseProps) => {
+/**
+ * Parse sources from the Sources section
+ * Format: ### Sources followed by a list of filenames
+ */
+const parseSources = (content: string): string[] => {
+  const sourcesMatch = content.match(/### Sources\s*\n([\s\S]*?)(?=\n### |$)/i)
+  if (!sourcesMatch) return []
+
+  return sourcesMatch[1]
+    .split('\n')
+    .map(line => line.replace(/^[-*]\s+/, '').trim())
+    .filter(line => line.length > 0)
+}
+
+/**
+ * Remove Sources section from content for display
+ * This ensures sources are parsed but not shown to the user
+ */
+const removeSourcesFromContent = (content: string): string => {
+  return content
+    .replace(/### Sources\s*\n[\s\S]*?(?=\n### |$)/i, '')
+    .trim()
+}
+
+const Response = memo(({ children, className, isCogneeMode = false, originalChunks, sources, ...props }: ResponseProps) => {
   const content = String(children)
   const streamdownRef = useRef<HTMLDivElement>(null)
-  
+
   // Check if content contains code blocks (```)
   const hasCodeBlocks = content.includes('```')
-  
-  // Check if content has Cognee-style citations and suggestions
-  const hasInlineCitations = content.includes('[CITATION:')
-  const hasCitationsSection = content.includes('### Citations')
-  const hasSuggestions = content.includes('### Suggested Questions')
-  
-  // Cognee content detection - if in Cognee mode and has any citation markers, treat as Cognee content
-  const isCogneeContent = isCogneeMode && (hasInlineCitations || hasCitationsSection || hasSuggestions)
-  
+
+  // Check if content has Cognee-style sources
+  const hasSourcesSection = content.includes('### Sources')
+
+  // Cognee content detection - if in Cognee mode and has sources section, treat as Cognee content
+  const isCogneeContent = isCogneeMode && hasSourcesSection
+
+  // Extract sources from content if not provided as prop
+  const extractedSources = sources || (isCogneeContent ? parseSources(content) : [])
+
   // Define shiki themes for Streamdown (light and dark)
   const shikiThemes: [BundledTheme, BundledTheme] = ['catppuccin-latte', 'github-dark']
   
@@ -64,33 +88,30 @@ const Response = memo(({ children, className, isCogneeMode = false, onQuestionSe
         className
       )}
       {...props}
+      data-sources={extractedSources.length > 0 ? JSON.stringify(extractedSources) : undefined}
     >
       {isCogneeContent ? (
-        // Use CogneeMarkdown for content with citations and suggestions
+        // Use CogneeMarkdown for content with sources
         <CogneeMarkdown
           content={content}
-          onQuestionSelect={onQuestionSelect}
           originalChunks={originalChunks}
-          useAIElements={useAIElements}
         />
       ) : hasCodeBlocks ? (
         // Use Streamdown for better code block formatting with theme support
         <div ref={streamdownRef}>
-          <Streamdown 
+          <Streamdown
             shikiTheme={shikiThemes}
             controls={{ code: true }}
           >
-            {content}
+            {removeSourcesFromContent(content)}
           </Streamdown>
         </div>
       ) : (
-        // Use new MarkdownRenderer for better list formatting
-        <MarkdownRenderer
-          content={content}
-          enableMath={true}
-          enableEmoji={true}
-          enableMermaid={true}
-        />
+        // Use AIResponse for all text content (consistent shadcn.io styling)
+        // Remove sources section before rendering to user
+        <AIResponse>
+          {removeSourcesFromContent(content)}
+        </AIResponse>
       )}
     </div>
   )

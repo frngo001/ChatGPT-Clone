@@ -25,6 +25,12 @@ import {
   DialogContent,
   DialogHeader,
 } from "@/components/ui/dialog";
+import {
+  Sources,
+  SourcesTrigger,
+  SourcesContent,
+  Source,
+} from "@/components/ui/ai/sources";
 
 export type ChatMessageProps = {
   message: ExtendedMessage;
@@ -33,8 +39,6 @@ export type ChatMessageProps = {
   reload: (chatRequestOptions?: ChatRequestOptions) => Promise<string | null | undefined>;
   isSecondLast?: boolean;
   isCogneeMode?: boolean;
-  onQuestionSelect?: (question: string) => void;
-  useAIElements?: boolean; // New prop to enable AI Elements
 };
 
 const MOTION_CONFIG = {
@@ -51,7 +55,7 @@ const MOTION_CONFIG = {
   },
 };
 
-function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false, onQuestionSelect, useAIElements = false }: ChatMessageProps) {
+function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false }: ChatMessageProps) {
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [isThinkCollapsed, setIsThinkCollapsed] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -165,7 +169,12 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false, onQu
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(message.content);
+    // Remove Sources section before copying to clipboard
+    const contentWithoutSources = message.content
+      .replace(/### Sources\s*\n[\s\S]*?(?=\n### |$)/i, '')
+      .trim();
+    
+    navigator.clipboard.writeText(contentWithoutSources);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 1500);
   };
@@ -199,7 +208,7 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false, onQu
         </summary>
         <div ref={thinkContentRef} className="mt-2 text-muted-foreground ml-4 max-h-48 overflow-y-auto relative">
           <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent pointer-events-none z-10"></div>
-          <Response className="text-xs leading-relaxed text-muted-foreground [&>h1]:text-sm [&>h1]:font-bold [&>h1]:mb-1 [&>h2]:text-xs [&>h2]:font-semibold [&>h2]:mb-1 [&>h3]:text-xs [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-1 [&_ul]:list-disc [&_ul]:ml-8 [&_ul]:space-y-0 [&_ol]:list-decimal [&_ol]:ml-8 [&_ol]:space-y-0 [&_li]:mb-0 [&_li]:leading-6 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-xs [&>pre]:bg-muted [&>pre]:p-2 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-2 [&>blockquote]:border-border [&>blockquote]:pl-2 [&>blockquote]:italic [&>a]:text-blue-400 [&>a]:hover:text-blue-600 [&>a]:underline">
+          <Response className="text-xs leading-relaxed text-muted-foreground">
             {thinkContent}
           </Response>
         </div>
@@ -252,10 +261,8 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false, onQu
                 ) : (
                   <Response 
                     key={`${index}-${partIndex}`}
-                    className="text-sm leading-relaxed [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&_ul]:list-disc [&_ul]:ml-10 [&_ul]:space-y-0 [&_ol]:list-decimal [&_ol]:ml-10 [&_ol]:space-y-0 [&_li]:mb-0 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-4 [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:italic [&>a]:text-blue-500 [&>a]:hover:text-blue-700 [&>a]:underline"
+                    className="text-sm leading-relaxed"
                     isCogneeMode={isCogneeMode}
-                    onQuestionSelect={onQuestionSelect}
-                    useAIElements={useAIElements}
                   >
                     {partItem.content}
                   </Response>
@@ -268,10 +275,8 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false, onQu
           return (
             <Response 
               key={index} 
-              className="text-sm leading-relaxed [&>h1]:text-xl [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-lg [&>h2]:font-semibold [&>h2]:mb-2 [&>h3]:text-base [&>h3]:font-semibold [&>h3]:mb-1 [&>p]:mb-2 [&_ul]:list-disc [&_ul]:ml-10 [&_ul]:space-y-0 [&_ol]:list-decimal [&_ol]:ml-10 [&_ol]:space-y-0 [&_li]:mb-0 [&_li]:leading-7 [&>code]:bg-muted [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded [&>code]:text-sm [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:rounded [&>pre]:overflow-x-auto [&>blockquote]:border-l-4 [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:italic [&>a]:text-blue-500 [&>a]:hover:text-blue-700 [&>a]:underline"
+              className="text-sm leading-relaxed"
               isCogneeMode={isCogneeMode}
-              onQuestionSelect={onQuestionSelect}
-              useAIElements={useAIElements}
             >
               {part}
             </Response>
@@ -291,14 +296,27 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false, onQu
     });
   };
 
+  // Extract sources directly from message content
+  const getSourcesFromMessage = (): string[] => {
+    const sourcesMatch = cleanContent.match(/### Sources\s*\n([\s\S]*?)(?=\n### |$)/i)
+    if (!sourcesMatch) return []
+    
+    return sourcesMatch[1]
+      .split('\n')
+      .map(line => line.replace(/^[-*]\s+/, '').trim())
+      .filter(line => line.length > 0)
+  }
+
+  const sources = getSourcesFromMessage()
+
   const renderActionButtons = () => (
-    <div className="pt-2 flex gap-1 items-center text-muted-foreground">
+    <div className="pt-2 flex gap-2 items-center text-muted-foreground">
       <ButtonWithTooltip side="bottom" toolTipText="Copy">
         <Button
           onClick={handleCopy}
           variant="ghost"
           size="icon"
-          className="h-4 w-4 mt-2"
+          className="h-4 w-4"
         >
           {isCopied ? (
             <CheckIcon className="w-3.5 h-3.5 transition-all" />
@@ -312,19 +330,38 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false, onQu
           <Button
             variant="ghost"
             size="icon"
-            className="h-4 w-4 mt-2"
+            className="h-4 w-4"
             onClick={() => reload()}
           >
             <RefreshCcw className="w-3.5 h-3.5 scale-100 transition-all" />
           </Button>
         </ButtonWithTooltip>
       )}
+      {/* Sources inline next to action buttons */}
+      {sources.length > 0 && message.role === "assistant" && (
+        <div className="relative">
+          <Sources className="mb-0 text-muted-foreground text-xs">
+            <SourcesTrigger count={sources.length} />
+            <SourcesContent
+              className="absolute left-0 top-full mt-2 z-50 bg-popover border rounded-md p-2 shadow-md w-auto min-w-full max-w-[10vw]"
+            >
+              {sources.map((source, index) => (
+                <Source
+                  key={index}
+                  href="#"
+                  title={source}
+                />
+              ))}
+            </SourcesContent>
+          </Sources>
+        </div>
+      )}
     </div>
   );
 
   return (
     <>
-      <motion.div {...MOTION_CONFIG} className={`flex flex-col whitespace-pre-wrap ${message.role === "user" ? "gap-1" : "gap-2"}`}>
+      <motion.div {...MOTION_CONFIG} className={`flex flex-col ${message.role === "user" ? "gap-1" : "gap-2"}`}>
         <ChatBubble 
           variant={message.role === "user" ? "sent" : "received"}
           className={message.role === "assistant" ? "max-w-[95%]" : ""}
@@ -336,6 +373,8 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false, onQu
             {renderActionButtons()}
           </ChatBubbleMessage>
         </ChatBubble>
+        
+        {/* Sources are now rendered inline next to action buttons */}
       </motion.div>
 
       {/* Image Modal */}

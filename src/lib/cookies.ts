@@ -3,7 +3,7 @@
  * Replaces js-cookie dependency for better consistency
  */
 
-const DEFAULT_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
+const DEFAULT_MAX_AGE = 60 * 60 * 24 * 70 // 70 days
 
 /**
  * Get a cookie value by name
