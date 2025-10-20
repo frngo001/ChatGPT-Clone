@@ -1,7 +1,7 @@
 # Postman API Test für Dataset File Upload
 
 ## API Endpoint
-- **URL**: `http://imeso-ki-02:8080/api/v1/add`
+- **URL**: `http://imeso-ki-02:8000/api/v1/add`
 - **Method**: POST
 - **Content-Type**: multipart/form-data
 
@@ -21,7 +21,7 @@
 ## Test Steps
 1. Öffnen Sie Postman
 2. Erstellen Sie eine neue POST-Anfrage
-3. Setzen Sie die URL: `http://imeso-ki-02:8080/api/v1/add`
+3. Setzen Sie die URL: `http://imeso-ki-02:8000/api/v1/add`
 4. Gehen Sie zum "Body" Tab
 5. Wählen Sie "form-data"
 6. Fügen Sie die Parameter hinzu:

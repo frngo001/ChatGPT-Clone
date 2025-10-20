@@ -16,7 +16,7 @@ Dieses Setup containerisiert Frontend und Cognee auf der `imeso-ki-02` Maschine 
 ### Containerisierte Services (auf imeso-ki-02)
 - **Frontend**: `http://imeso-ki-02:3000` (Production)
 - **Frontend Dev**: `http://imeso-ki-02:5173` (Development)
-- **Cognee**: `http://imeso-ki-02:8080` (local container)
+- **Cognee**: `http://imeso-ki-02:8000` (local container)
 
 ## Schnellstart
 
@@ -24,14 +24,14 @@ Dieses Setup containerisiert Frontend und Cognee auf der `imeso-ki-02` Maschine 
 ```env
 # Services Configuration (all on imeso-ki-02)
 OLLAMA_URL=http://imeso-ki-02:11434
-COGNEE_URL=http://imeso-ki-02:8080
+COGNEE_URL=http://imeso-ki-02:8000
 
 # Frontend Configuration
 NODE_ENV=production
 
 # Development URLs (for Vite)
 VITE_OLLAMA_URL=http://imeso-ki-02:11434
-VITE_COGNEE_URL=http://imeso-ki-02:8080
+VITE_COGNEE_URL=http://imeso-ki-02:8000
 
 # Cognee LLM Configuration
 LLM_PROVIDER=custom
@@ -134,9 +134,9 @@ Das Frontend-Container erhält alle relevanten Cognee-Umgebungsvariablen:
 ```yaml
 environment:
   # Service URLs
-  - COGNEE_URL=http://imeso-ki-02:8080
+  - COGNEE_URL=http://imeso-ki-02:8000
   - OLLAMA_URL=http://imeso-ki-02:11434
-  - VITE_COGNEE_URL=http://imeso-ki-02:8080
+  - VITE_COGNEE_URL=http://imeso-ki-02:8000
   - VITE_OLLAMA_URL=http://imeso-ki-02:11434
   # Cognee Configuration
   - LLM_PROVIDER=${LLM_PROVIDER}
@@ -174,7 +174,7 @@ docker exec chatgpt-clone-frontend nslookup imeso-ki-02
 
 ### Services nicht erreichbar
 1. Prüfe ob Ollama auf `imeso-ki-02:11434` läuft
-2. Prüfe ob Cognee auf `imeso-ki-02:8080` läuft
+2. Prüfe ob Cognee auf `imeso-ki-02:8000` läuft
 3. Prüfe Firewall-Einstellungen
 
 ### Logs prüfen
@@ -207,4 +207,4 @@ docker-compose -f docker-compose.dev.yml build frontend-dev
 
 - **3000**: Frontend (Production)
 - **5173**: Frontend (Development)
-- **8080**: Cognee (lokaler Container)
+- **8000**: Cognee (lokaler Container)

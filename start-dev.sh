@@ -17,7 +17,7 @@ docker-compose -f docker-compose.dev.yml up -d
 echo "✅ Development environment started successfully!"
 echo ""
 echo "🌐 Frontend (Dev): http://imeso-ki-02:5173"
-echo "🧠 Cognee: http://imeso-ki-02:8080"
+echo "🧠 Cognee: http://imeso-ki-02:8000"
 echo "🤖 Ollama: http://imeso-ki-02:11434"
 echo ""
 echo "📋 To view logs: docker-compose -f docker-compose.dev.yml logs -f"

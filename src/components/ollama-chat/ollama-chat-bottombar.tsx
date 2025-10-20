@@ -189,7 +189,7 @@ export default function OllamaChatBottombar({
                         onClick={() => setChatMode('cognee')}
                         className={chatMode === 'cognee' ? 'bg-accent' : ''}
                       >
-                        Cognee Search
+                        Cognee
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

@@ -50,7 +50,7 @@ export default defineConfig({
       },
       // Proxy Cognee API requests to avoid CORS issues
       '/api/v1': {
-        target: 'http://imeso-ki-02:8080',
+        target: 'http://imeso-ki-02:8000',
         changeOrigin: true,
         secure: false,
       },

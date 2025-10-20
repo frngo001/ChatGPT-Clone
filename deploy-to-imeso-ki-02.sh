@@ -54,8 +54,8 @@ else
 fi
 
 # Check Cognee
-if curl -s http://localhost:8080/health > /dev/null; then
-    echo "✅ Cognee is running on http://localhost:8080"
+if curl -s http://localhost:8000/health > /dev/null; then
+    echo "✅ Cognee is running on http://localhost:8000"
 else
     echo "❌ Cognee is not responding"
 fi
@@ -72,7 +72,7 @@ echo "🎉 Deployment completed!"
 echo ""
 echo "🌐 Services available:"
 echo "   Frontend: http://imeso-ki-02:3000"
-echo "   Cognee: http://imeso-ki-02:8080"
+echo "   Cognee: http://imeso-ki-02:8000"
 echo "   Ollama: http://imeso-ki-02:11434"
 echo ""
 echo "📋 Useful commands:"

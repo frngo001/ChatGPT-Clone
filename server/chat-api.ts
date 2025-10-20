@@ -334,7 +334,7 @@ export function setupChatApi(server: ViteDevServer) {
           return;
         }
 
-        const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8080';
+        const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
         const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
         
         if (!deepseekApiKey) {
@@ -351,12 +351,12 @@ export function setupChatApi(server: ViteDevServer) {
           query: query,
           systemPrompt: systemPrompt || "Du bist ein hilfreicher KI-Assistent mit Zugriff auf eine umfassende Wissensdatenbank.",
           nodeName: [],
-          topK: 10,
+          topK: 20,
           onlyContext: false, // Get full response to extract chunks
           useCombinedContext: false
         };
 
-        console.log('Fetching chunks from Cognee...');
+       
         const cogneeResponse = await fetch(`${cogneeUrl}/api/v1/search`, {
           method: 'POST',
           headers: {
@@ -371,10 +371,7 @@ export function setupChatApi(server: ViteDevServer) {
         }
 
         const cogneeData = await cogneeResponse.json() as any;
-        
-        console.log('Cognee response type:', typeof cogneeData);
-        console.log('Cognee response structure:', JSON.stringify(cogneeData, null, 2).substring(0, 500) + '...');
-        
+
         // Extract chunks from Cognee response
         let chunks = '';
         if (Array.isArray(cogneeData) && cogneeData.length > 0) {
@@ -399,8 +396,6 @@ export function setupChatApi(server: ViteDevServer) {
         } else {
           chunks = 'No relevant context found.';
         }
-
-        console.log(`Retrieved ${cogneeData.length || 0} chunks from Cognee`);
 
         // Step 2: Use DeepSeek with chunks as context (reuse existing DeepSeek logic)
         const enhancedSystemPrompt = `---Role---
@@ -427,7 +422,7 @@ Your response MUST follow this EXACT structure (NO EXCEPTIONS):
 3. **Citations Section (MANDATORY):**
    - Start with EXACTLY "### Citations" (three hashes, one space, capital C)
    - List ALL citations in order of appearance
-   - Format: "[NUMBER] DOCUMENT_TYPE: DOCUMENT_NAME | SECTION: SECTION_IDENTIFIER | TOPIC: MAIN_CONTENT_AREA | CONTENT: SPECIFIC_INFORMATION_SUMMARY"
+   - Format: "[NUMBER] (should match the [CITATION:N] format and the numbers must be in the same order as the [CITATION:N] format) DOCUMENT_TYPE: DOCUMENT_NAME | SECTION: SECTION_IDENTIFIER | TOPIC: MAIN_CONTENT_AREA | CONTENT: SPECIFIC_INFORMATION_SUMMARY"
    - Extract information from the corresponding document chunks
 
 4. **Suggested Questions Section (MANDATORY):**
@@ -524,10 +519,7 @@ Das vorliegende Dokument beschreibt die Installation des Systems [CITATION:1]. D
         // Extract the actual user question from the query (remove conversation history formatting)
         const userQuestion = query.includes('User:') ? 
           query.split('User:').pop()?.trim() || query : 
-          query;
-
-        console.log('Using DeepSeek with enhanced context...');
-        
+          query;        
         // Step 3: Use existing DeepSeek logic directly
         
         const deepseekMessages = [

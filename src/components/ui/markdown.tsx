@@ -49,7 +49,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     if (onLinkClick) {
       onLinkClick(url, event)
     } else {
-      console.log("Link clicked:", url)
     }
   }
 
@@ -57,7 +56,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     if (onDownloadClick) {
       onDownloadClick(url, filename)
     } else {
-      console.log("Download clicked:", url, filename)
     }
   }
 

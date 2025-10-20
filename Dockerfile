@@ -4,14 +4,19 @@ FROM node:22-alpine AS builder
 # Set working directory
 WORKDIR /app
 
+# Copy package files
+COPY package*.json ./
+COPY pnpm-lock.yaml ./
+
 # Install pnpm and dependencies
-RUN npm install
+RUN npm install -g pnpm
+RUN pnpm install 
 
 # Copy source code
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN pnpm build
 
 # Production stage
 FROM nginx:alpine

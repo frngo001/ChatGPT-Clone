@@ -17,7 +17,7 @@ docker-compose up -d
 echo "✅ Services started successfully!"
 echo ""
 echo "🌐 Frontend: http://imeso-ki-02:3000"
-echo "🧠 Cognee: http://imeso-ki-02:8080"
+echo "🧠 Cognee: http://imeso-ki-02:8000"
 echo "🤖 Ollama: http://imeso-ki-02:11434"
 echo ""
 echo "📋 To view logs: docker-compose logs -f"

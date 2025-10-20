@@ -1,5 +1,5 @@
 // API service for datasets management
-// Connects to the Cognee API at http://imeso-ki-02:8080
+// Connects to the Cognee API at http://imeso-ki-02:8000
 
 const API_BASE_URL = '/api/v1'
 

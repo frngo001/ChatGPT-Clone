@@ -13,7 +13,7 @@ services:
     environment:
       - NODE_ENV=development
       - VITE_OLLAMA_URL=http://imeso-ki-02:11434
-      - VITE_COGNEE_URL=http://imeso-ki-02:8080
+      - VITE_COGNEE_URL=http://imeso-ki-02:8000
       # Cognee Environment Variables for Frontend
       - LLM_PROVIDER=${LLM_PROVIDER}
       - LLM_MODEL=${LLM_MODEL}
@@ -28,7 +28,7 @@ services:
       - COGNEE_DATA_DIR=${COGNEE_DATA_DIR}
       # Additional development config
       - OLLAMA_URL=http://imeso-ki-02:11434
-      - COGNEE_URL=http://imeso-ki-02:8080
+      - COGNEE_URL=http://imeso-ki-02:8000
     depends_on:
       - cognee
     networks:
@@ -42,7 +42,7 @@ services:
     image: cognee/cognee:main
     container_name: cognee-container
     ports:
-      - "8080:8000"
+      - "8000:8000"
     environment:
       # LLM Configuration
       - LLM_PROVIDER=${LLM_PROVIDER}

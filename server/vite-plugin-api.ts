@@ -1,5 +1,9 @@
 import type { Plugin, ViteDevServer } from 'vite';
+import { config } from 'dotenv';
 import { setupChatApi } from './chat-api';
+
+// Load environment variables from .env file
+config();
 
 /**
  * Vite plugin for setting up chat API endpoints
