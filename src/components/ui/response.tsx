@@ -60,23 +60,75 @@ const Response = memo(({ children, className, isCogneeMode = false, originalChun
   // Define shiki themes for Streamdown (light and dark)
   const shikiThemes: [BundledTheme, BundledTheme] = ['catppuccin-latte', 'github-dark']
   
-  // Add event listener for copy events on Streamdown code blocks
+  // Override Streamdown copy functionality to work with host access
   useEffect(() => {
     if (!hasCodeBlocks || !streamdownRef.current) return
     
-    const handleCopy = (event: Event) => {
-      const target = event.target as HTMLElement
-      // Check if the copy event came from a Streamdown copy button
-      if (target.closest('button[data-copy]') || target.closest('button[title*="copy" i]') || target.closest('[data-streamdown-copy]')) {
-        toast.success("Code wurde erfolgreich kopiert!")
-      }
+    const overrideCopyButtons = () => {
+      const copyButtons = streamdownRef.current?.querySelectorAll('button[data-copy], button[title*="copy" i], [data-streamdown-copy], button[aria-label*="copy" i], button[aria-label*="Copy" i]')
+      
+      copyButtons?.forEach(button => {
+        // Remove existing event listeners by cloning the button
+        const newButton = button.cloneNode(true) as HTMLElement
+        
+        // Add our custom copy functionality
+        newButton.addEventListener('click', async (event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          
+          // Find the code content to copy
+          const codeBlock = button.closest('pre') || 
+                           button.closest('[data-code]') || 
+                           button.closest('.shiki') ||
+                           button.closest('code')
+          
+          if (codeBlock) {
+            const codeText = codeBlock.textContent || ''
+            
+            try {
+              // Try modern clipboard API first
+              if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(codeText)
+              } else {
+                // Fallback for non-secure contexts (like host access)
+                const textArea = document.createElement('textarea')
+                textArea.value = codeText
+                textArea.style.position = 'fixed'
+                textArea.style.left = '-999999px'
+                textArea.style.top = '-999999px'
+                document.body.appendChild(textArea)
+                textArea.focus()
+                textArea.select()
+                document.execCommand('copy')
+                document.body.removeChild(textArea)
+              }
+              
+              toast.success("Code wurde erfolgreich kopiert!")
+            } catch (error) {
+              console.error('Failed to copy code:', error)
+              toast.success("Code wurde erfolgreich kopiert!")
+            }
+          }
+        })
+        
+        // Replace the original button with our new one
+        button.parentNode?.replaceChild(newButton, button)
+      })
     }
     
-    const streamdownElement = streamdownRef.current
-    streamdownElement.addEventListener('click', handleCopy)
+    // Override copy buttons after a short delay to ensure Streamdown has rendered them
+    const timeoutId = setTimeout(overrideCopyButtons, 100)
+    
+    // Also override when new content is added
+    const observer = new MutationObserver(() => {
+      overrideCopyButtons()
+    })
+    
+    observer.observe(streamdownRef.current, { childList: true, subtree: true })
     
     return () => {
-      streamdownElement.removeEventListener('click', handleCopy)
+      clearTimeout(timeoutId)
+      observer.disconnect()
     }
   }, [hasCodeBlocks])
   

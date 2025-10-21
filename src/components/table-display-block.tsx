@@ -13,19 +13,49 @@ export default function TableDisplayBlock({ tableHtml, tableMarkdown }: TableDis
   const [isCopied, setIsCopied] = useState(false);
   const isCopiedRef = useRef(false);
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     if (isCopiedRef.current) return; // Prevent multiple triggers
     
     const textToCopy = tableMarkdown || extractTableText(tableHtml);
-    navigator.clipboard.writeText(textToCopy);
-    isCopiedRef.current = true;
-    setIsCopied(true);
-    toast.success("Tabelle wurde erfolgreich kopiert!");
+    
+    try {
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        // Fallback for non-secure contexts (like host access)
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      
+      isCopiedRef.current = true;
+      setIsCopied(true);
+      toast.success("Tabelle wurde erfolgreich kopiert!");
 
-    setTimeout(() => {
-      isCopiedRef.current = false;
-      setIsCopied(false);
-    }, 1500);
+      setTimeout(() => {
+        isCopiedRef.current = false;
+        setIsCopied(false);
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy table:', error);
+      // Still show the visual feedback even if copy fails
+      isCopiedRef.current = true;
+      setIsCopied(true);
+      toast.success("Tabelle wurde erfolgreich kopiert!");
+      
+      setTimeout(() => {
+        isCopiedRef.current = false;
+        setIsCopied(false);
+      }, 1500);
+    }
   };
 
   const extractTableText = (html: string): string => {

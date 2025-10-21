@@ -241,6 +241,9 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
             <h1 className="text-4xl font-semibold text-foreground mb-2 tracking-tight">
               Was darf ich dir erleichtern?
             </h1>
+            <p className="text-muted-foreground text-lg mt-4">
+              Wähle zwischen General für allgemeine Fragen oder Cognee für Fragen zu deinen Dokumenten.
+            </p>
           </div>
           <OllamaChatBottombar
             input={input}

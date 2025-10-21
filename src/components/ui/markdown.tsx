@@ -106,8 +106,27 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                   </SyntaxHighlighter>
                   <button
                     className="absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => {
-                      navigator.clipboard.writeText(String(children))
+                    onClick={async () => {
+                      try {
+                        // Try modern clipboard API first
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(String(children));
+                        } else {
+                          // Fallback for non-secure contexts (like host access)
+                          const textArea = document.createElement('textarea');
+                          textArea.value = String(children);
+                          textArea.style.position = 'fixed';
+                          textArea.style.left = '-999999px';
+                          textArea.style.top = '-999999px';
+                          document.body.appendChild(textArea);
+                          textArea.focus();
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                        }
+                      } catch (error) {
+                        console.error('Failed to copy code:', error);
+                      }
                     }}
                   >
                     Copy

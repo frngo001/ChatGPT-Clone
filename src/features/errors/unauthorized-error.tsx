@@ -8,16 +8,15 @@ export function UnauthorisedError() {
     <div className='h-svh'>
       <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
         <h1 className='text-[7rem] leading-tight font-bold'>401</h1>
-        <span className='font-medium'>Unauthorized Access</span>
+        <span className='font-medium'>Unbefugter Zugriff</span>
         <p className='text-muted-foreground text-center'>
-          Please log in with the appropriate credentials <br /> to access this
-          resource.
+          Bitte melden Sie sich mit den entsprechenden Anmeldedaten <br /> an, um auf diese Ressource zuzugreifen.
         </p>
         <div className='mt-6 flex gap-4'>
           <Button variant='outline' onClick={() => history.go(-1)}>
-            Go Back
+            Zurück
           </Button>
-          <Button onClick={() => navigate({ to: '/' })}>Back to Home</Button>
+          <Button onClick={() => navigate({ to: '/' })}>Zur Startseite</Button>
         </div>
       </div>
     </div>

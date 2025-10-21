@@ -50,8 +50,8 @@ export function ProfileForm() {
       username: profileData.username,
       email: profileData.email,
       urls: profileData.urls.length > 0 ? profileData.urls : [
-        { value: 'https://shadcn.com' },
-        { value: 'http://twitter.com/shadcn' },
+        { value: '' },
+        { value: '' },
       ],
     },
     mode: 'onChange',
@@ -94,32 +94,6 @@ export function ProfileForm() {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name='email'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>E-Mail</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder='Verifizierte E-Mail auswählen' />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value='m@example.com'>m@example.com</SelectItem>
-                  <SelectItem value='m@google.com'>m@google.com</SelectItem>
-                  <SelectItem value='m@support.com'>m@support.com</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                Du kannst verifizierte E-Mail-Adressen in deinen{' '}
-                <Link to='/'>E-Mail-Einstellungen</Link> verwalten.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <div>
           {fields.map((field, index) => (
             <FormField
@@ -132,7 +106,7 @@ export function ProfileForm() {
                     URLs
                   </FormLabel>
                   <FormDescription className={cn(index !== 0 && 'sr-only')}>
-                    Füge Links zu deiner Website, deinem Blog oder deinen Social-Media-Profilen hinzu.
+                    Füge Links zu hinzu
                   </FormDescription>
                   <FormControl>
                     <Input {...field} />

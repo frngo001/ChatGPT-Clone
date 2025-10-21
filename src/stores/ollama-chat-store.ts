@@ -76,12 +76,12 @@ const useOllamaChatStore = create<State & Actions>()(
       downloadProgress: 0,
       downloadingModel: null,
       // Chat settings defaults
-      temperature: 0.7,
+      temperature: 1.0,
       topP: 0.9,
       maxTokens: 1000000,
-      batchSize: 20,
-      throttleDelay: 50,
-      systemPrompt: "You are a helpful AI assistant. Provide very long, detailed, and comprehensive responses using Markdown formatting. Include ALL relevant information from the provided context without exception. Do not omit any details, no matter how small or seemingly insignificant. Be thorough and exhaustive in your explanations. Structure your response with proper headings, lists, and formatting to ensure clarity and completeness. Always respond in the same language as the user's question. Prioritize completeness over brevity - longer responses are preferred. min length: 1000 words",
+      batchSize: 80,
+      throttleDelay: 80,
+      systemPrompt: "",
       // Cognee settings defaults
       chatMode: 'general',
       selectedDataset: null, 

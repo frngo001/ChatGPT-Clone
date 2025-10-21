@@ -168,15 +168,38 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false }: Ch
     return tables;
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     // Remove Sources section before copying to clipboard
     const contentWithoutSources = message.content
       .replace(/### Sources\s*\n[\s\S]*?(?=\n### |$)/i, '')
       .trim();
     
-    navigator.clipboard.writeText(contentWithoutSources);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 1500);
+    try {
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(contentWithoutSources);
+      } else {
+        // Fallback for non-secure contexts (like host access)
+        const textArea = document.createElement('textarea');
+        textArea.value = contentWithoutSources;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 1500);
+    } catch (error) {
+      console.error('Failed to copy text:', error);
+      // Still show the visual feedback even if copy fails
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 1500);
+    }
   };
 
 
