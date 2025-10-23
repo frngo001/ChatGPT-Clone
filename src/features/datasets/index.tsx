@@ -249,7 +249,7 @@ export function DatasetsPage() {
                   <div className="flex-1">
                     <CardTitle className="text-base">{dataset.name}</CardTitle>
                     <CardDescription className="mt-1 text-sm">
-                      {dataset.description}
+                      {dataset.description || 'Keine Beschreibung verfügbar'}
                     </CardDescription>
                   </div>
                   <DropdownMenu>

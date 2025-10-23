@@ -13,6 +13,10 @@ import { NavGroupExtended } from './nav-group-extended'
 import { TeamSwitcher } from './team-switcher'
 import { OllamaChatHistory } from './ollama-chat-history'
 
+function SidebarRailWithText() {
+  return <SidebarRail />
+}
+
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
   const { state, isMobile } = useSidebar()
@@ -48,7 +52,7 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
       </SidebarContent>
-      <SidebarRail />
+      <SidebarRailWithText />
     </Sidebar>
   )
 }

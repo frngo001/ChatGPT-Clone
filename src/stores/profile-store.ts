@@ -1,10 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useAuthStore } from './auth-store'
 
 interface ProfileData {
   username: string
   email: string
-  urls: Array<{ value: string }>
 }
 
 interface State {
@@ -14,12 +14,13 @@ interface State {
 interface Actions {
   updateProfileData: (data: Partial<ProfileData>) => void
   resetProfileData: () => void
+  getCurrentUserEmail: () => string
+  getCurrentUserData: () => ProfileData
 }
 
 const defaultProfileData: ProfileData = {
   username: '',
-  email: 'm@example.com', // Default email
-  urls: [],
+  email: '', // Will be set from authenticated user
 }
 
 export const useProfileStore = create<State & Actions>()(
@@ -31,6 +32,18 @@ export const useProfileStore = create<State & Actions>()(
           profileData: { ...state.profileData, ...data },
         })),
       resetProfileData: () => set({ profileData: defaultProfileData }),
+      getCurrentUserEmail: () => {
+        const authStore = useAuthStore.getState();
+        return authStore.auth.user?.email || '';
+      },
+      getCurrentUserData: () => {
+        const authStore = useAuthStore.getState();
+        const user = authStore.auth.user;
+        return {
+          username: user?.email?.split('@')[0] || '',
+          email: user?.email || '',
+        };
+      },
     }),
     {
       name: 'profile-settings-store', // unique name

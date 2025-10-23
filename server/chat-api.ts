@@ -305,6 +305,240 @@ export function setupChatApi(server: ViteDevServer) {
     }
   });
 
+  // Cognee Authentication API
+  server.middlewares.use('/api/cognee/auth/login', async (req, res) => {
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.end('Method Not Allowed');
+      return;
+    }
+
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk.toString();
+    });
+
+    req.on('end', async () => {
+      try {
+        const { email, password } = JSON.parse(body);
+
+        if (!email || !password) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'Email and password are required' }));
+          return;
+        }
+
+        const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
+        
+        // Cognee expects form-urlencoded data for login
+        const formData = new URLSearchParams();
+        formData.append('username', email);
+        formData.append('password', password);
+        formData.append('grant_type', 'password');
+
+        const cogneeResponse = await fetch(`${cogneeUrl}/api/v1/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData.toString(),
+        });
+
+        if (!cogneeResponse.ok) {
+          const errorText = await cogneeResponse.text();
+          res.statusCode = cogneeResponse.status;
+          res.end(errorText);
+          return;
+        }
+
+        // Get the response data
+        const responseData = await cogneeResponse.json();
+        
+        // Extract token from response (Cognee might return it in different formats)
+        const token = responseData.access_token || responseData.token || responseData;
+        
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ 
+          token,
+          user: {
+            email,
+            id: responseData.user_id || responseData.id,
+            tenant_id: responseData.tenant_id
+          }
+        }));
+
+      } catch (error) {
+        console.error('Cognee Login API Error:', error);
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: 'Internal Server Error' }));
+      }
+    });
+  });
+
+  // Cognee Register API
+  server.middlewares.use('/api/cognee/auth/register', async (req, res) => {
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.end('Method Not Allowed');
+      return;
+    }
+
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk.toString();
+    });
+
+    req.on('end', async () => {
+      try {
+        const { email, password, name } = JSON.parse(body);
+
+        if (!email || !password) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'Email and password are required' }));
+          return;
+        }
+
+        const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
+        
+        const cogneeResponse = await fetch(`${cogneeUrl}/api/v1/auth/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            is_active: true,
+            is_verified: true, // Auto-verify for development
+            is_superuser: false
+          }),
+        });
+
+        if (!cogneeResponse.ok) {
+          const errorText = await cogneeResponse.text();
+          res.statusCode = cogneeResponse.status;
+          res.end(errorText);
+          return;
+        }
+
+        const responseData = await cogneeResponse.json();
+        
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ 
+          user: {
+            id: responseData.id,
+            email: responseData.email,
+            is_active: responseData.is_active,
+            is_verified: responseData.is_verified,
+            tenant_id: responseData.tenant_id
+          }
+        }));
+
+      } catch (error) {
+        console.error('Cognee Register API Error:', error);
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: 'Internal Server Error' }));
+      }
+    });
+  });
+
+  // Cognee Logout API
+  server.middlewares.use('/api/cognee/auth/logout', async (req, res) => {
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.end('Method Not Allowed');
+      return;
+    }
+
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.replace('Bearer ', '');
+
+      if (!token) {
+        res.statusCode = 401;
+        res.end(JSON.stringify({ error: 'No token provided' }));
+        return;
+      }
+
+      const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
+      
+      const cogneeResponse = await fetch(`${cogneeUrl}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      res.statusCode = cogneeResponse.status;
+      res.setHeader('Content-Type', 'application/json');
+      
+      if (cogneeResponse.ok) {
+        res.end(JSON.stringify({ message: 'Logged out successfully' }));
+      } else {
+        const errorText = await cogneeResponse.text();
+        res.end(errorText);
+      }
+
+    } catch (error) {
+      console.error('Cognee Logout API Error:', error);
+      res.statusCode = 500;
+      res.end(JSON.stringify({ error: 'Internal Server Error' }));
+    }
+  });
+
+  // Cognee Verify Token API
+  server.middlewares.use('/api/cognee/auth/verify', async (req, res) => {
+    if (req.method !== 'GET') {
+      res.statusCode = 405;
+      res.end('Method Not Allowed');
+      return;
+    }
+
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.replace('Bearer ', '');
+
+      if (!token) {
+        res.statusCode = 401;
+        res.end(JSON.stringify({ error: 'No token provided' }));
+        return;
+      }
+
+      const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
+      
+      const cogneeResponse = await fetch(`${cogneeUrl}/api/v1/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      res.statusCode = cogneeResponse.status;
+      res.setHeader('Content-Type', 'application/json');
+      
+      if (cogneeResponse.ok) {
+        const userData = await cogneeResponse.json();
+        res.end(JSON.stringify({ 
+          valid: true,
+          user: {
+            id: userData.id,
+            email: userData.email,
+            is_active: userData.is_active,
+            is_verified: userData.is_verified,
+            tenant_id: userData.tenant_id
+          }
+        }));
+      } else {
+        res.end(JSON.stringify({ valid: false, error: 'Invalid token' }));
+      }
+
+    } catch (error) {
+      console.error('Cognee Verify API Error:', error);
+      res.statusCode = 500;
+      res.end(JSON.stringify({ error: 'Internal Server Error' }));
+    }
+  });
+
   // Cognee Search API with DeepSeek Integration
   server.middlewares.use('/api/cognee/search', async (req, res) => {
     if (req.method !== 'POST') {
@@ -320,7 +554,7 @@ export function setupChatApi(server: ViteDevServer) {
 
     req.on('end', async () => {
       try {
-        const { searchType, query, datasets, systemPrompt } = JSON.parse(body);
+        const { searchType, query, datasetIds, systemPrompt } = JSON.parse(body);
 
         if (!query) {
           res.statusCode = 400;
@@ -328,9 +562,19 @@ export function setupChatApi(server: ViteDevServer) {
           return;
         }
 
-        if (!datasets || datasets.length === 0) {
+        if (!datasetIds || datasetIds.length === 0) {
           res.statusCode = 400;
-          res.end(JSON.stringify({ error: 'At least one dataset is required' }));
+          res.end(JSON.stringify({ error: 'At least one dataset ID is required' }));
+          return;
+        }
+
+        // Extract token from request headers
+        const authHeader = req.headers.authorization;
+        const token = authHeader?.replace('Bearer ', '');
+
+        if (!token) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ error: 'Authentication token required' }));
           return;
         }
 
@@ -346,8 +590,8 @@ export function setupChatApi(server: ViteDevServer) {
         // Step 1: Get chunks from Cognee API
         const cogneeRequestBody = {
           searchType: searchType || "CHUNKS",
-          datasets: datasets,
-          datasetIds: [],
+          datasets: [],
+          datasetIds: datasetIds,
           query: query,
           systemPrompt: systemPrompt || "Du bist ein hilfreicher KI-Assistent mit Zugriff auf eine umfassende Wissensdatenbank.",
           nodeName: [],
@@ -361,6 +605,7 @@ export function setupChatApi(server: ViteDevServer) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify(cogneeRequestBody),
         });

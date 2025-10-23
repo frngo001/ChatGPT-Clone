@@ -1,13 +1,9 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
-import { ChevronDownIcon } from '@radix-ui/react-icons'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { fonts } from '@/config/fonts'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
-import { useFont } from '@/context/font-provider'
-import { useTheme } from '@/context/theme-provider'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Form,
   FormControl,
@@ -17,151 +13,173 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { useAppearanceStore } from '@/stores/appearance-store'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { useDisplayStore } from '@/stores/display-store'
+import { useFont } from '@/context/font-provider'
+import { fonts } from '@/config/fonts'
+
+const items = [
+  {
+    id: 'recents',
+    label: 'Zuletzt verwendet',
+  },
+  {
+    id: 'home',
+    label: 'Startseite',
+  },
+  {
+    id: 'applications',
+    label: 'Anwendungen',
+  },
+  {
+    id: 'desktop',
+    label: 'Desktop',
+  },
+  {
+    id: 'downloads',
+    label: 'Downloads',
+  },
+  {
+    id: 'documents',
+    label: 'Dokumente',
+  },
+  {
+    id: 'theme-settings',
+    label: 'Theme-Einstellungen',
+  },
+] as const
 
 const appearanceFormSchema = z.object({
-  theme: z.enum(['light', 'dark']),
   font: z.enum(fonts),
+  items: z.array(z.string()).refine((value) => value.some((item) => item), {
+    message: 'Du musst mindestens ein Element auswählen.',
+  }),
 })
 
 type AppearanceFormValues = z.infer<typeof appearanceFormSchema>
 
 export function AppearanceForm() {
+  const { showThemeSettings, setShowThemeSettings, selectedFont, setSelectedFont } = useDisplayStore()
   const { font, setFont } = useFont()
-  const { theme, setTheme } = useTheme()
-  const { appearanceData, updateAppearanceData } = useAppearanceStore()
-
+  
   const form = useForm<AppearanceFormValues>({
     resolver: zodResolver(appearanceFormSchema),
     defaultValues: {
-      theme: (appearanceData.theme as 'light' | 'dark') || (theme as 'light' | 'dark'),
-      font: (appearanceData.font as 'inter' | 'manrope' | 'system') || (font as 'inter' | 'manrope' | 'system'),
+      font: selectedFont || font,
+      items: showThemeSettings 
+        ? ['recents', 'home', 'theme-settings']
+        : ['recents', 'home'],
     },
   })
 
-  function onSubmit(data: AppearanceFormValues) {
-    // Update context providers
-    if (data.font != font) setFont(data.font)
-    if (data.theme != theme) setTheme(data.theme)
-
-    // Save to store
-    updateAppearanceData({
-      font: data.font,
-      theme: data.theme,
-    })
-
-    toast.success('Erscheinungsbild erfolgreich aktualisiert!')
-  }
-
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
+      <form
+        onSubmit={form.handleSubmit((data) => {
+          // Update font if changed
+          if (data.font !== font) {
+            setFont(data.font)
+            setSelectedFont(data.font)
+          }
+          
+          // Check if theme-settings is selected and update store immediately
+          const showThemeSettings = data.items.includes('theme-settings')
+          setShowThemeSettings(showThemeSettings)
+          
+          toast.success('Anzeige erfolgreich aktualisiert!')
+        })}
+        className='space-y-8'
+      >
+        {/* Font Selection */}
         <FormField
           control={form.control}
           name='font'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Schriftart</FormLabel>
-              <div className='relative w-max'>
-                <FormControl>
-                  <select
-                    className={cn(
-                      buttonVariants({ variant: 'outline' }),
-                      'w-[200px] appearance-none font-normal capitalize',
-                      'dark:bg-background dark:hover:bg-background'
-                    )}
-                    {...field}
-                  >
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-sm font-medium">Schriftart</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="w-48 h-8">
+                      <SelectValue placeholder="Schriftart auswählen" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
                     {fonts.map((font) => (
-                      <option key={font} value={font}>
-                        {font}
-                      </option>
+                      <SelectItem key={font} value={font}>
+                        <span className="capitalize">{font}</span>
+                      </SelectItem>
                     ))}
-                  </select>
-                </FormControl>
-                <ChevronDownIcon className='absolute end-3 top-2.5 h-4 w-4 opacity-50' />
+                  </SelectContent>
+                </Select>
               </div>
-              <FormDescription className='font-manrope'>
-                Wähle die Schriftart aus, die im Dashboard verwendet werden soll.
-              </FormDescription>
+              <p className="text-xs text-muted-foreground mt-1">
+                Wähle die Schriftart aus, die in der gesamten Anwendung verwendet werden soll.
+              </p>
               <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name='theme'
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Design</FormLabel>
-              <FormDescription>
-                Wähle das Design für das Dashboard aus.
-              </FormDescription>
-              <FormMessage />
-              <RadioGroup
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                className='grid max-w-md grid-cols-2 gap-8 pt-2'
-              >
-                <FormItem>
-                  <FormLabel className='[&:has([data-state=checked])>div]:border-primary'>
-                    <FormControl>
-                      <RadioGroupItem value='light' className='sr-only' />
-                    </FormControl>
-                    <div className='border-muted hover:border-accent items-center rounded-md border-2 p-1'>
-                      <div className='space-y-2 rounded-sm bg-[#ecedef] p-2'>
-                        <div className='space-y-2 rounded-md bg-white p-2 shadow-xs'>
-                          <div className='h-2 w-[80px] rounded-lg bg-[#ecedef]' />
-                          <div className='h-2 w-[100px] rounded-lg bg-[#ecedef]' />
-                        </div>
-                        <div className='flex items-center space-x-2 rounded-md bg-white p-2 shadow-xs'>
-                          <div className='h-4 w-4 rounded-full bg-[#ecedef]' />
-                          <div className='h-2 w-[100px] rounded-lg bg-[#ecedef]' />
-                        </div>
-                        <div className='flex items-center space-x-2 rounded-md bg-white p-2 shadow-xs'>
-                          <div className='h-4 w-4 rounded-full bg-[#ecedef]' />
-                          <div className='h-2 w-[100px] rounded-lg bg-[#ecedef]' />
-                        </div>
-                      </div>
-                    </div>
-                    <span className='block w-full p-2 text-center font-normal'>
-                      Hell
-                    </span>
-                  </FormLabel>
-                </FormItem>
-                <FormItem>
-                  <FormLabel className='[&:has([data-state=checked])>div]:border-primary'>
-                    <FormControl>
-                      <RadioGroupItem value='dark' className='sr-only' />
-                    </FormControl>
-                    <div className='border-muted bg-popover hover:bg-accent hover:text-accent-foreground items-center rounded-md border-2 p-1'>
-                      <div className='space-y-2 rounded-sm bg-slate-950 p-2'>
-                        <div className='space-y-2 rounded-md bg-slate-800 p-2 shadow-xs'>
-                          <div className='h-2 w-[80px] rounded-lg bg-slate-400' />
-                          <div className='h-2 w-[100px] rounded-lg bg-slate-400' />
-                        </div>
-                        <div className='flex items-center space-x-2 rounded-md bg-slate-800 p-2 shadow-xs'>
-                          <div className='h-4 w-4 rounded-full bg-slate-400' />
-                          <div className='h-2 w-[100px] rounded-lg bg-slate-400' />
-                        </div>
-                        <div className='flex items-center space-x-2 rounded-md bg-slate-800 p-2 shadow-xs'>
-                          <div className='h-4 w-4 rounded-full bg-slate-400' />
-                          <div className='h-2 w-[100px] rounded-lg bg-slate-400' />
-                        </div>
-                      </div>
-                    </div>
-                    <span className='block w-full p-2 text-center font-normal'>
-                      Dunkel
-                    </span>
-                  </FormLabel>
-                </FormItem>
-              </RadioGroup>
             </FormItem>
           )}
         />
 
-        <Button type='submit'>Einstellungen aktualisieren</Button>
+        <Separator />
+
+        {/* Sidebar Items */}
+        <FormField
+          control={form.control}
+          name='items'
+          render={() => (
+            <FormItem>
+              <div className='mb-4'>
+                <FormLabel className='text-base'>Seitenleiste</FormLabel>
+                <FormDescription>
+                  Wähle die Elemente aus, die in der Seitenleiste angezeigt werden sollen.
+                </FormDescription>
+              </div>
+              {items.map((item) => (
+                <FormField
+                  key={item.id}
+                  control={form.control}
+                  name='items'
+                  render={({ field }) => {
+                    return (
+                      <FormItem
+                        key={item.id}
+                        className='flex flex-row items-start'
+                      >
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value?.includes(item.id)}
+                            onCheckedChange={(checked) => {
+                              return checked
+                                ? field.onChange([...field.value, item.id])
+                                : field.onChange(
+                                    field.value?.filter(
+                                      (value) => value !== item.id
+                                    )
+                                  )
+                            }}
+                          />
+                        </FormControl>
+                        <FormLabel className='font-normal'>
+                          {item.label}
+                        </FormLabel>
+                      </FormItem>
+                    )
+                  }}
+                />
+              ))}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type='submit'>Anzeige aktualisieren</Button>
       </form>
     </Form>
   )

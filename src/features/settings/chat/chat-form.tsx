@@ -29,8 +29,6 @@ const chatFormSchema = z.object({
   temperature: z.number().min(0).max(2), // Controls response creativity (0-2)
   topP: z.number().min(0).max(1), // Controls token diversity (0-1)
   maxTokens: z.number().min(1).max(10000000), // Maximum response length
-  batchSize: z.number().min(1).max(100), // Tokens processed simultaneously
-  throttleDelay: z.number().min(0).max(1000), // Delay between streaming updates (ms)
   systemPrompt: z.string().min(1).max(2000), // AI behavior definition
 })
 
@@ -56,16 +54,12 @@ export function ChatForm() {
     temperature,
     topP,
     maxTokens,
-    batchSize,
-    throttleDelay,
     systemPrompt,
     // Setter functions
     setSelectedProvider,
     setTemperature,
     setTopP,
     setMaxTokens,
-    setBatchSize,
-    setThrottleDelay,
     setSystemPrompt,
   } = useOllamaChatStore()
 
@@ -78,8 +72,6 @@ export function ChatForm() {
       temperature,
       topP,
       maxTokens,
-      batchSize,
-      throttleDelay,
       systemPrompt,
     },
   })
@@ -98,8 +90,6 @@ export function ChatForm() {
     setTemperature(data.temperature)
     setTopP(data.topP)
     setMaxTokens(data.maxTokens)
-    setBatchSize(data.batchSize)
-    setThrottleDelay(data.throttleDelay)
     setSystemPrompt(data.systemPrompt)
     
     // Show success notification to user
@@ -261,70 +251,6 @@ export function ChatForm() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Maximale Antwortlänge in Tokens
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <Separator />
-
-          {/* Batch Size Control */}
-          {/* Number of tokens processed simultaneously (affects speed vs memory usage) */}
-          <div className="p-4">
-            <FormField
-              control={form.control}
-              name="batchSize"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel className="text-sm font-medium">Batch-Größe</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={field.value}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        className="w-24 h-8"
-                      />
-                    </FormControl>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Gleichzeitig verarbeitete Tokens
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <Separator />
-
-          {/* Throttle Delay Control */}
-          {/* Delay between streaming updates in milliseconds (affects smoothness vs network traffic) */}
-          <div className="p-4">
-            <FormField
-              control={form.control}
-              name="throttleDelay"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel className="text-sm font-medium">Verzögerung (ms)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={1000}
-                        value={field.value}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        className="w-24 h-8"
-                      />
-                    </FormControl>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Verzögerung zwischen Streaming-Updates (ms)
                   </p>
                   <FormMessage />
                 </FormItem>

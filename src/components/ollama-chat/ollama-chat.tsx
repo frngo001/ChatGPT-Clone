@@ -7,9 +7,11 @@ import React, { useEffect } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import useOllamaChatStore from "@/stores/ollama-chat-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { useNavigate } from "@tanstack/react-router";
 import { WifiOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cogneeApi } from "@/lib/api/cognee-api-client";
 
 // Type definition for Attachment
 type Attachment = {
@@ -50,6 +52,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   const selectedProvider = useOllamaChatStore((state) => state.selectedProvider);
   const saveMessages = useOllamaChatStore((state) => state.saveMessages);
   const getMessagesById = useOllamaChatStore((state) => state.getMessagesById);
+  const setSelectedDataset = useOllamaChatStore((state) => state.setSelectedDataset);
   // Chat settings from store
   const temperature = useOllamaChatStore((state) => state.temperature);
   const topP = useOllamaChatStore((state) => state.topP);
@@ -75,6 +78,23 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     id,
     initialMessages,
     api: chatMode === 'cognee' ? "/api/cognee/search" : (selectedProvider === 'ollama' ? "/api/ollama/chat" : "/api/deepseek/chat"),
+    fetch: async (url, options) => {
+      // Add authorization header for Cognee requests
+      if (chatMode === 'cognee') {
+        const token = useAuthStore.getState().auth.accessToken;
+        if (token) {
+          options = {
+            ...options,
+            headers: {
+              ...options?.headers,
+              'Authorization': `Bearer ${token}`,
+            },
+          };
+        }
+      }
+      
+      return fetch(url, options);
+    },
     onResponse: (response) => {
       if (response) {
         setLoadingSubmit(false);
@@ -100,7 +120,12 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       // Determine error type and show appropriate message
       let errorMessage = "Ein unbekannter Fehler ist aufgetreten.";
       
-      if (error.message.includes("Failed to fetch") || 
+      // Handle Cognee-specific errors
+      if (error.message.includes("Cognee API Error: 409") || 
+          error.message.includes("NoDataError") ||
+          error.message.includes("No data found in the system")) {
+        errorMessage = "Dataset-Fehler: Das ausgewählte Dataset enthält keine verarbeiteten Daten. Bitte fügen Sie Dokumente hinzu und verarbeiten Sie diese zuerst.";
+      } else if (error.message.includes("Failed to fetch") || 
           error.message.includes("NetworkError") ||
           error.message.includes("Connection refused") ||
           error.message.includes("ECONNREFUSED")) {
@@ -132,7 +157,14 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     setMessages(initialMessages);
   }, [id, initialMessages, setMessages]);
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // Reset selected dataset when switching to general mode
+  useEffect(() => {
+    if (chatMode === 'general' && selectedDataset) {
+      setSelectedDataset(null);
+    }
+  }, [chatMode, selectedDataset, setSelectedDataset]);
+
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     window.history.replaceState({}, "", `/chat/${id}`);
 
@@ -145,6 +177,23 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     if (chatMode === 'cognee' && !selectedDataset) {
       toast.error("Please select a dataset");
       return;
+    }
+
+    // Preventive check for Cognee mode - check if dataset has data
+    if (chatMode === 'cognee' && selectedDataset) {
+      try {
+        const hasData = await cogneeApi.checkDatasetHasData(selectedDataset);
+        if (!hasData) {
+          toast.error("Dataset-Fehler", {
+            description: "Das ausgewählte Dataset enthält keine verarbeiteten Daten. Bitte fügen Sie Dokumente hinzu und verarbeiten Sie diese zuerst.",
+            duration: 8000,
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking dataset data:', error);
+        // Continue with the request - the error will be handled by the onError callback
+      }
     }
 
     const userMessage: Message = {
@@ -173,7 +222,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       body: {
         searchType: "CHUNKS",
         query: formatMessageHistoryForCognee([...messages as ExtendedMessage[], userMessage as ExtendedMessage]),
-        datasets: [selectedDataset],
+        datasetIds: [selectedDataset],
         systemPrompt: systemPrompt,
       },
     } : {
@@ -241,7 +290,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
             <h1 className="text-4xl font-semibold text-foreground mb-2 tracking-tight">
               Was darf ich dir erleichtern?
             </h1>
-            <p className="text-muted-foreground text-lg mt-4">
+            <p className="text-muted-foreground text-sm mt-4">
               Wähle zwischen General für allgemeine Fragen oder Cognee für Fragen zu deinen Dokumenten.
             </p>
           </div>
@@ -264,10 +313,27 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
             reload={async () => {
               removeLatestMessage();
 
+              // Preventive check for Cognee mode - check if dataset has data
+              if (chatMode === 'cognee' && selectedDataset) {
+                try {
+                  const hasData = await cogneeApi.checkDatasetHasData(selectedDataset);
+                  if (!hasData) {
+                    toast.error("Dataset-Fehler", {
+                      description: "Das ausgewählte Dataset enthält keine verarbeiteten Daten. Bitte fügen Sie Dokumente hinzu und verarbeiten Sie diese zuerst.",
+                      duration: 8000,
+                    });
+                    return;
+                  }
+                } catch (error) {
+                  console.error('Error checking dataset data:', error);
+                  // Continue with the request - the error will be handled by the onError callback
+                }
+              }
+
               const requestOptions: ChatRequestOptions = chatMode === 'cognee' ? {
                 body: {
                   query: messages[messages.length - 1]?.content || '',
-                  datasets: [selectedDataset],
+                  datasetIds: [selectedDataset],
                   systemPrompt: systemPrompt,
                 },
               } : {

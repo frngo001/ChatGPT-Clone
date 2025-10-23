@@ -1,5 +1,5 @@
 import { Outlet } from '@tanstack/react-router'
-import { Monitor, Palette, Wrench, UserCog, Bot } from 'lucide-react'
+import { Palette, UserCog, Bot } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { SidebarNav } from './components/sidebar-nav'
 
@@ -11,11 +11,6 @@ const sidebarNavItems = [
     icon: <UserCog size={18} />,
   },
   {
-    title: 'Konto',
-    href: '/settings/account',
-    icon: <Wrench size={18} />,
-  },
-  {
     title: 'Chat',
     href: '/settings/chat',
     icon: <Bot size={18} />,
@@ -24,11 +19,6 @@ const sidebarNavItems = [
     title: 'Anzeige',
     href: '/settings/appearance',
     icon: <Palette size={18} />,
-  },
-  {
-    title: 'Anzeigeelement',
-    href: '/settings/display',
-    icon: <Monitor size={18} />,
   },
 ]
 

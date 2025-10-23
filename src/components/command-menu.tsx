@@ -1,8 +1,9 @@
 import React from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { ArrowRight, ChevronRight, Laptop, Moon, Sun } from 'lucide-react'
+import { ArrowRight, ChevronRight, Laptop, Moon, Sun, Keyboard } from 'lucide-react'
 import { useSearch } from '@/context/search-provider'
 import { useTheme } from '@/context/theme-provider'
+import { useAuthStore } from '@/stores/auth-store'
 import {
   CommandDialog,
   CommandEmpty,
@@ -11,6 +12,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
+  CommandShortcut,
 } from '@/components/ui/command'
 import { sidebarData } from './layout/data/sidebar-data'
 import { ScrollArea } from './ui/scroll-area'
@@ -19,6 +21,7 @@ export function CommandMenu() {
   const navigate = useNavigate()
   const { setTheme } = useTheme()
   const { open, setOpen } = useSearch()
+  const { auth } = useAuthStore()
 
   const runCommand = React.useCallback(
     (command: () => unknown) => {
@@ -30,7 +33,7 @@ export function CommandMenu() {
 
   return (
     <CommandDialog modal open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder='Type a command or search...' />
+      <CommandInput placeholder='Suchen oder Befehl eingeben...' />
       <CommandList>
         <ScrollArea type='hover' className='h-72 pe-1'>
           <CommandEmpty>No results found.</CommandEmpty>
@@ -82,6 +85,42 @@ export function CommandMenu() {
             <CommandItem onSelect={() => runCommand(() => setTheme('system'))}>
               <Laptop />
               <span>System</span>
+            </CommandItem>
+          </CommandGroup>
+          <CommandSeparator />
+          <CommandGroup heading='Keyboard Shortcuts'>
+            <CommandItem onSelect={() => runCommand(() => setOpen(false))}>
+              <Keyboard className='size-4' />
+              <span>Suchfunktion</span>
+              <CommandShortcut>⌘K</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => navigate({ to: '/chat' }))}>
+              <Keyboard className='size-4' />
+              <span>Neuer Chat</span>
+              <CommandShortcut>⇧⌘N</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => navigate({ to: '/settings' }))}>
+              <Keyboard className='size-4' />
+              <span>Profil-Einstellungen</span>
+              <CommandShortcut>⇧⌘P</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => navigate({ to: '/settings/chat' }))}>
+              <Keyboard className='size-4' />
+              <span>Chat-Einstellungen</span>
+              <CommandShortcut>⇧⌘C</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => navigate({ to: '/settings' }))}>
+              <Keyboard className='size-4' />
+              <span>Einstellungen</span>
+              <CommandShortcut>⌘S</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => {
+              auth.reset()
+              navigate({ to: '/login', replace: true })
+            })}>
+              <Keyboard className='size-4' />
+              <span>Abmelden</span>
+              <CommandShortcut>⇧⌘Q</CommandShortcut>
             </CommandItem>
           </CommandGroup>
         </ScrollArea>

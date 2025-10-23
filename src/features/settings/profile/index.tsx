@@ -5,7 +5,7 @@ export function SettingsProfile() {
   return (
     <ContentSection
       title='Profil'
-      desc='So wirst du von anderen auf der Website gesehen.'
+      desc='Bearbeiten Sie Ihre persönlichen Informationen und Einstellungen'
     >
       <ProfileForm />
     </ContentSection>

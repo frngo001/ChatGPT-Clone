@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Download, Edit, Trash2, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -5,13 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useDatasetStore } from '@/stores/dataset-store'
+import { DeleteFileDialog } from './delete-file-dialog'
 
 export function FileDetailPage() {
   const { datasetId, fileId } = useParams({ 
     from: '/_authenticated/library/datasets/$datasetId/files/$fileId' 
   })
   const navigate = useNavigate()
-  const { getDatasetById, removeFileFromDataset } = useDatasetStore()
+  const { getDatasetById } = useDatasetStore()
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   const dataset = getDatasetById(datasetId)
   const file = dataset?.files.find(f => f.id === fileId)
@@ -61,10 +64,7 @@ export function FileDetailPage() {
   }
 
   const handleDeleteFile = () => {
-    if (confirm('Are you sure you want to delete this file?')) {
-      removeFileFromDataset(datasetId, fileId)
-      navigate({ to: `/library/datasets/${datasetId}` })
-    }
+    setShowDeleteDialog(true)
   }
 
   return (
@@ -205,6 +205,18 @@ export function FileDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      <DeleteFileDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        datasetId={datasetId}
+        fileId={fileId}
+        fileName={file.name}
+        onSuccess={() => {
+          // Navigate back to dataset after successful deletion
+          navigate({ to: `/library/datasets/${datasetId}` })
+        }}
+      />
     </div>
   )
 }

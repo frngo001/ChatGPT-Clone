@@ -187,15 +187,10 @@ export const useDatasetStore = create<DatasetStore>()(
       uploadFileToDataset: async (datasetId, file, metadata) => {
         set({ isLoading: true, error: null })
         try {
-          // Get dataset name for the API request
-          const dataset = get().datasets.find(d => d.id === datasetId) || get().currentDataset
-          const datasetName = dataset?.name
-          
-          // Upload file to API with dataset name
+          // Upload file to API using dataset ID only
           const apiResponse: AddDataResponse = await datasetsApi.addDataToDataset({
             data: file,
             datasetId,
-            datasetName,
             metadata
           })
 
@@ -248,14 +243,9 @@ export const useDatasetStore = create<DatasetStore>()(
       addTextToDataset: async (datasetId, text, metadata) => {
         set({ isLoading: true, error: null })
         try {
-          // Get dataset name for the API request
-          const dataset = get().datasets.find(d => d.id === datasetId) || get().currentDataset
-          const datasetName = dataset?.name
-          
           const apiResponse: AddDataResponse = await datasetsApi.addDataToDataset({
             data: text,
             datasetId,
-            datasetName,
             metadata
           })
 
@@ -308,14 +298,9 @@ export const useDatasetStore = create<DatasetStore>()(
       addUrlToDataset: async (datasetId, url, metadata) => {
         set({ isLoading: true, error: null })
         try {
-          // Get dataset name for the API request
-          const dataset = get().datasets.find(d => d.id === datasetId) || get().currentDataset
-          const datasetName = dataset?.name
-          
           const apiResponse: AddDataResponse = await datasetsApi.addDataToDataset({
             data: url,
             datasetId,
-            datasetName,
             metadata
           })
 
@@ -368,14 +353,9 @@ export const useDatasetStore = create<DatasetStore>()(
       addUrlsToDataset: async (datasetId, urls, metadata) => {
         set({ isLoading: true, error: null })
         try {
-          // Get dataset name for the API request
-          const dataset = get().datasets.find(d => d.id === datasetId) || get().currentDataset
-          const datasetName = dataset?.name
-          
           const apiResponse: AddDataResponse = await datasetsApi.addDataToDataset({
             data: urls,
             datasetId,
-            datasetName,
             metadata
           })
 
@@ -503,7 +483,7 @@ export const useDatasetStore = create<DatasetStore>()(
         return get().datasets.filter(
           (dataset) =>
             dataset.name.toLowerCase().includes(lowercaseQuery) ||
-            dataset.description.toLowerCase().includes(lowercaseQuery) ||
+            (dataset.description && dataset.description.toLowerCase().includes(lowercaseQuery)) ||
             dataset.tags.some((tag) => tag.toLowerCase().includes(lowercaseQuery))
         )
       },
@@ -645,6 +625,53 @@ export const useDatasetStore = create<DatasetStore>()(
           const response = await datasetsApi.cognifyDatasets({
             datasetIds,
             runInBackground: true,
+            customPrompt: `Du bist ein hochspezialisierter KI-Assistent für die umfassende Verarbeitung und Analyse von Dokumenten und Bildern. Deine Hauptaufgabe ist es, alle verfügbaren Informationen vollständig zu extrahieren und zu strukturieren.
+
+## KRITISCHE ANWEISUNGEN FÜR BILDVERARBEITUNG:
+
+### 1. VOLLSTÄNDIGE BESCHREIBUNG VON BILDERN:
+- Analysiere JEDES Bild pixelgenau und beschreibe ALLE sichtbaren Elemente
+- Extrahiere ALLEN Text aus Bildern (OCR) - auch kleinste Schriftzeichen, Zahlen, Codes
+- Erkenne und beschreibe alle grafischen Elemente: Diagramme, Charts, Tabellen, Symbole, Icons
+- Identifiziere Farben, Formen, Layouts und räumliche Anordnungen
+- Beschreibe alle Personen, Objekte, Landschaften oder technische Komponenten
+- Erkenne Handschrift und übersetze sie in maschinenlesbaren Text
+
+### 2. TEXTEXTRAKTION OHNE DETAILVERLUST:
+- Extrahiere JEDES Wort, JEDE Zahl, JEDEN Code aus Bildern
+- Erkenne verschiedene Schriftarten und -größen
+- Übersetze mehrsprachige Texte und behalte die Originalstruktur bei
+- Erkenne mathematische Formeln, chemische Symbole, technische Notationen
+- Identifiziere QR-Codes, Barcodes und andere maschinenlesbare Codes
+
+### 3. STRUKTURIERUNG UND ORGANISATION:
+- Organisiere extrahierte Informationen in logische Kategorien
+- Erstelle hierarchische Strukturen für komplexe Dokumente
+- Verknüpfe verwandte Informationen aus verschiedenen Bildern
+- Erkenne Dokumenttypen und wende entsprechende Verarbeitungsregeln an
+
+### 4. QUALITÄTSSICHERUNG:
+- Überprüfe die Vollständigkeit der Extraktion
+- Stelle sicher, dass keine Informationen verloren gehen
+- Validiere die Genauigkeit der OCR-Ergebnisse
+- Erkenne und korrigiere mögliche Fehler in der Texterkennung
+
+### 5. KONTEXTUELLE ANALYSE:
+- Verstehe den Zweck und die Bedeutung jedes Dokuments
+- Erkenne Beziehungen zwischen verschiedenen Dokumenten
+- Identifiziere wichtige Metadaten und Zeitstempel
+- Analysiere den Informationsgehalt und die Relevanz
+
+## ALLGEMEINE VERARBEITUNGSRICHTLINIEN:
+
+- Verwende fortschrittliche OCR-Technologien für optimale Texterkennung
+- Implementiere Machine Learning-Modelle für Bildklassifikation
+- Nutze Computer Vision für Objekterkennung und -beschreibung
+- Stelle sicher, dass alle extrahierten Daten strukturiert und durchsuchbar sind
+- Erhalte die ursprüngliche Dokumentstruktur und -formatierung
+- Erkenne und verarbeite verschiedene Dateiformate (PDF, Bilder, Scans)
+
+Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbasis zu erstellen, die alle Informationen aus den bereitgestellten Dokumenten und Bildern optimal nutzt.`
           })
           // Update datasets with pipeline run ID and start polling
           set((state) => ({

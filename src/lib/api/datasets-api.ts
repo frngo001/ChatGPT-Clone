@@ -1,6 +1,8 @@
 // API service for datasets management
 // Connects to the Cognee API at http://imeso-ki-02:8000
 
+import { useAuthStore } from '@/stores/auth-store'
+
 const API_BASE_URL = '/api/v1'
 
 // Types for API requests and responses
@@ -58,7 +60,6 @@ export type DataType = 'file' | 'text' | 'url' | 'github'
 export interface AddDataRequest {
   data: string | File | string[] // Can be text, URL, file, or array of URLs
   datasetId: string
-  datasetName?: string
   node_set?: string[]
   metadata?: Record<string, any>
 }
@@ -104,8 +105,8 @@ export class DatasetsApiService {
       'Content-Type': 'application/json',
     }
 
-    // Add Bearer token if available (you might need to get this from your auth store)
-    const token = localStorage.getItem('auth_token')
+    // Add Bearer token from auth store
+    const token = useAuthStore.getState().auth.accessToken
     if (token) {
       headers.Authorization = `Bearer ${token}`
     }
@@ -250,13 +251,6 @@ export class DatasetsApiService {
     
     formData.append('datasetId', request.datasetId)
     
-    // Add optional parameters
-    if (request.datasetName) {
-      // Sanitize dataset name to prevent backend validation errors
-      const sanitizedDatasetName = this.sanitizeDatasetName(request.datasetName)
-      formData.append('datasetName', sanitizedDatasetName)
-    }
-    
     if (request.node_set && request.node_set.length > 0) {
       request.node_set.forEach((node) => {
         formData.append('node_set', node)
@@ -269,7 +263,7 @@ export class DatasetsApiService {
 
     // Create headers without Content-Type for FormData (browser will set it automatically)
     const headers: HeadersInit = {}
-    const token = localStorage.getItem('auth_token')
+    const token = useAuthStore.getState().auth.accessToken
     if (token) {
       headers.Authorization = `Bearer ${token}`
     }

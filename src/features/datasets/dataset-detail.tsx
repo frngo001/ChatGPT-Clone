@@ -11,15 +11,25 @@ import { toast } from 'sonner'
 import { useDatasetStore } from '@/stores/dataset-store'
 import { AddDataDialog } from './components/add-data-dialog'
 import { ProcessingStatusBadge } from './components/processing-status-badge'
+import { DeleteFileDialog } from './components/delete-file-dialog'
 
 export function DatasetDetailPage() {
   const { datasetId } = useParams({ from: '/_authenticated/library/datasets/$datasetId' })
   const navigate = useNavigate()
-  const { getDatasetById, removeFileFromDataset, fetchDatasetData, processDatasets, checkDatasetStatus } = useDatasetStore()
+  const { getDatasetById, fetchDatasetData, processDatasets, checkDatasetStatus } = useDatasetStore()
   const [showAddDataDialog, setShowAddDataDialog] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [deleteFileDialog, setDeleteFileDialog] = useState<{
+    open: boolean
+    fileId: string
+    fileName: string
+  }>({
+    open: false,
+    fileId: '',
+    fileName: ''
+  })
 
   const dataset = getDatasetById(datasetId)
 
@@ -85,8 +95,11 @@ export function DatasetDetailPage() {
   }
 
   const handleDeleteFile = (fileId: string, fileName: string) => {
-    removeFileFromDataset(datasetId, fileId)
-    toast.success(`${fileName} wurde erfolgreich entfernt.`)
+    setDeleteFileDialog({
+      open: true,
+      fileId,
+      fileName
+    })
   }
 
   const handleProcessDataset = async () => {
@@ -351,6 +364,20 @@ export function DatasetDetailPage() {
         open={showAddDataDialog}
         onOpenChange={setShowAddDataDialog}
         datasetId={datasetId}
+      />
+
+      <DeleteFileDialog
+        open={deleteFileDialog.open}
+        onOpenChange={(open) => setDeleteFileDialog(prev => ({ ...prev, open }))}
+        datasetId={datasetId}
+        fileId={deleteFileDialog.fileId}
+        fileName={deleteFileDialog.fileName}
+        onSuccess={() => {
+          // Refresh dataset data after successful deletion
+          fetchDatasetData(datasetId).catch((error) => {
+            console.error('Failed to refresh dataset data:', error)
+          })
+        }}
       />
     </div>
   )

@@ -17,7 +17,7 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     // Preserve current location for redirect after sign-in
     const currentPath = location.href
     navigate({
-      to: '/sign-in',
+      to: '/login',
       search: { redirect: currentPath },
       replace: true,
     })
@@ -27,9 +27,10 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
-      title='Sign out'
-      desc='Are you sure you want to sign out? You will need to sign in again to access your account.'
-      confirmText='Sign out'
+      title='Abmelden'
+      desc='Sind Sie sicher, dass Sie sich abmelden möchten? Sie müssen sich erneut anmelden, um auf Ihr Konto zugreifen zu können.'
+      confirmText='Abmelden'
+      cancelBtnText='Abbrechen'
       handleConfirm={handleSignOut}
       className='sm:max-w-sm'
     />
