@@ -30,8 +30,8 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>
 
 export function ProfileForm() {
   const { profileData, updateProfileData } = useProfileStore()
-  const { auth } = useAuthStore()
-  const user = auth.user
+  // Optimize: Only subscribe to user data, not the entire auth object
+  const user = useAuthStore((state) => state.auth.user)
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),

@@ -1,7 +1,6 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
-
 ## Die Kommentare im Code müssen immer auf English geschrieben werden.
 ## Aktualisiere immer die PACKAGE.json wenn du ein Neues Packet installierst
 ## Aktualisiert immer die Change.Log Datei mit dem Fix oder Feature, dass du gemacht hast: 

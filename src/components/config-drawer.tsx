@@ -1,6 +1,6 @@
-import { type SVGProps } from 'react'
+import { type SVGProps, useRef } from 'react'
 import { Root as Radio, Item } from '@radix-ui/react-radio-group'
-import { CircleCheck, RotateCcw, Settings } from 'lucide-react'
+import { CircleCheck, RotateCcw } from 'lucide-react'
 import { IconDir } from '@/assets/custom/icon-dir'
 import { IconLayoutCompact } from '@/assets/custom/icon-layout-compact'
 import { IconLayoutDefault } from '@/assets/custom/icon-layout-default'
@@ -16,6 +16,7 @@ import { useDirection } from '@/context/direction-provider'
 import { type Collapsible, useLayout } from '@/context/layout-provider'
 import { useTheme } from '@/context/theme-provider'
 import { Button } from '@/components/ui/button'
+import { SettingsGearIcon, type SettingsGearIconHandle } from '@/components/ui/settings-gear-icon'
 import {
   Sheet,
   SheetContent,
@@ -34,12 +35,21 @@ export function ConfigDrawer() {
   const { resetTheme } = useTheme()
   const { resetLayout } = useLayout()
   const { showThemeSettings } = useDisplayStore()
+  const settingsIconRef = useRef<SettingsGearIconHandle>(null)
 
   const handleReset = () => {
     setOpen(true)
     resetDir()
     resetTheme()
     resetLayout()
+  }
+
+  const handleMouseEnter = () => {
+    settingsIconRef.current?.startAnimation()
+  }
+
+  const handleMouseLeave = () => {
+    settingsIconRef.current?.stopAnimation()
   }
 
   // Don't render if theme settings are disabled
@@ -56,8 +66,10 @@ export function ConfigDrawer() {
           aria-label='Theme-Einstellungen öffnen'
           aria-describedby='config-drawer-description'
           className='rounded-full'
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
-          <Settings aria-hidden='true' />
+          <SettingsGearIcon ref={settingsIconRef} aria-hidden='true' />
         </Button>
       </SheetTrigger>
       <SheetContent className='flex flex-col'>

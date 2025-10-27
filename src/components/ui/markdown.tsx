@@ -193,7 +193,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           
           li({ children, ...props }) {
             return (
-              <li className="leading-relaxed" {...props}>
+              <li className="leading-relaxed marker:text-muted-foreground" {...props}>
                 {children}
               </li>
             )

@@ -1,8 +1,10 @@
-import { useEffect } from 'react'
-import { Check, Moon, Sun } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/theme-provider'
 import { Button } from '@/components/ui/button'
+import { SunIcon, type SunIconHandle } from '@/components/ui/sun-icon'
+import { MoonIcon, type MoonIconHandle } from '@/components/ui/moon-icon'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +14,8 @@ import {
 
 export function ThemeSwitch() {
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const sunIconRef = useRef<SunIconHandle>(null)
+  const moonIconRef = useRef<MoonIconHandle>(null)
 
   /* Update theme-color meta tag
    * when theme is updated */
@@ -21,12 +25,28 @@ export function ThemeSwitch() {
     if (metaThemeColor) metaThemeColor.setAttribute('content', themeColor)
   }, [resolvedTheme])
 
+  const handleMouseEnter = () => {
+    sunIconRef.current?.startAnimation()
+    moonIconRef.current?.startAnimation()
+  }
+
+  const handleMouseLeave = () => {
+    sunIconRef.current?.stopAnimation()
+    moonIconRef.current?.stopAnimation()
+  }
+
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant='ghost' size='icon' className='scale-95 rounded-full'>
-          <Sun className='size-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90' />
-          <Moon className='absolute size-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0' />
+        <Button 
+          variant='ghost' 
+          size='icon' 
+          className='scale-95 rounded-full relative'
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <SunIcon ref={sunIconRef} className='size-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90' />
+          <MoonIcon ref={moonIconRef} className='absolute size-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0' />
           <span className='sr-only'>Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>

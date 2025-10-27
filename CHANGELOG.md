@@ -1,3 +1,352 @@
+### Feature & Enhancement - 23.10.2025
+
+- **User Management Extension:** Erweiterte Userverwaltung mit vollständigen Benutzerinformationen
+  - **Neuer API-Endpunkt:** Integration des `/api/v1/users/all` Endpunkts für vollständige User-Daten
+  - **Tenant-Anzeige:** Neue Spalte zeigt Tenant-Namen mit Owner-Indicator (Krone-Icon)
+  - **Rollen-Anzeige:** Zusätzliche Spalte für alle zugewiesenen Rollen
+  - **Tenant-Zuweisung:** Neue Funktion zum Zuweisen von Benutzern zu Tenants via Dialog
+  - **Erweiterter Tenant-Filter:** Filter nach Tenant-Zugehörigkeit in User-Tabelle
+  - **Responsive Design:** 
+    - Mobile (<640px): Card-basiertes Layout mit allen Informationen
+    - Tablet (640px-1024px): Kompakte Tabelle mit wichtigsten Spalten
+    - Desktop (>1024px): Vollständige Tabelle mit allen Details
+  - **shadcn/ui Components:** Dialog, Select, Badge, und Card für moderne UI
+  - **TypeScript Types:** Erweiterte Interfaces für Tenant und User-Objekte
+  - **Permissions Store:** Neue Actions für Tenant-Management und Filterung
+
+### UI/UX Enhancement - 23.10.2025
+
+- **Permissions Page Redesign & Simplification:** Vollständige Neugestaltung und Vereinfachung der Berechtigungsseite
+  - **Fokus auf User-Verwaltung:** Entfernung der Tabs "Übersicht", "Tenants" und "Rollen" für besseren Fokus
+  - **Konsistenter Header:** Vereinfachter Header-Style wie bei anderen Settings-Seiten (Profil, Anzeige)
+  - **Single Card Layout:** Direkte User-Management-Card ohne unnötige Tab-Navigation
+  - **Verbesserte User-Verwaltung:** Optimierte User-Management-Tabelle innerhalb einer Card-Struktur
+  - **Vereinfachte Filter:** Kompaktere Filter-Controls mit inline Zurücksetzen-Button
+  - **Aktualisieren-Button:** Lädt User-Liste vom Server neu mit Loading-Animation
+  - **Einheitliches Spacing:** `space-y-6` und konsistente Abstände wie in anderen Settings-Seiten
+  - **Optimierte Buttons:** Kleinere Buttons (`size="sm"`) und `variant="outline"` für Aktualisieren-Button
+  - **Bessere Hierarchie:** Klare CardTitle und CardDescription ohne überflüssige Icons
+  - **Responsive Design:** Optimiertes Layout für mobile und Desktop-Geräte
+  - **Reduzierte Komplexität:** Nur noch essentielle User-Management-Funktionen sichtbar
+
+### UI/UX Enhancement - 10.01.2025
+
+- **Permissions Page Layout Overhaul:** Complete redesign of permissions management interface
+- **Dashboard Statistics Cards:** Added comprehensive statistics overview with visual indicators
+- **Enhanced Tab Navigation:** Improved tab structure with icons, badges, and better organization
+- **Modern Filter System:** Advanced filtering with active filter display and clear functionality
+- **Improved User Table:** Enhanced table design with better badges, icons, and hover effects
+- **Responsive Design:** Optimized layout for mobile and desktop devices
+- **Visual Hierarchy:** Better spacing, typography, and component organization
+- **Loading States:** Improved loading indicators and empty states
+- **Accessibility:** Better contrast, focus states, and screen reader support
+
+### Performance Fix - 10.01.2025
+
+- optimize navigation performance by eliminating unnecessary API calls (#33)
+- implement token verification caching (10-minute cache) (#33)
+- remove automatic dataset detail loading on navigation (#33)
+- add lazy loading for dataset details only when clicked (#33)
+- optimize sidebar dataset badges to show "..." when data not loaded (#33)
+- add initial app loading hook for better startup performance (#33)
+- **fix dataset loading logic:** "Verwalten" loads all details, individual clicks use cache (#33)
+- **improve cache utilization:** display values taken from cache, details loaded on demand (#33)
+- **fix token verification:** only called once after login, then cached for 10 minutes (#33)
+- **optimize dataset details loading:** only load details for datasets without cached data (#33)
+- **fix cache preservation:** prevent cached dataset details from being lost on refresh (#33)
+- **improve cache merging:** preserve file details when updating dataset metadata (#33)
+- **implement permanent token cache:** verifyToken only called once at app start, then cached forever (#33)
+- **add auth store persistence:** user data and verification status survive page refreshes (#33)
+
+### Feat - 16.01.2025
+
+- **Admin Permissions Management:** Vollständiges Admin-Permissions-System implementiert
+  - **Backend API-Endpoints:** Alle Cognee Permissions-Endpoints implementiert
+    - `POST /api/cognee/permissions/datasets` - Dataset-Berechtigungen vergeben
+    - `POST /api/cognee/permissions/roles` - Rollen erstellen
+    - `POST /api/cognee/permissions/users/roles` - User zu Rolle hinzufügen
+    - `POST /api/cognee/permissions/users/tenants` - User zu Tenant hinzufügen
+    - `POST /api/cognee/permissions/tenants` - Tenant erstellen
+  - **Frontend API-Client:** Alle Admin-Permissions-Methoden implementiert
+    - `createTenant()`, `createRole()`, `addUserToRole()`, `addUserToTenant()`
+    - `giveDatasetPermission()` für Dataset-Berechtigungen
+  - **Admin-Panel UI:** Umfassende Tenant- und Rollen-Verwaltung
+    - **Tenant-Management:** Tenant erstellen, bearbeiten, löschen mit Tabellen-UI
+    - **Rollen-Management:** Rollen erstellen, bearbeiten, löschen mit Tabellen-UI
+    - **Neue Tabs:** Tenants und Rollen Tabs im Admin-Panel
+    - **Dialog-basierte UI:** Moderne Dialoge für Create/Edit-Operationen
+    - **Tabellen-UI:** Professionelle Tabellen mit Dropdown-Actions
+    - **Toast-Benachrichtigungen:** Erfolgs- und Fehler-Toasts für alle Aktionen
+  - **Permissions-Store:** Erweitert um Tenant/Role-Management-Funktionen
+    - `fetchTenants()`, `fetchRoles()` Methoden hinzugefügt
+    - State für `tenants` Array hinzugefügt
+  - **Admin-Berechtigungen:** Alle neuen Funktionen nur für Admins zugänglich
+    - Nur `is_superuser: true` kann Tenants/Rollen erstellen und verwalten
+    - Admin-Panel-Tabs nur für Admins sichtbar
+  - **UI-Komponenten:** Neue shadcn-Komponenten integriert
+    - Dialog, Table, DropdownMenu für moderne Admin-UI
+    - Plus-Icons für Create-Buttons, Building2/Shield-Icons für Tenants/Rollen
+    - Responsive Design mit Grid-Layout
+
+- **Admin User Management Dashboard:** Umfassendes User-Management-System für Admins implementiert
+  - **Backend User-API-Endpoints:** Neue Proxy-Endpoints für User-Management (GET, UPDATE, DELETE)
+  - **TypeScript Types:** User, UpdateUserPayload Interfaces hinzugefügt
+  - **API-Client:** User-Management-Methoden (getUser, getAllUsers, updateUser, deleteUser)
+  - **Permissions-Store:** Vollständige User-Management-Funktionen (fetchAllUsers, toggleUserRole, deleteUser)
+  - **User-Management-Table:** Professionelle Tabelle mit Dropdown-Actions für jeden User
+  - **User-Filters:** Such- und Filterfunktionen (Suche, Rolle, Status)
+  - **Admin-Panel:** Tabs-basiertes Dashboard mit User-, Rollen- und Tenant-Tabs
+  - **Toggle Admin Role:** Admins können User zu Admins machen oder Admin-Rechte entfernen
+  - **Toggle Verification:** Admins können User verifizieren/entverifizieren (is_verified)
+  - **User Delete:** User löschen mit Bestätigungsdialog und Toast-Benachrichtigung
+  - **Security:** Eigenen Account schützen (keine Selbst-Löschung)
+  - **User Badges:** "Du" Badge für aktuellen User, Role-Badges (Admin/User), Verification-Badge
+  - **Verification Status:** Zeigt Verifizierungsstatus aller User in der Tabelle
+  - **Cognee Superuser Integration:** Nutzt Cognee's `is_superuser` Feld statt Rollen-System
+  - **Table UI:** Moderne shadcn Table-Komponente mit vollständiger User-Übersicht
+  - **Tabs Navigation:** Drei Tabs für User-Verwaltung, Rollen-Übersicht und Tenant-Info
+  - **Role Statistics:** Zeigt Anzahl User pro Rolle im Rollen-Tab
+  - **Tenant Info:** Zeigt Tenant-Details und Statistiken (Anzahl User)
+  - **Search & Filter:** Suche nach E-Mail, Filter nach Rolle und Status
+  - **Loading States:** Loading-Indikatoren und Error-Handling
+  - **Toast Notifications:** Erfolgs- und Fehler-Toasts für alle Aktionen
+
+- **Cognee Permissions System Integration:** Implementiert vollständiges Multi-User-Permissions-System für RAG-Chatbot
+  - **Backend API-Endpoints:** Neue Proxy-Endpoints für Cognee Permissions API (Tenants, Roles, Permissions)
+  - **TypeScript Types:** Interfaces für Tenant, Role, UserWithRoles, DatasetPermission
+  - **Frontend API-Client:** Erweiterte cognee-api-client.ts mit Permissions-Methoden
+  - **Auth Store:** Roles-Support mit isAdmin() und hasRole() Helper-Methoden
+  - **Dataset Store:** Permissions-Integration mit ownerId, isShared, und shareDatasetWithTenant()
+  - **Permissions Store:** NEU für Tenant-/Role-Management (initializeTenant, createRole, assignRoleToUser)
+  - **Permission Helper:** Utility-Functions für Zugriffskontrolle (canShare, canDelete, canWrite, canRead)
+  - **Permissions Badge:** UI-Komponente zur Anzeige von Dataset-Berechtigungen (Owner/Shared/Read-Only)
+  - **Share Dataset Dialog:** Dialog für Admin zum Teilen von Datasets mit Tenant (Read-Only für alle User)
+  - **Admin Panel:** Settings-Seite für Permissions-Management (Tenant-Info, Rollen, Nutzer)
+  - **Setup Script:** Automatische Initialisierung von Tenant und Rollen beim ersten Start
+  - **Single-Tenant Architecture:** "imeso-ki" Tenant für firmeninterne Nutzung
+  - **Role-Based Access:** Admin- und User-Rollen mit unterschiedlichen Berechtigungen
+- **Dataset Sharing:** Admins können Datasets mit allen Tenant-Usern teilen (Read-Only-Zugriff)
+- **User Dataset Sharing:** Alle User können ihre eigenen Datasets mit dem Tenant teilen (Read-Only-Zugriff)
+- **User Isolation:** Jeder User kann eigene Datasets erstellen mit vollen Rechten
+  - **Backend Config:** Cognee muss mit ENABLE_BACKEND_ACCESS_CONTROL=true laufen
+  - **Integration:** Permissions-System vollständig in bestehende Auth- und Dataset-Funktionalität integriert
+
+### Fix - 16.01.2025
+
+- **Missing Appearance Settings Index:** Behebt fehlende index.tsx Datei für Appearance Settings Route
+  - Erstellt fehlende `src/features/settings/appearance/index.tsx` Datei
+  - Exportiert `SettingsAppearance` Komponente für Route-Import
+  - Wrapper-Komponente mit Header und `AppearanceForm` Integration
+  - Behebt "Failed to load module script" Fehler bei Appearance Settings Route
+  - Route kann jetzt korrekt `SettingsAppearance` aus `@/features/settings/appearance` importieren
+
+### Fix - 16.01.2025
+
+- **Chat Settings Simplification:** Entfernt Batch-Größe und Verzögerung aus den Chat-Einstellungen
+  - **Removed UI Controls:** Batch-Größe und Verzögerung (ms) Felder aus Chat-Settings entfernt
+  - **Fixed Default Values:** Standardwerte für batchSize und throttleDelay auf 80 gesetzt
+  - **Simplified Interface:** Reduzierte Komplexität der Chat-Konfiguration für bessere UX
+  - **Maintained Functionality:** Werte werden weiterhin intern verwendet, aber nicht mehr konfigurierbar
+
+- **Cognee 409 Error Handling:** Implementiert umfassende Behandlung von Cognee "No Data" Fehlern
+  - **User-Friendly Error Messages:** Zeigt verständliche Fehlermeldungen für 409 Cognee API Fehler
+  - **Preventive Checks:** Fügt präventive Überprüfung hinzu, ob Dataset verarbeitete Daten enthält
+  - **Dataset Status Display:** Erweitert Dataset-Selector um Verarbeitungsstatus-Anzeige
+  - **Enhanced Visual Warnings:** Verbesserte Sichtbarkeit der Warnmeldung mit größerer Schrift und auffälligeren Farben
+  - **Auto-Reset Dataset Selection:** Setzt automatisch selectedDataset zurück wenn nicht verfügbar oder nicht verarbeitet
+  - **Empty Default Selection:** Standardmäßig ist kein Dataset ausgewählt, verhindert ungewollte Auswahl
+  - **Error Prevention:** Verhindert 409 Fehler durch vorherige Datenverfügbarkeitsprüfung
+  - **Better UX:** Benutzer sehen sofort, welche Datasets bereit sind und welche noch verarbeitet werden
+
+- **Cmd+K Shortcut Fix:** Behebt nicht funktionierenden Cmd+K Shortcut für Command Menu
+  - **Consolidated Event Listeners:** Alle Keyboard-Shortcuts werden jetzt zentral im SearchProvider verwaltet
+  - **Removed Duplicates:** Entfernt doppelte Event-Listener aus ProfileDropdown Komponente
+  - **Centralized Management:** Alle Shortcuts (⌘K, ⇧⌘N, ⇧⌘P, ⇧⌘C, ⌘S, ⇧⌘Q) werden an einem Ort verwaltet
+  - **Improved Performance:** Verhindert Konflikte zwischen mehreren Event-Listenern
+  - **Better Maintainability:** Einfachere Wartung und Debugging von Keyboard-Shortcuts
+
+- **Dataset Search Error Fix:** Behebt TypeError beim Durchsuchen von Datasets mit undefined description
+  - **Null Check:** Fügt Null-Check für dataset.description in searchDatasets Funktion hinzu
+  - **Safe Rendering:** Zeigt Fallback-Text für undefined description in DatasetsPage an
+  - **Error Prevention:** Verhindert "Cannot read properties of undefined (reading 'toLowerCase')" Fehler
+
+- **Dataset Loading Optimization:** Behebt automatisches Laden von Datasets beim Hover über Sidebar
+  - **Removed Auto-Loading:** Entfernt automatisches Laden von Datasets nach Login
+  - **Conditional Loading:** Datasets werden nur angezeigt, wenn sie bereits geladen sind
+  - **Click-Based Loading:** Datasets werden nur geladen, wenn Benutzer auf "Verwalten" klickt
+  - **Performance Improvement:** Verhindert unnötige API-Aufrufe beim Hover über Sidebar-Elemente
+  - **Sidebar Optimization:** Sidebar zeigt nur "Verwalten" Link, bis Datasets explizit geladen werden
+
+- **Functional Keyboard Shortcuts:** Macht alle Shortcuts im Command Menu funktional
+  - **Profile Dropdown:** "⌘K - Suchfunktion" als Informationstext hinzugefügt
+  - **Search Component:** Placeholder-Text auf "Suchen oder Befehl eingeben..." geändert
+  - **Command Menu:** Placeholder-Text auf "Suchen oder Befehl eingeben..." geändert
+  - **Navbar:** Kreatives "Suchen mit ⌘K" Design in der Navbar hinzugefügt
+    - **Modern Design:** Abgerundete Karte mit Hintergrund und Border
+    - **Animierter Indikator:** Pulsierender Punkt für visuellen Fokus
+    - **Interaktive Effekte:** Hover-Animationen und Farbübergänge
+    - **Professioneller KBD:** Stilisiertes Keyboard-Shortcut mit Schatten
+    - **Responsive:** Versteckt auf mobilen Geräten für optimale Platzausnutzung
+  - **Command Menu:** Neue "Keyboard Shortcuts" Sektion mit funktionalen Shortcuts
+  - **Functional Actions:** Alle Shortcuts führen jetzt die entsprechenden Aktionen aus:
+    - ⌘K (Suchfunktion) - Schließt das Command Menu
+    - ⇧⌘N (Neuer Chat) - Navigiert zu /chat
+    - ⇧⌘P (Profil-Einstellungen) - Navigiert zu /settings
+    - ⇧⌘C (Chat-Einstellungen) - Navigiert zu /settings/chat
+    - ⌘S (Einstellungen) - Navigiert zu /settings
+    - ⇧⌘Q (Abmelden) - Führt Abmeldung durch und navigiert zu /login
+  - **Auth Store Integration:** Direkte Integration des Auth Stores für Abmelden-Funktionalität
+  - **User Experience:** Benutzer können Shortcuts sowohl über Tastatur als auch über Mausklick verwenden
+
+- **Account Settings Section Removal:** Entfernt komplette Konto-Sektion aus den Einstellungen
+  - **Settings Sidebar:** "Konto" Navigation-Item aus der Sidebar entfernt
+  - **Account Route:** `/settings/account` Route und Komponente gelöscht
+  - **Account Components:** Alle Account-bezogenen Komponenten entfernt (SettingsAccount, AccountForm)
+  - **Account Store:** Account Store komplett gelöscht
+  - **Navigation Links:** Account-Links aus Nav-User-Dropdown entfernt
+  - **Profile Dropdown:** Account-Link mit Shortcut "⇧⌘K" aus Profile-Dropdown entfernt
+  - **Keyboard Shortcuts:** Entsprechender Keyboard-Shortcut für Account-Seite entfernt
+  - **Clean Codebase:** Ungenutzte Imports und Abhängigkeiten bereinigt
+  - **Simplified Settings:** Einstellungen-Seite fokussiert sich jetzt nur auf Profil, Chat, Anzeige und Anzeigeelement
+
+- **Sign Out Dialog German Translation:** Übersetzt Sign-Out-Dialog und Buttons ins Deutsche
+  - **SignOutDialog Component:** Titel "Sign out" → "Abmelden", Beschreibung vollständig übersetzt
+  - **Dialog Message:** "Are you sure you want to sign out? You will need to sign in again to access your account." → "Sind Sie sicher, dass Sie sich abmelden möchten? Sie müssen sich erneut anmelden, um auf Ihr Konto zugreifen zu können."
+  - **Button Texts:** "Sign out" → "Abmelden", "Cancel" → "Abbrechen"
+  - **Profile Dropdown:** "Sign out" → "Abmelden" im Dropdown-Menü
+  - **Nav User Component:** "Sign out" → "Abmelden" in der Sidebar-Navigation
+  - **Consistent German UI:** Alle Sign-Out-bezogenen Texte sind jetzt auf Deutsch
+
+- **Theme Switch System Mode Fix:** Behebt Theme-Color Meta-Tag für System-Modus
+  - **ThemeSwitch Component Update:** Verwendet jetzt `resolvedTheme` anstatt `theme` für Meta-Tag-Updates
+  - **System Mode Support:** Korrekte Behandlung des System-Modus in der Theme-Color-Logik
+  - **Meta-Tag Consistency:** Theme-Color Meta-Tag wird jetzt korrekt für alle Theme-Modi aktualisiert
+  - **Resolved Theme Integration:** Verwendet den bereits berechneten `resolvedTheme` aus dem Theme-Provider
+  - **Better Theme Detection:** System-Modus wird jetzt korrekt als Light oder Dark aufgelöst für Meta-Tag-Updates
+
+### Feat - 16.01.2025
+
+- **Enhanced Cognify Function with Custom Prompt:** Implementiert ausführlichen Custom Prompt für optimale Bildverarbeitung
+  - **Custom Prompt Integration:** Cognify-Funktion verwendet jetzt detaillierten Custom Prompt für bessere Verarbeitung
+  - **Comprehensive Image Processing:** Spezielle Anweisungen für vollständige Bildanalyse ohne Detailverlust
+  - **OCR Optimization:** Anweisungen für optimale Texterkennung aus Bildern und Dokumenten
+  - **Structured Data Extraction:** Hierarchische Strukturierung und Organisation extrahierter Informationen
+  - **Quality Assurance:** Qualitätssicherung und Validierung der Extraktionsergebnisse
+  - **Contextual Analysis:** Kontextuelle Analyse und Verknüpfung verwandter Informationen
+  - **Multi-format Support:** Unterstützung verschiedener Dateiformate (PDF, Bilder, Scans)
+  - **Advanced Processing Guidelines:** Verwendung fortschrittlicher OCR-Technologien und Machine Learning-Modelle
+
+### Fix - 16.01.2025
+
+- **Dataset Auto-Loading After Login:** Implementiert automatisches Laden der Datasets nach erfolgreichem Login
+  - **LoginForm Enhancement:** LoginForm lädt automatisch Datasets nach erfolgreichem Login über fetchDatasets()
+  - **Authenticated Route Update:** Token-Verifikation in _authenticated Route lädt Datasets nach erfolgreicher Validierung
+  - **Dataset Store Integration:** Verwendung des Dataset Stores in LoginForm und authentifizierten Routen
+  - **Error Handling:** Graceful Fehlerbehandlung für Dataset-Loading ohne Beeinträchtigung des Login-Prozesses
+  - **Sidebar Synchronization:** Datasets werden automatisch in der Sidebar-Navigation angezeigt nach Login
+  - **Consistent User Experience:** Benutzer sehen sofort ihre Datasets ohne manuelle Aktualisierung
+  - **Token-Based Loading:** Dataset-Loading erfolgt sowohl bei manuellem Login als auch bei automatischer Token-Verifikation
+
+- **Profile URL Elements Removal:** Entfernt URL-Elemente aus der Profil-Seite für vereinfachte Benutzeroberfläche
+  - **Profile Form Cleanup:** Entfernung aller URL-Eingabefelder und URL-Verwaltung aus der Profile-Form
+  - **Schema Simplification:** Profile-Schema vereinfacht - nur noch Username und E-Mail-Felder
+  - **ProfileStore Update:** Entfernung der URL-Behandlung aus dem ProfileStore
+  - **Form Validation:** Vereinfachte Validierung ohne URL-spezifische Regeln
+  - **Cleaner UI:** Sauberere und fokussiertere Profil-Seite ohne URL-Ablenkungen
+  - **Reduced Complexity:** Weniger Code und einfachere Wartung der Profil-Funktionalität
+  - **useFieldArray Removal:** Entfernung der useFieldArray-Hook da keine dynamischen URL-Felder mehr benötigt werden
+
+- **Profile Data Synchronization:** Behebt Anzeige von falschen Benutzerdaten im Profile-Dropdown
+  - **ProfileDropdown Update:** Verwendet jetzt echte Auth-Daten anstatt Storage-Werte für Name und E-Mail
+  - **AuthStore Integration:** ProfileDropdown zeigt jetzt die tatsächlichen Daten aus Login/Registrierung an
+  - **Dynamic User Data:** Name wird automatisch aus E-Mail-Adresse generiert (Teil vor @)
+  - **Real-time Updates:** Profile-Daten werden automatisch aktualisiert wenn sich Auth-Status ändert
+  - **ProfileStore Enhancement:** Neue getCurrentUserData() Methode für direkten Zugriff auf Auth-Daten
+  - **Profile Form Sync:** Profile-Form verwendet jetzt Auth-Daten als Standard-Werte
+  - **Consistent Data Source:** Alle Profile-Komponenten verwenden jetzt die gleiche Datenquelle (AuthStore)
+  - **Fallback Handling:** Graceful Fallback zu Storage-Werten wenn Auth-Daten nicht verfügbar sind
+
+- **File Deletion Confirmation Dialog:** Implementiert Bestätigungsdialog für das Löschen von Dateien in Datasets
+  - **DeleteFileDialog Component:** Neue Dialog-Komponente für sichere Datei-Löschung mit Bestätigung
+  - **Dataset Detail Page:** Ersetzt sofortige Löschung durch Bestätigungsdialog in der Dataset-Detail-Seite
+  - **File Detail Page:** Ersetzt einfachen confirm() Dialog durch professionellen DeleteFileDialog
+  - **Consistent UX:** Einheitliche Benutzeroberfläche für alle Datei-Löschvorgänge mit modernem Dialog-Design
+  - **Error Handling:** Umfassende Fehlerbehandlung mit Toast-Benachrichtigungen für erfolgreiche und fehlgeschlagene Löschvorgänge
+  - **Loading States:** Loading-Indikatoren während des Löschvorgangs für bessere Benutzererfahrung
+  - **German Translation:** Vollständig deutsche Benutzeroberfläche mit "Datei löschen" und "Möchten Sie die Datei wirklich löschen?"
+  - **Success Callbacks:** Automatische Aktualisierung der Dataset-Daten nach erfolgreicher Löschung
+  - **Navigation Integration:** Automatische Rücknavigation zur Dataset-Seite nach Löschung in der File-Detail-Seite
+  - **Prevents Accidental Deletion:** Verhindert versehentliches Löschen von Dateien durch Bestätigungsdialog
+
+### Fix - 16.01.2025
+
+- **Login Page Redesign:** Komplett neues modernes Login-Design mit shadcn/ui Komponenten
+  - **Card-basiertes Layout:** Elegante Card-Komponente mit Glassmorphism-Effekt (backdrop-blur-sm)
+  - **Gradient-Hintergrund:** Schöner Gradient von slate-50 zu slate-100 (Light) / slate-900 zu slate-800 (Dark)
+  - **Zentriertes Design:** Vollständig zentriertes Layout ohne zwei-spaltige Struktur
+  - **Moderne Effekte:** Shadow-xl, transparente Hintergründe (bg-white/80) und Backdrop-Blur
+  - **Verbesserte Typografie:** CardTitle und CardDescription für bessere Hierarchie
+  - **Logo-Integration:** Zentriertes Logo im CardHeader mit größerer Darstellung (h-12)
+  - **Enhanced Input-Felder:** Höhere Input-Felder (h-11) mit verbesserter Border-Farbe und Focus-States
+  - **Verbesserte Buttons:** Konsistente Höhe (h-11) mit modernen Hover-Effekten
+  - **Deutsche Übersetzung:** "Willkommen zurück" und "Melden Sie sich bei Ihrem Agent AI Konto an"
+  - **Responsive Design:** Optimiert für alle Bildschirmgrößen mit max-w-md Container
+- **Logout Redirect Fix:** Behebung der Logout-Weiterleitung zur falschen Login-Seite
+  - **SignOutDialog Update:** SignOutDialog leitet jetzt zu `/login` anstatt `/sign-in` weiter
+  - **Main.tsx Auth Error Fix:** 401-Fehler in main.tsx leiten jetzt zu `/login` anstatt `/sign-in` weiter
+  - **Consistent Login Route:** Alle Logout-Weiterleitungen verwenden jetzt die ursprüngliche Login-Seite (`/login`)
+- **Dataset ID Only Usage:** Behebung der Verwendung von dataset_name in der Cognee add und search Funktionen
+  - **Removed datasetName Parameter:** Entfernung des optionalen datasetName Parameters aus der AddDataRequest Interface
+  - **Dataset ID Only:** Alle addDataToDataset Aufrufe verwenden jetzt nur noch die dataset_id anstatt dataset_name
+  - **Search Function Fix:** Cognee Search API verwendet jetzt datasetIds anstatt datasets für bessere Kompatibilität
+  - **Dataset Selector Update:** Dataset-Selektor übergibt jetzt dataset.id anstatt dataset.name an den Chat Store
+  - **Backend Search Update:** Backend Search-Endpunkt verwendet jetzt datasetIds Parameter für Cognee API-Aufrufe
+  - **Cross-User Dataset Support:** Ermöglicht das Hinzufügen von Daten zu Datasets, die nicht dem aktuellen Benutzer gehören
+  - **API Consistency:** Verbesserte Konsistenz mit der Cognee API-Spezifikation für dataset_id basierte Operationen
+  - **Simplified Interface:** Vereinfachte AddDataRequest Interface durch Entfernung redundanter Parameter
+- **Cognee Search Authentication Fix:** Behebung des 401 Unauthorized-Fehlers bei Cognee Search-Anfragen
+  - **useChat Authorization:** useChat Hook wurde mit einem fetch Callback erweitert, um automatisch Authorization-Header hinzuzufügen
+  - **Token Injection:** Authentifizierungstoken wird jetzt automatisch für alle Cognee Search-Anfragen übertragen
+  - **Auth Store Integration:** Direkte Integration des Auth Stores in die Chat-Komponente für Token-Zugriff
+  - **Conditional Headers:** Authorization-Header wird nur für Cognee-Modus hinzugefügt, nicht für andere Chat-Provider
+
+### Feat - 16.01.2025
+
+- **Cognee API Authentication Integration:** Vollständige Implementierung eines Authentifizierungssystems mit der Cognee API
+  - **Backend Authentication Middleware:** Neue Endpunkte in server/chat-api.ts für Login, Registrierung, Logout und Token-Verifikation
+  - **Token-basierte Zugriffskontrolle:** Alle Cognee-Anfragen erfordern jetzt Authentifizierung über Bearer Token
+  - **Frontend Auth Store:** Erweiterte Zustand-Verwaltung mit Cognee-spezifischen Benutzerfeldern (id, tenant_id, is_active, is_verified)
+  - **Login-Seite Integration:** Echte API-Integration mit Fehlerbehandlung und automatischer Weiterleitung nach erfolgreichem Login
+  - **Registrierungs-Seite:** Neue Registrierungskomponente mit Validierung und automatischer Weiterleitung zur Login-Seite
+  - **Route Guards:** beforeLoad-Hooks in _authenticated-Routen für Token-Validierung und automatische Umleitung bei ungültigen Tokens
+  - **Cognee API Client:** Axios-basierter Client mit automatischer Token-Injektion und 401/403-Fehlerbehandlung
+  - **Datasets API Update:** Aktualisierung der datasets-api.ts für Token-basierte Authentifizierung über Auth Store
+  - **Environment Configuration:** Cognee-Authentifizierungs-Flags (ENABLE_BACKEND_ACCESS_CONTROL, REQUIRE_AUTHENTICATION) hinzugefügt
+  - **Automatische Token-Verifikation:** Token-Validierung beim App-Start und bei jedem geschützten Routen-Zugriff
+  - **Benutzer-Isolation:** Jeder authentifizierte Benutzer erhält isolierten Zugriff auf seine Cognee-Datasets und -Daten
+  - **Sichere API-Kommunikation:** Alle Anfragen an imeso-ki-02:8000 werden mit Authentifizierungstoken gesichert
+  - **Fehlerbehandlung:** Umfassende Fehlerbehandlung für 401 Unauthorized, 403 Forbidden und Netzwerkfehler
+  - **Persistente Authentifizierung:** Token-Speicherung in Cookies und localStorage für nahtlose Benutzererfahrung
+  - **Deutsche Benutzeroberfläche:** Vollständige Übersetzung aller Authentifizierungs-Komponenten ins Deutsche
+- **Profile Store Email Integration:** Dynamische E-Mail-Adresse des authentifizierten Benutzers
+  - **Removed Hardcoded Email:** Entfernung der fest codierten E-Mail-Adresse m@example.com aus dem Profile Store
+  - **Dynamic Email Source:** Profile Store verwendet jetzt die E-Mail-Adresse des authentifizierten Benutzers aus dem Auth Store
+  - **getCurrentUserEmail Method:** Neue Methode für dynamische E-Mail-Abfrage aus dem authentifizierten Benutzer
+  - **User-Specific Profile Data:** Profile-Daten werden jetzt benutzerspezifisch geladen statt mit Standard-Werten
+  - **Real User Information:** Echte Benutzerdaten aus dem Cognee-System werden in der Profile-Seite angezeigt
+
+### Feat - 16.01.2025
+
+- **Error Pages German Translation:** Vollständige Übersetzung aller Error Pages auf Deutsch
+  - forbidden.tsx: "Access Forbidden" → "Zugriff verweigert"
+  - general-error.tsx: "Oops! Something went wrong" → "Ups! Etwas ist schiefgelaufen"
+  - maintenance-error.tsx: "Website is under maintenance!" → "Website befindet sich im Wartungsmodus!"
+  - not-found-error.tsx: "Oops! Page Not Found!" → "Ups! Seite nicht gefunden!"
+  - unauthorized-error.tsx: "Unauthorized Access" → "Unbefugter Zugriff"
+  - Alle Button-Texte übersetzt: "Go Back" → "Zurück", "Back to Home" → "Zur Startseite"
+  - Deutsche Fehlermeldungen für bessere Benutzerfreundlichkeit
+  - Konsistente deutsche Terminologie in allen Error Pages
+
 ### Fix - 16.10.2025
 
 - **TypeScript Build Errors:** Behebung aller TypeScript-Kompilierungsfehler
@@ -534,6 +883,12 @@
   - New API endpoints for DeepSeek chat and model listing.
   - Model selector and chat store updated to support both providers.
   - Fixed max_tokens parameter issue by removing it from DeepSeek API requests.
+
+### Fix - 10.10.2025
+
+- fix Cognee API parameter format (query params instead of body params) (#35)
+- resolve 400 Bad Request errors for tenant/role creation (#34)
+- correct frontend API client to match backend query parameter expectations (#33)
 
 ### Feat 25-12-2024
 

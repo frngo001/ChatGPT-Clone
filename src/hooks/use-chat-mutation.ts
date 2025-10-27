@@ -80,9 +80,9 @@ export function useChatMutation() {
           streamingConfig: request.streamingConfig || {
             temperature: 0.7,
             topP: 0.9,
-            maxTokens: 10000,
-            batchSize: 10,
-            throttleDelay: 20,
+            maxTokens: 1000000,
+            batchSize: 80,
+            throttleDelay: 80,
           },
         }),
       })

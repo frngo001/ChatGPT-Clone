@@ -13,6 +13,7 @@ import { ProfileDropdown } from '@/components/profile-dropdown'
 import { ModelSelector } from '@/components/ollama-chat/model-selector'
 import { DatasetSelector } from '@/components/ollama-chat/dataset-selector'
 import useOllamaChatStore from '@/stores/ollama-chat-store'
+import { useInitialLoading } from '@/hooks/use-initial-loading'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -21,6 +22,9 @@ type AuthenticatedLayoutProps = {
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const defaultOpen = getCookie('sidebar_state') !== 'false'
   const location = useLocation()
+  
+  // Initialize app data (token verification + dataset loading)
+  useInitialLoading()
   
   // Check if we're on a chat page to show chat-specific components
   const isChatPage = location.pathname.startsWith('/chat')

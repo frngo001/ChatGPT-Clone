@@ -16,7 +16,7 @@ import { DeleteFileDialog } from './components/delete-file-dialog'
 export function DatasetDetailPage() {
   const { datasetId } = useParams({ from: '/_authenticated/library/datasets/$datasetId' })
   const navigate = useNavigate()
-  const { getDatasetById, fetchDatasetData, processDatasets, checkDatasetStatus } = useDatasetStore()
+  const { getDatasetById, fetchDatasetDataWithCache, processDatasets, checkDatasetStatus, isFetchingInBackground } = useDatasetStore()
   const [showAddDataDialog, setShowAddDataDialog] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -32,16 +32,17 @@ export function DatasetDetailPage() {
   })
 
   const dataset = getDatasetById(datasetId)
+  const isBackgroundFetching = datasetId ? isFetchingInBackground[datasetId] : false
 
-  // Fetch dataset data when component mounts
+  // Always use cache-aware fetch
   useEffect(() => {
     if (datasetId) {
-      fetchDatasetData(datasetId).catch((error) => {
+      fetchDatasetDataWithCache(datasetId).catch((error) => {
         console.error('Failed to fetch dataset data:', error)
         toast.error('Fehler beim Laden der Dataset-Dateien')
       })
     }
-  }, [datasetId, fetchDatasetData])
+  }, [datasetId, fetchDatasetDataWithCache])
 
   // Check dataset status periodically if it's processing
   useEffect(() => {
@@ -147,6 +148,11 @@ export function DatasetDetailPage() {
             <h1 className="text-lg sm:text-xl font-bold truncate">{dataset.name}</h1>
             <div className="flex items-center gap-2">
               <ProcessingStatusBadge status={dataset.processingStatus} />
+              {isBackgroundFetching && (
+                <Badge variant="outline" className="h-7 text-xs animate-pulse">
+                  Aktualisiere...
+                </Badge>
+              )}
               <Button variant="outline" size="sm" className="h-7 text-xs w-fit">
                 <Edit className="mr-1 h-3 w-3" />
                 <span className="hidden sm:inline">Bearbeiten</span>

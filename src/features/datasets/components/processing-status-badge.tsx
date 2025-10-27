@@ -12,31 +12,31 @@ export function ProcessingStatusBadge({ status, className }: ProcessingStatusBad
       case 'DATASET_PROCESSING_STARTED':
         return {
           label: 'Wird verarbeitet...',
-          variant: 'default' as const,
-          icon: <Loader2 className="h-3 w-3 animate-spin" />,
-          className: 'bg-blue-100 text-blue-800 border-blue-200'
+          variant: 'secondary' as const,
+          icon: <Loader2 className="h-3 w-3 animate-spin text-blue-600 dark:text-blue-400" />,
+          className: 'bg-muted text-foreground dark:text-foreground border-border'
         }
       case 'DATASET_PROCESSING_COMPLETED':
         return {
           label: 'Verarbeitet',
-          variant: 'default' as const,
-          icon: <CheckCircle2 className="h-3 w-3" />,
-          className: 'bg-green-100 text-green-800 border-green-200'
+          variant: 'secondary' as const,
+          icon: <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />,
+          className: 'bg-muted text-foreground dark:text-foreground border-border'
         }
       case 'DATASET_PROCESSING_ERRORED':
         return {
           label: 'Verarbeitung fehlgeschlagen',
-          variant: 'destructive' as const,
-          icon: <AlertCircle className="h-3 w-3" />,
-          className: 'bg-red-100 text-red-800 border-red-200'
+          variant: 'secondary' as const,
+          icon: <AlertCircle className="h-3 w-3 text-red-600 dark:text-red-400" />,
+          className: 'bg-muted text-foreground dark:text-foreground border-border'
         }
       case 'DATASET_PROCESSING_INITIATED':
       default:
         return {
           label: 'Muss verarbeitet werden',
           variant: 'secondary' as const,
-          icon: <AlertTriangle className="h-3 w-3" />,
-          className: 'bg-orange-100 text-orange-800 border-orange-200'
+          icon: <AlertTriangle className="h-3 w-3 text-orange-600 dark:text-orange-400" />,
+          className: 'bg-muted text-foreground dark:text-foreground border-border'
         }
     }
   }

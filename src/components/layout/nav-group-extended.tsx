@@ -1,6 +1,7 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useRef } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
+import { useDatasetStore } from '@/stores/dataset-store'
 import {
   Collapsible,
   CollapsibleContent,
@@ -31,6 +32,8 @@ import {
   type NavLink,
   type NavGroup as NavGroupProps,
 } from './types'
+import { FoldersIcon, type FoldersIconHandle } from '@/components/ui/folders-icon'
+import { SquarePenIcon, type SquarePenIconHandle } from '@/components/ui/square-pen-icon'
 
 export function NavGroupExtended({ items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
@@ -62,6 +65,34 @@ function NavBadge({ children }: { children: ReactNode }) {
 
 function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
   const { setOpenMobile } = useSidebar()
+  const squarePenIconRef = useRef<SquarePenIconHandle>(null)
+  const { fetchDatasetDataWithCache } = useDatasetStore()
+  
+  const handleMouseEnter = () => {
+    if (item.icon === SquarePenIcon) {
+      squarePenIconRef.current?.startAnimation()
+    }
+  }
+  
+  const handleMouseLeave = () => {
+    if (item.icon === SquarePenIcon) {
+      squarePenIconRef.current?.stopAnimation()
+    }
+  }
+
+  const handleClick = () => {
+    setOpenMobile(false)
+    
+    // Check if this is a dataset link
+    const datasetMatch = href.match(/^\/library\/datasets\/(.+)$/)
+    if (datasetMatch) {
+      const datasetId = datasetMatch[1]
+      // Trigger cache-fetch before navigation
+      fetchDatasetDataWithCache(datasetId).catch((error) => {
+        console.error('Failed to fetch dataset data:', error)
+      })
+    }
+  }
 
   return (
     <SidebarMenuItem>
@@ -69,9 +100,15 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
         asChild
         isActive={checkIsActive(href, item)}
         tooltip={item.title}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        <Link to={item.url} onClick={() => setOpenMobile(false)}>
-          {item.icon && <item.icon />}
+        <Link to={item.url} onClick={handleClick}>
+          {item.icon === SquarePenIcon ? (
+            <SquarePenIcon ref={squarePenIconRef} />
+          ) : (
+            item.icon && <item.icon />
+          )}
           <span>{item.title}</span>
           {item.badge && <NavBadge>{item.badge}</NavBadge>}
         </Link>
@@ -88,6 +125,20 @@ function SidebarMenuCollapsibleExtended({
   href: string
 }) {
   const { setOpenMobile } = useSidebar()
+  const foldersIconRef = useRef<FoldersIconHandle>(null)
+  
+  const handleMouseEnter = () => {
+    if (item.icon === FoldersIcon) {
+      foldersIconRef.current?.startAnimation()
+    }
+  }
+  
+  const handleMouseLeave = () => {
+    if (item.icon === FoldersIcon) {
+      foldersIconRef.current?.stopAnimation()
+    }
+  }
+  
   return (
     <Collapsible
       asChild
@@ -96,8 +147,16 @@ function SidebarMenuCollapsibleExtended({
     >
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={item.title}>
-            {item.icon && <item.icon />}
+          <SidebarMenuButton 
+            tooltip={item.title}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            {item.icon === FoldersIcon ? (
+              <FoldersIcon ref={foldersIconRef} />
+            ) : (
+              item.icon && <item.icon />
+            )}
             <span>{item.title}</span>
             {item.badge && <NavBadge>{item.badge}</NavBadge>}
             <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
@@ -170,6 +229,20 @@ function SidebarMenuCollapsedDropdown({
   item: NavCollapsible
   href: string
 }) {
+  const foldersIconRef = useRef<FoldersIconHandle>(null)
+  
+  const handleMouseEnter = () => {
+    if (item.icon === FoldersIcon) {
+      foldersIconRef.current?.startAnimation()
+    }
+  }
+  
+  const handleMouseLeave = () => {
+    if (item.icon === FoldersIcon) {
+      foldersIconRef.current?.stopAnimation()
+    }
+  }
+  
   return (
     <SidebarMenuItem>
       <DropdownMenu>
@@ -177,8 +250,14 @@ function SidebarMenuCollapsedDropdown({
           <SidebarMenuButton
             tooltip={item.title}
             isActive={checkIsActive(href, item)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
           >
-            {item.icon && <item.icon />}
+            {item.icon === FoldersIcon ? (
+              <FoldersIcon ref={foldersIconRef} />
+            ) : (
+              item.icon && <item.icon />
+            )}
             <span>{item.title}</span>
             {item.badge && <NavBadge>{item.badge}</NavBadge>}
             <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />

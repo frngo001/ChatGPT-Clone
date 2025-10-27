@@ -1,9 +1,10 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 import { useAuthStore } from '@/stores/auth-store'
+import type { PermissionType, PrincipalType, UpdateUserPayload } from '@/types/permissions'
 
 // Create Axios instance for Cognee API calls
 const cogneeApiClient: AxiosInstance = axios.create({
-  baseURL: '/api/v1',
+  baseURL: '/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -17,6 +18,8 @@ cogneeApiClient.interceptors.request.use(
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+    } else {
+      console.warn('No token available for request')
     }
     
     return config
@@ -81,34 +84,34 @@ export const cogneeApi = {
     onlyContext?: boolean
     useCombinedContext?: boolean
   }) => {
-    return cogneeApiClient.post('/search', payload)
+    return cogneeApiClient.post('/v1/search', payload)
   },
 
   // Dataset operations
   getDatasets: () => {
-    return cogneeApiClient.get('/datasets')
+    return cogneeApiClient.get('/v1/datasets')
   },
 
   createDataset: (name: string) => {
-    return cogneeApiClient.post('/datasets', { name })
+    return cogneeApiClient.post('/v1/datasets', { name })
   },
 
   deleteDataset: (datasetId: string) => {
-    return cogneeApiClient.delete(`/datasets/${datasetId}`)
+    return cogneeApiClient.delete(`/v1/datasets/${datasetId}`)
   },
 
   getDatasetData: (datasetId: string) => {
-    return cogneeApiClient.get(`/datasets/${datasetId}/data`)
+    return cogneeApiClient.get(`/v1/datasets/${datasetId}/data`)
   },
 
   getDatasetGraph: (datasetId: string) => {
-    return cogneeApiClient.get(`/datasets/${datasetId}/graph`)
+    return cogneeApiClient.get(`/v1/datasets/${datasetId}/graph`)
   },
 
   // Check if dataset has processed data
   checkDatasetHasData: async (datasetId: string): Promise<boolean> => {
     try {
-      const response = await cogneeApiClient.get(`/datasets/${datasetId}/data`)
+      const response = await cogneeApiClient.get(`/v1/datasets/${datasetId}/data`)
       const data = response.data
       
       // Check if dataset has any processed data
@@ -139,7 +142,7 @@ export const cogneeApi = {
 
   // Add data operations
   addData: (formData: FormData) => {
-    return cogneeApiClient.post('/add', formData, {
+    return cogneeApiClient.post('/v1/add', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -153,12 +156,12 @@ export const cogneeApi = {
     runInBackground?: boolean
     customPrompt?: string
   }) => {
-    return cogneeApiClient.post('/cognify', payload)
+    return cogneeApiClient.post('/v1/cognify', payload)
   },
 
   // Settings operations
   getSettings: () => {
-    return cogneeApiClient.get('/settings')
+    return cogneeApiClient.get('/v1/settings')
   },
 
   saveSettings: (settings: {
@@ -173,12 +176,12 @@ export const cogneeApi = {
       apiKey: string
     }
   }) => {
-    return cogneeApiClient.post('/settings', settings)
+    return cogneeApiClient.post('/v1/settings', settings)
   },
 
   // User operations
   getCurrentUser: () => {
-    return cogneeApiClient.get('/users/me')
+    return cogneeApiClient.get('/v1/users/me')
   },
 
   updateCurrentUser: (userData: {
@@ -187,6 +190,119 @@ export const cogneeApi = {
     is_active?: boolean
     is_verified?: boolean
   }) => {
-    return cogneeApiClient.patch('/users/me', userData)
+    return cogneeApiClient.patch('/v1/users/me', userData)
   },
+
+  // Permissions API
+  permissions: {
+    // Tenant operations
+    // Note: getAllTenants is not needed anymore as tenants are included in /v1/users/all response
+    // getAllTenants: () => {
+    //   return cogneeApiClient.get('/v1/tenants')
+    // },
+
+    createTenant: (name: string, description?: string) => {
+      const params = new URLSearchParams();
+      params.append('tenant_name', name);
+      if (description) {
+        params.append('description', description);
+      }
+      // baseURL ist bereits /api
+      return cogneeApiClient.post(`/v1/permissions/tenants?${params.toString()}`)
+    },
+
+    addUserToTenant: (userId: string, tenantId: string) => {
+      const params = new URLSearchParams();
+      params.append('tenant_id', tenantId);
+      // baseURL ist bereits /api
+      return cogneeApiClient.post(`/v1/permissions/users/${userId}/tenants?${params.toString()}`)
+    },
+
+    // Role operations
+    getRoles: () => {
+      return cogneeApiClient.get('/v1/permissions/roles')
+    },
+
+    createRole: (name: string, description?: string) => {
+      const params = new URLSearchParams();
+      params.append('role_name', name);
+      if (description) {
+        params.append('description', description);
+      }
+      // baseURL ist bereits /api, daher nur v1/permissions/roles
+      return cogneeApiClient.post(`/v1/permissions/roles?${params.toString()}`)
+    },
+
+    addUserToRole: (userId: string, roleId: string) => {
+      const params = new URLSearchParams();
+      params.append('role_id', roleId);
+      // baseURL ist bereits /api, daher nur v1/...
+      return cogneeApiClient.post(`/v1/permissions/users/${userId}/roles?${params.toString()}`)
+    },
+
+    // Dataset permissions
+    // Basierend auf echter Cognee API: POST /api/v1/permissions/datasets/{principal_id}
+    // Body: array of dataset UUIDs
+    // Query: permission_name
+    giveDatasetPermission: (payload: {
+      dataset_id: string
+      principal_id: string
+      principal_type: PrincipalType
+      permission_type: PermissionType
+    }) => {
+      const params = new URLSearchParams();
+      params.append('permission_name', payload.permission_type);
+      
+      // Body ist ein Array von Dataset-UUIDs
+      return cogneeApiClient.post(
+        `/v1/permissions/datasets/${payload.principal_id}?${params.toString()}`,
+        [payload.dataset_id]
+      )
+    },
+
+    // Helper: Share dataset with tenant (all users get read access)
+    shareDatasetWithTenant: async (datasetId: string, tenantId: string) => {
+      // Cognee API: POST /v1/permissions/datasets/{principal_id}?permission_name=read
+      // Body: [dataset_id]
+      return cogneeApi.permissions.giveDatasetPermission({
+        dataset_id: datasetId,
+        principal_id: tenantId,
+        principal_type: 'tenant',
+        permission_type: 'read'
+      })
+    },
+
+    removeUserFromRole: (userId: string, roleId: string) => {
+      const params = new URLSearchParams();
+      params.append('role_id', roleId);
+      // Annahme: DELETE /v1/permissions/users/{user_id}/roles?role_id={role_id}
+      // Falls nicht korrekt, muss Backend-Endpoint geprüft werden
+      return cogneeApiClient.delete(`/v1/permissions/users/${userId}/roles?${params.toString()}`)
+    }
+  },
+
+  // User Management API
+  users: {
+    getUser: (userId: string) => {
+      return cogneeApiClient.get(`/cognee/users/${userId}`)
+    },
+
+    getAllUsers: () => {
+      return cogneeApiClient.get('/cognee/users')
+    },
+
+    // New endpoint with full user information including tenant and roles
+    getAllUsersV2: () => {
+      return cogneeApiClient.get('/v1/users/all')
+    },
+
+    // Update user (is_verified, is_superuser, is_active, email, password)
+    updateUser: (userId: string, payload: UpdateUserPayload) => {
+      return cogneeApiClient.patch(`/v1/users/${userId}`, payload)
+    },
+
+    deleteUser: (userId: string) => {
+      return cogneeApiClient.delete(`/v1/users/${userId}`)
+    },
+  }
 }

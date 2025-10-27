@@ -30,6 +30,12 @@ export function ModelSelector({ isLoading = false }: ModelSelectorProps) {
     isError 
   } = useAllModels();
 
+  // Extract model names
+  const ollamaModelNames = ollamaModels.map(model => model.name);
+  const deepseekModelNames = deepseekModels.map(model => model.id);
+  
+  const currentModels = selectedProvider === 'ollama' ? ollamaModelNames : deepseekModelNames;
+
   const handleModelChange = (model: string) => {
     setSelectedModel(model);
     setOpen(false);
@@ -37,14 +43,16 @@ export function ModelSelector({ isLoading = false }: ModelSelectorProps) {
 
   const handleProviderChange = (provider: 'ollama' | 'deepseek') => {
     setSelectedProvider(provider);
-    setSelectedModel(''); // Reset model when switching providers
+    
+    // Automatically select the first model from the new provider
+    if (provider === 'ollama' && ollamaModelNames.length > 0) {
+      setSelectedModel(ollamaModelNames[0]);
+    } else if (provider === 'deepseek' && deepseekModelNames.length > 0) {
+      setSelectedModel(deepseekModelNames[0]);
+    } else {
+      setSelectedModel(''); // No models available
+    }
   };
-
-  // Extract model names
-  const ollamaModelNames = ollamaModels.map(model => model.name);
-  const deepseekModelNames = deepseekModels.map(model => model.id);
-  
-  const currentModels = selectedProvider === 'ollama' ? ollamaModelNames : deepseekModelNames;
 
   return (
     <div className="flex gap-2">
@@ -67,35 +75,39 @@ export function ModelSelector({ isLoading = false }: ModelSelectorProps) {
             aria-expanded={open}
             className="w-[220px] justify-between"
           >
-            {selectedModel || "Modell auswählen"}
+            <span className="truncate text-left">
+              {selectedModel || "Modell auswählen"}
+            </span>
             <CaretSortIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[220px] p-1">
+        <PopoverContent className="w-[220px] p-2" align="start">
           {modelsLoading ? (
-            <Button variant="ghost" disabled className="w-full">
+            <Button variant="ghost" disabled className="w-full justify-start px-3">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Lade Modelle...
             </Button>
           ) : isError ? (
-            <Button variant="ghost" disabled className="w-full">
+            <Button variant="ghost" disabled className="w-full justify-start px-3">
               Fehler beim Laden
             </Button>
           ) : currentModels.length > 0 ? (
-            currentModels.map((model) => (
-              <Button
-                key={model}
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => {
-                  handleModelChange(model);
-                }}
-              >
-                {model}
-              </Button>
-            ))
+            <div className="max-h-[300px] overflow-y-auto">
+              {currentModels.map((model) => (
+                <Button
+                  key={model}
+                  variant="ghost"
+                  className="w-full justify-start text-left px-3 py-2 h-auto"
+                  onClick={() => {
+                    handleModelChange(model);
+                  }}
+                >
+                  <span className="truncate block w-full">{model}</span>
+                </Button>
+              ))}
+            </div>
           ) : (
-            <Button variant="ghost" disabled className="w-full">
+            <Button variant="ghost" disabled className="w-full justify-start px-3">
               Keine Modelle verfügbar
             </Button>
           )}

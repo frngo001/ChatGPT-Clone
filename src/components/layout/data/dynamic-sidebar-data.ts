@@ -1,12 +1,13 @@
 import {
   Library,
-  SquarePen,
-  Folder,
   FolderPlus,
-  SquareChartGantt ,
+  FolderSearch2,
+  FolderOpen,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 import { useDatasetStore } from '@/stores/dataset-store'
+import { FoldersIcon } from '@/components/ui/folders-icon'
+import { SquarePenIcon } from '@/components/ui/square-pen-icon'
 
 export function useDynamicSidebarData(): SidebarData {
   const { datasets } = useDatasetStore()
@@ -15,8 +16,8 @@ export function useDynamicSidebarData(): SidebarData {
   const datasetItems = datasets.map((dataset) => ({
     title: dataset.name,
     url: `/library/datasets/${dataset.id}` as const,
-    icon: Folder,
-    badge: dataset.files.length.toString(),
+    icon: FolderOpen,
+    badge: dataset.files.length > 0 ? dataset.files.length.toString() : '...',
   }))
 
 
@@ -34,7 +35,7 @@ export function useDynamicSidebarData(): SidebarData {
           {
             title: 'Neuer Chat',
             url: '/chat',
-            icon: SquarePen,
+            icon: SquarePenIcon,
           },
           {
             title: 'Bibliothek',
@@ -42,12 +43,12 @@ export function useDynamicSidebarData(): SidebarData {
             items: [
               {
                 title: 'Datasets',
-                icon: Folder,
+                icon: FoldersIcon,
                 items: [
                   {
                     title: 'Verwalten',
                     url: '/library/datasets',
-                    icon: SquareChartGantt
+                    icon: FolderSearch2
                   },
                   // Add dynamic datasets as sub-items
                   ...datasetItems,

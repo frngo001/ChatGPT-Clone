@@ -17,7 +17,8 @@ import { useAuthStore } from '@/stores/auth-store'
 
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
-  const { auth } = useAuthStore()
+  // Optimize: Only subscribe to user email, not the entire auth object
+  const userEmail = useAuthStore((state) => state.auth.user?.email)
 
   // Generate initials from email (since we don't have username in auth)
   const getInitials = (email: string) => {
@@ -28,9 +29,9 @@ export function ProfileDropdown() {
     return 'U'
   }
 
-  const initials = getInitials(auth.user?.email || '')
-  const displayName = auth.user?.email?.split('@')[0] || 'Benutzer'
-  const displayEmail = auth.user?.email || 'email@example.com'
+  const initials = getInitials(userEmail || '')
+  const displayName = userEmail?.split('@')[0] || 'Benutzer'
+  const displayEmail = userEmail || 'email@example.com'
 
   // Keyboard shortcuts are now handled centrally in SearchProvider
 

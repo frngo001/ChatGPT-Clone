@@ -2,107 +2,58 @@
 
 import { cn } from "@/lib/utils"
 import type { HTMLAttributes } from "react"
-import { memo } from "react"
+import { memo, useMemo } from "react"
 import ReactMarkdown, { type Options } from "react-markdown"
 import remarkGfm from "remark-gfm"
 
 /**
- * Parses markdown text and removes incomplete tokens to prevent partial rendering
- * of links, images, bold, and italic formatting during streaming.
+ * Simplified and optimized markdown parser that handles incomplete tokens during streaming.
+ * Uses efficient regex operations and avoids expensive string operations.
  */
 function parseIncompleteMarkdown(text: string): string {
   if (!text || typeof text !== "string") {
     return text
   }
+  
   let result = text
+  const length = result.length
 
-  // Handle incomplete links and images
-  // Pattern: [...] or ![...] where the closing ] is missing
-  const linkImagePattern = /(!?\[)([^\]]*?)$/
-  const linkMatch = result.match(linkImagePattern)
-  if (linkMatch) {
-    // If we have an unterminated [ or ![, remove it and everything after
-    const startIndex = result.lastIndexOf(linkMatch[1])
-    result = result.substring(0, startIndex)
+  // Handle incomplete links at the end - remove if unterminated
+  const lastOpenBracket = result.lastIndexOf('[')
+  const lastCloseBracket = result.lastIndexOf(']')
+  if (lastOpenBracket > lastCloseBracket) {
+    result = result.substring(0, lastOpenBracket)
   }
 
-  // Handle incomplete bold formatting (**)
-  const boldPattern = /(\*\*)([^*]*?)$/
-  const boldMatch = result.match(boldPattern)
-  if (boldMatch) {
-    // Count the number of ** in the entire string
-    const asteriskPairs = (result.match(/\*\*/g) || []).length
-    // If odd number of **, we have an incomplete bold - complete it
-    if (asteriskPairs % 2 === 1) {
-      result = `${result}**`
-    }
+  // Quick check for incomplete markdown tokens at the end
+  // Only process the last ~50 characters for performance
+  const checkEnd = Math.min(50, length)
+  const endText = result.slice(-checkEnd)
+  
+  // Check for incomplete tokens using simple pattern matching
+  // Bold (**)
+  const asteriskCount = (endText.match(/\*\*/g) || []).length
+  if (asteriskCount % 2 === 1) {
+    result = result + '**'
   }
-
-  // Handle incomplete italic formatting (__)
-  const italicPattern = /(__)([^_]*?)$/
-  const italicMatch = result.match(italicPattern)
-  if (italicMatch) {
-    // Count the number of __ in the entire string
-    const underscorePairs = (result.match(/__/g) || []).length
-    // If odd number of __, we have an incomplete italic - complete it
-    if (underscorePairs % 2 === 1) {
-      result = `${result}__`
-    }
+  
+  // Underscore italic (__)
+  const underscoreCount = (endText.match(/__/g) || []).length
+  if (underscoreCount % 2 === 1) {
+    result = result + '__'
   }
-
-  // Handle incomplete single asterisk italic (*)
-  const singleAsteriskPattern = /(\*)([^*]*?)$/
-  const singleAsteriskMatch = result.match(singleAsteriskPattern)
-  if (singleAsteriskMatch) {
-    // Count single asterisks that aren't part of **
-    const singleAsterisks = result.split("").reduce((acc, char, index) => {
-      if (char === "*") {
-        // Check if it's part of a ** pair
-        const prevChar = result[index - 1]
-        const nextChar = result[index + 1]
-        if (prevChar !== "*" && nextChar !== "*") {
-          return acc + 1
-        }
-      }
-      return acc
-    }, 0)
-    // If odd number of single *, we have an incomplete italic - complete it
-    if (singleAsterisks % 2 === 1) {
-      result = `${result}*`
-    }
+  
+  // Strikethrough (~~)
+  const tildeCount = (endText.match(/~~/g) || []).length
+  if (tildeCount % 2 === 1) {
+    result = result + '~~'
   }
-
-  // Handle incomplete strikethrough formatting (~~)
-  const strikethroughPattern = /(~~)([^~]*?)$/
-  const strikethroughMatch = result.match(strikethroughPattern)
-  if (strikethroughMatch) {
-    // Count the number of ~~ in the entire string
-    const tildePairs = (result.match(/~~/g) || []).length
-    // If odd number of ~~, we have an incomplete strikethrough - complete it
-    if (tildePairs % 2 === 1) {
-      result = `${result}~~`
-    }
-  }
-
-  // Handle incomplete inline code formatting (`)
-  const inlineCodePattern = /(`)([^`]*?)$/
-  const inlineCodeMatch = result.match(inlineCodePattern)
-  if (inlineCodeMatch) {
-    // Count single backticks that aren't part of ```
-    const singleBackticks = result.split("").reduce((acc, char, index) => {
-      if (char === "`") {
-        // Check if it's part of a ``` block
-        const prevChar = result[index - 1]
-        const nextChar = result[index + 1]
-        if (prevChar !== "`" && nextChar !== "`") {
-          return acc + 1
-        }
-      }
-      return acc
-    }, 0)
-    // If odd number of single `, we have an incomplete inline code - complete it
-    if (singleBackticks % 2 === 1) {
-      result = `${result}\``
+  
+  // Inline code (`) - only check if there's a trailing backtick
+  if (endText.includes('`') && !endText.includes('```')) {
+    const backtickCount = (endText.match(/`/g) || []).length
+    if (backtickCount % 2 === 1) {
+      result = result + '`'
     }
   }
 
@@ -129,11 +80,15 @@ const AIResponse = memo(
     className,
     ...props
   }: AIResponseProps) => {
-    const content = shouldParseIncompleteMarkdown
-      ? parseIncompleteMarkdown(children)
-      : children
+    // Memoize the parsed content to avoid unnecessary re-parsing
+    const content = useMemo(() => {
+      return shouldParseIncompleteMarkdown
+        ? parseIncompleteMarkdown(children)
+        : children
+    }, [children, shouldParseIncompleteMarkdown])
 
-    const components: Options["components"] = {
+    // Memoize components to avoid re-creating them on every render
+    const components: Options["components"] = useMemo(() => ({
       h1: ({ children, ...props }) => (
         <h1 className="scroll-m-20 text-3xl font-extrabold tracking-tight lg:text-3xl mt-5" {...props}>
           {children}
@@ -180,7 +135,7 @@ const AIResponse = memo(
         </ol>
       ),
       li: ({ children, ...props }) => (
-        <li {...props}>
+        <li className="marker:text-muted-foreground" {...props}>
           {children}
         </li>
       ),
@@ -231,7 +186,7 @@ const AIResponse = memo(
       pre: ({ children, ...props }) => (
         <div {...(props as HTMLAttributes<HTMLDivElement>)}>{children}</div>
       ),
-    }
+    }), [allowedLinkPrefixes])
 
     return (
       <div className={cn("prose dark:prose-invert", className)} {...props}>

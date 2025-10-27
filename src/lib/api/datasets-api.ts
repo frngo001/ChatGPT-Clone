@@ -15,9 +15,10 @@ export interface CreateDatasetRequest {
 export interface DatasetResponse {
   id: string
   name: string
-  description: string
-  created_at: string
-  updated_at: string
+  description?: string
+  createdAt: string
+  updatedAt: string
+  ownerId?: string
   tags?: string[]
   files?: DatasetFileResponse[]
 }
@@ -383,9 +384,10 @@ export function convertApiResponseToDataset(apiResponse: DatasetResponse): any {
   return {
     id: apiResponse.id,
     name: apiResponse.name,
-    description: apiResponse.description,
-    createdAt: safeParseDate(apiResponse.created_at),
-    updatedAt: safeParseDate(apiResponse.updated_at),
+    description: apiResponse.description || '',
+    createdAt: safeParseDate(apiResponse.createdAt),
+    updatedAt: safeParseDate(apiResponse.updatedAt),
+    ownerId: apiResponse.ownerId,
     tags: apiResponse.tags || [],
     files: apiResponse.files?.map(file => ({
       id: file.id,

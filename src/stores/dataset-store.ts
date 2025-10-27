@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { datasetsApi, convertApiResponseToDataset, convertDatasetToApiRequest, AddDataResponse, DataType } from '@/lib/api/datasets-api'
+import { cogneeApi } from '@/lib/api/cognee-api-client'
+import type { DatasetPermission } from '@/types/permissions'
 
 export interface DatasetFile {
   id: string
@@ -23,6 +25,16 @@ export interface Dataset {
   tags: string[]
   processingStatus?: string  // 'DATASET_PROCESSING_INITIATED' | 'DATASET_PROCESSING_STARTED' | 'DATASET_PROCESSING_COMPLETED' | 'DATASET_PROCESSING_ERRORED'
   pipelineRunId?: string
+  
+  // Neu: Permissions
+  ownerId?: string
+  isShared?: boolean  // Shared with tenant
+  permissions?: {
+    read: boolean
+    write: boolean
+    delete: boolean
+    share: boolean
+  }
 }
 
 interface DatasetStore {
@@ -31,6 +43,10 @@ interface DatasetStore {
   isLoading: boolean
   error: string | null
   statusPollingInterval: NodeJS.Timeout | null
+  
+  // Cache fields
+  documentsCacheTimestamp: Record<string, number>
+  isFetchingInBackground: Record<string, boolean>
   
   // Actions
   createDataset: (name: string, description: string, tags?: string[]) => Promise<void>
@@ -50,6 +66,10 @@ interface DatasetStore {
   // API actions
   fetchDatasets: () => Promise<void>
   fetchDatasetData: (datasetId: string) => Promise<void>
+  fetchDatasetDataWithCache: (datasetId: string) => Promise<void>
+  
+  // Cache actions
+  invalidateDatasetCache: (datasetId: string) => void
   
   // Processing actions
   processDatasets: (datasetIds: string[]) => Promise<void>
@@ -63,6 +83,10 @@ interface DatasetStore {
   getDatasetById: (id: string) => Dataset | undefined
   searchDatasets: (query: string) => Dataset[]
   clearError: () => void
+  
+  // Permissions actions
+  shareDatasetWithTenant: (datasetId: string, tenantId: string) => Promise<void>
+  fetchDatasetPermissions: (datasetId: string) => Promise<DatasetPermission[]>
 }
 
 // Example datasets are no longer needed as we fetch from API
@@ -75,6 +99,10 @@ export const useDatasetStore = create<DatasetStore>()(
       isLoading: false,
       error: null,
       statusPollingInterval: null,
+      
+      // Cache initialization
+      documentsCacheTimestamp: {},
+      isFetchingInBackground: {},
 
       createDataset: async (name, description, tags = []) => {
         set({ isLoading: true, error: null })
@@ -231,6 +259,9 @@ export const useDatasetStore = create<DatasetStore>()(
             isLoading: false,
           }))
           
+          // Invalidate cache after successful upload
+          get().invalidateDatasetCache(datasetId)
+          
         } catch (error) {
           set({ 
             error: error instanceof Error ? error.message : 'Failed to upload file to dataset',
@@ -285,6 +316,9 @@ export const useDatasetStore = create<DatasetStore>()(
               : state.currentDataset,
             isLoading: false,
           }))
+          
+          // Invalidate cache after successful upload
+          get().invalidateDatasetCache(datasetId)
           
         } catch (error) {
           set({ 
@@ -341,6 +375,9 @@ export const useDatasetStore = create<DatasetStore>()(
             isLoading: false,
           }))
           
+          // Invalidate cache after successful upload
+          get().invalidateDatasetCache(datasetId)
+          
         } catch (error) {
           set({ 
             error: error instanceof Error ? error.message : 'Failed to add URL to dataset',
@@ -396,6 +433,9 @@ export const useDatasetStore = create<DatasetStore>()(
             isLoading: false,
           }))
           
+          // Invalidate cache after successful upload
+          get().invalidateDatasetCache(datasetId)
+          
         } catch (error) {
           set({ 
             error: error instanceof Error ? error.message : 'Failed to add URLs to dataset',
@@ -428,6 +468,9 @@ export const useDatasetStore = create<DatasetStore>()(
               : state.currentDataset,
             isLoading: false,
           }))
+          
+          // Invalidate cache after successful delete
+          get().invalidateDatasetCache(datasetId)
           
         } catch (error) {
           set({ 
@@ -498,12 +541,14 @@ export const useDatasetStore = create<DatasetStore>()(
           // Always fetch processing status for all datasets
           if (datasets.length > 0) {
             const datasetIds = datasets.map(dataset => dataset.id)
+            
             try {
               const statusResponse = await datasetsApi.getDatasetProcessingStatus(datasetIds)
               
               // Update datasets with actual API status
               const datasetsWithStatus = datasets.map(dataset => {
                 const apiStatus = statusResponse[dataset.id]
+                
                 if (apiStatus) {
                   return {
                     ...dataset,
@@ -514,35 +559,60 @@ export const useDatasetStore = create<DatasetStore>()(
                 return dataset
               })
               
-              set({ 
-                datasets: datasetsWithStatus,
-                isLoading: false 
+              // Merge new datasets with existing cached data to preserve file details
+              set((state) => {
+                const mergedDatasets = datasetsWithStatus.map(newDataset => {
+                  const existingDataset = state.datasets.find(d => d.id === newDataset.id)
+                  if (existingDataset && existingDataset.files.length > 0) {
+                    // Keep cached file details if they exist
+                    return {
+                      ...newDataset,
+                      files: existingDataset.files,
+                      updatedAt: existingDataset.updatedAt
+                    }
+                  }
+                  return newDataset
+                })
+                
+                return {
+                  datasets: mergedDatasets,
+                  isLoading: false
+                }
               })
               
               // Start polling after fetching datasets
               get().startStatusPolling()
               
-              // Also fetch data for all datasets to update file counts in navbar
-              datasetsWithStatus.forEach(async (dataset) => {
-                try {
-                  await get().fetchDatasetData(dataset.id)
-                } catch (error) {
-                  console.error(`Failed to fetch data for dataset ${dataset.id}:`, error)
-                }
-              })
+              // Note: Dataset details are now loaded lazily when needed
             } catch (statusError) {
               console.error('Failed to fetch dataset statuses:', statusError)
-              // If status fetch fails, still set datasets without status
-              set({ 
-                datasets,
-                isLoading: false 
+              // If status fetch fails, merge datasets with existing cached data
+              set((state) => {
+                const mergedDatasets = datasets.map(newDataset => {
+                  const existingDataset = state.datasets.find(d => d.id === newDataset.id)
+                  if (existingDataset && existingDataset.files.length > 0) {
+                    // Keep cached file details if they exist
+                    return {
+                      ...newDataset,
+                      files: existingDataset.files,
+                      updatedAt: existingDataset.updatedAt
+                    }
+                  }
+                  return newDataset
+                })
+                
+                return {
+                  datasets: mergedDatasets,
+                  isLoading: false
+                }
               })
             }
           } else {
-            set({ 
-              datasets,
-              isLoading: false 
-            })
+            // No datasets, but preserve existing cached data if any
+            set((state) => ({
+              datasets: state.datasets.length > 0 ? state.datasets : [],
+              isLoading: false
+            }))
           }
         } catch (error) {
           set({ 
@@ -617,6 +687,40 @@ export const useDatasetStore = create<DatasetStore>()(
           })
           throw error
         }
+      },
+
+      fetchDatasetDataWithCache: async (datasetId) => {
+        const dataset = get().getDatasetById(datasetId)
+        const hasCachedData = dataset && dataset.files.length > 0
+        
+        if (hasCachedData) {
+          // Cache vorhanden: Sofort zurückgeben + Background-Refresh starten
+          set((state) => ({
+            isFetchingInBackground: { ...state.isFetchingInBackground, [datasetId]: true }
+          }))
+          
+          // Im Hintergrund aktualisieren
+          get().fetchDatasetData(datasetId).finally(() => {
+            set((state) => ({
+              isFetchingInBackground: { ...state.isFetchingInBackground, [datasetId]: false },
+              documentsCacheTimestamp: { ...state.documentsCacheTimestamp, [datasetId]: Date.now() }
+            }))
+          })
+        } else {
+          // Kein Cache: Normal laden mit Loading-State
+          await get().fetchDatasetData(datasetId)
+          set((state) => ({
+            documentsCacheTimestamp: { ...state.documentsCacheTimestamp, [datasetId]: Date.now() }
+          }))
+        }
+      },
+
+      invalidateDatasetCache: (datasetId) => {
+        set((state) => {
+          const newTimestamps = { ...state.documentsCacheTimestamp }
+          delete newTimestamps[datasetId]
+          return { documentsCacheTimestamp: newTimestamps }
+        })
       },
 
       processDatasets: async (datasetIds) => {
@@ -713,14 +817,17 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
           const currentDataset = datasets.find(d => d.id === datasetId)
           const previousStatus = currentDataset?.processingStatus
 
+
           const statusResponse = await datasetsApi.getDatasetProcessingStatus([datasetId])
           const apiStatus = statusResponse[datasetId]
+
 
           if (apiStatus) {
             // Check if status changed to completed or failed
             const wasProcessing = previousStatus === 'DATASET_PROCESSING_STARTED'
             const isCompleted = apiStatus === 'DATASET_PROCESSING_COMPLETED'
             const isFailed = apiStatus === 'DATASET_PROCESSING_ERRORED'
+
 
             // Use the exact API status value
             set((state) => ({
@@ -744,6 +851,7 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
                 toast.error(`Verarbeitung von Dataset "${currentDataset?.name}" ist fehlgeschlagen!`)
               })
             }
+          } else {
           }
         } catch (error) {
           console.error('Failed to check dataset status:', error)
@@ -817,6 +925,39 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
       clearError: () => {
         set({ error: null })
       },
+
+      // Permissions actions
+      shareDatasetWithTenant: async (datasetId, tenantId) => {
+        set({ isLoading: true, error: null })
+        try {
+          await cogneeApi.permissions.shareDatasetWithTenant(datasetId, tenantId)
+          
+          // Update dataset to mark as shared
+          set((state) => ({
+            datasets: state.datasets.map((dataset) =>
+              dataset.id === datasetId
+                ? { ...dataset, isShared: true, updatedAt: new Date() }
+                : dataset
+            ),
+            currentDataset: state.currentDataset?.id === datasetId
+              ? { ...state.currentDataset, isShared: true, updatedAt: new Date() }
+              : state.currentDataset,
+            isLoading: false,
+          }))
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to share dataset',
+            isLoading: false 
+          })
+          throw error
+        }
+      },
+
+      fetchDatasetPermissions: async (_datasetId) => {
+        // This would fetch actual permissions from Cognee
+        // For now, return empty array as placeholder
+        return []
+      },
     }),
     {
       name: 'dataset-store',
@@ -832,6 +973,8 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
           processingStatus: undefined,
           pipelineRunId: undefined,
         } : null,
+        // Persist cache timestamps but not background fetch state
+        documentsCacheTimestamp: state.documentsCacheTimestamp,
       }),
     }
   )

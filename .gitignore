@@ -4,3 +4,4 @@ CHANGELOG.md
 .env.example
 docker*
 /dist
+/logs
