@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useDatasetStore } from '@/stores/dataset-store'
+import { toast } from 'sonner'
 
 interface DeleteDatasetDialogProps {
   open: boolean
@@ -34,6 +35,7 @@ export function DeleteDatasetDialog({
     setIsDeleting(true)
     try {
       await deleteDataset(dataset.id)
+      toast.success(`Dataset "${dataset.name}" wurde erfolgreich gelöscht`)
       onSuccess?.()
       
       // Close modal after short delay to show toast
@@ -42,7 +44,8 @@ export function DeleteDatasetDialog({
       }, 500)
     } catch (error) {
       console.error('Failed to delete dataset:', error)
-      // Error is handled by the store
+      const errorMessage = error instanceof Error ? error.message : 'Dataset konnte nicht gelöscht werden'
+      toast.error(errorMessage)
     } finally {
       setIsDeleting(false)
     }

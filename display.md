@@ -1,22 +1,74 @@
-### Installation der Regeldateien
+📊 **Monitoring in Cognee überprüfen**
 
-Die Installation der Regeldateien für das DRG-Management erfolgt durch das Platzieren der Dateien in bestimmten Verzeichnissen, von wo aus sie automatisch an die Clients verteilt werden [CITATION:1].
+Cognee bietet verschiedene Möglichkeiten, um das Monitoring und die Observability deiner Wissensgraphen zu überprüfen. Hier sind die verfügbaren Optionen:
 
-#### Grouper- und Regelprüferfunktion
-Für die integrierte Grouper- und Regelprüferfunktionalität werden verschiedene Dateien benötigt, darunter `3MAll-In-One.jar`, Lizenzdateien wie `3MGDRGGrouper.liz` und `3MRuleChecker.liz`, sowie Regelpakete für verschiedene Jahre (`Rules2003.rpk` bis `Rules2013.rpk`) [CITATION:2]. Diese Dateien müssen einmalig im zentralen Verzeichnis `$Narko4ad$\KisData\lib` abgelegt werden [CITATION:2]. Die KISData-Clientsoftware kopiert diese Dateien anschließend automatisch in das lokale `lib`-Verzeichnis des jeweiligen Rechners [CITATION:2].
+## 🔍 **Integrierte Observability-Tools**
 
-#### Zusatzentgeltdateien
-Für die Darstellung der Zusatzentgelte im Fachrichtungsabschluss werden die entsprechenden Regeldateien benötigt, beispielsweise `DRG-G-DRG 2014 Hauptabteilung.txt` und die Zusatzentgeltdateien `ZE2014_1.txt`, `ZE2014_2.txt`, `ZE2014_3.txt` [CITATION:3]. Diese Dateien müssen im zentralen Katalogverzeichnis `$Narko4ad$\KisData\KisDataVorlagen\DRGKataloge\2014` platziert werden [CITATION:3]. Auch hier übernimmt die KISData-Clientsoftware die automatische Verteilung in das lokale `lib`-Verzeichnis der Client-Rechner [CITATION:3].
+### **Langfuse Integration**
+Cognee verfügt über eine eingebaute Langfuse-Unterstützung für umfassende Observability:
 
-#### Bezugsquelle
-Die aktuellen Dateien für beide Bereiche können aus dem Kundenbereich des IMESO-Web-Portals bezogen werden [CITATION:2][CITATION:3]. Für die Bibliotheksdateien steht unter `Download → KISData → lib` eine Archivdatei (z.B. `lib.1591.zip`) zur Verfügung [CITATION:2]. Die aktuellen Katalogdateien für ein bestimmtes Jahr (z.B. 2014) finden sich unter `Download → KISData → schluessel → aktuelles Jahr` in einer Archivdatei (z.B. `DRGKataloge.DE.GI.2014.zip`) [CITATION:3].
+```python
+from cognee.modules.observability.get_observe import get_observe
 
-### Citations
-[1] MANUAL: Administratorhandbuch Rev.004 (hec) | SECTION: 2 Einrichtung des DRG-Arbeitsplatzes | TOPIC: Konfiguration | CONTENT: Aufgrund der breiten Funktionalität existiert ein Konfigurationsbedarf auf verschiedenen Ebenen, der sich teilweise mit anderen KISData-Funktion überschneidet. Der DRG-Arbeitsplatz ist ein Teil des Subsystems DRG-Management und ist damit integraler Bestandteil von ICUData.
-[2] MANUAL: Administratorhandbuch Rev.004 (hec) | SECTION: 2.3 Grouper- und Regelprüferfunktion | TOPIC: Dateiinstallation | CONTENT: Diese Dateien werden einmal im zentralen $Narko4ad$\KisData\lib Verzeichnis deponiert. Die KisData-Clientsoftware kopiert diese automatisch in das lokale lib Verzeichnis des Rechners. Im Kundenbereich des IMESO-Web-Portals existiert unter Download → KISData → lib eine Archivdatei lib.1591.zip die alle aktuell von KISData benötigten Bibliotheksdateien enthält.
-[3] MANUAL: Administratorhandbuch Rev.004 (hec) | SECTION: 2.4 Darstellung der Zusatzentgelte | TOPIC: Zusatzentgeltdateien | CONTENT: Für die Darstellung der Zusatzentgelte im Fachrichtungsabschluss werden die entsprechenden Regeldateien im zentralen Katalogverzeichnis $Narko4ad$\KisData\KisDataVorlagen\DRGKataloge\2014 benötigt. Die KISData-Clientsoftware kopiert diese automatisch in das lokale lib Verzeichnis des Rechners. Im Kundenbereich des IMESO-Web-Portals existiert unter Download → KISData → schluessel → aktuelles Jahr eine Archivdatei, z.B. DRGKataloge.DE.GI.2014.zip.
+observe = get_observe()
 
-### Suggested Questions
-* Wo genau finde ich die Archivdateien für die Regeldateien im IMESO-Web-Portal?
-* Müssen die Regeldateien manuell auf jedem Client-Rechner installiert werden?
-* Wie erfolgt die Aktualisierung der Regeldateien bei einem Jahreswechsel?
+@observe(as_type="generation")
+async def your_function(...):
+    ...
+```
+
+**Setup:**
+- Erstelle ein Projekt bei [Langfuse Cloud](https://cloud.langfuse.com)
+- Exportiere diese Umgebungsvariablen:
+```bash
+LANGFUSE_PUBLIC_KEY=<dein_public_key>
+LANGFUSE_SECRET_KEY=<dein_secret_key>
+LANGFUSE_HOST=https://cloud.langfuse.com
+```
+
+### **Keywords AI Integration**
+Alternative Observability-Lösung für LLM-gestützte Anwendungen:
+
+```bash
+pip install cognee-community-observability-keywordsai
+export MONITORING_TOOL=keywordsai
+export KEYWORDSAI_API_KEY=<dein_key>
+```
+
+## 📈 **Monitoring in verschiedenen Umgebungen**
+
+### **Cogwit (Cloud)**
+- **Modal Dashboard**: Überwache Container-Status und Logs in Echtzeit
+- **Automatisches Scaling**: Modal skaliert automatisch basierend auf Workload
+- **Log-Streaming**: `modal logs cognee-app`
+
+### **Lokale Entwicklung**
+- **Service-Status**: `sudo systemctl status cognee`
+- **Logs einsehen**: `sudo journalctl -u cognee -f`
+- **Port-Verfügbarkeit**: `sudo netstat -tlnp | grep :8000`
+
+## 🛠 **Praktische Überprüfung**
+
+### **Health Checks**
+```python
+# API Health Check
+curl -H "X-Api-Key: YOUR-API-KEY" https://api.cognee.ai/api/health
+
+# Detaillierter Health Check
+curl -H "X-Api-Key: YOUR-API-KEY" https://api.cognee.ai/api/health/detailed
+```
+
+### **Pipeline-Status**
+```python
+# Verarbeite Status von Datasets
+cognify_result = await cogwit_instance.cognify(dataset_ids=[dataset_id])
+print(f"Cognify status: {cognify_result[str(dataset_id)].status}")
+```
+
+## ⚠️ **Wichtige Hinweise**
+
+> **Telemetrie-Kontrolle**: Du kannst die Telemetrie mit `TELEMETRY_DISABLED=true` deaktivieren, wenn gewünscht.
+
+> **Debug-Modus**: Für detaillierte Problembehebung kannst du den Debug-Modus in verschiedenen Tools aktivieren.
+
+Die Monitoring-Lösungen sammeln automatisch Traces, Generierungen und Metriken, sodass du deine AI-Features in der Produktion debuggen, evaluieren und überwachen kannst.

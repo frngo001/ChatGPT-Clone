@@ -1,8 +1,37 @@
+/**
+ * ============================================================================
+ * COGNEE API CLIENT
+ * ============================================================================
+ * 
+ * @file cognee-api-client.ts
+ * @description 
+ * Configured Axios Client für Cognee Backend API.
+ * Bietet automatische Authentifizierung und Error-Handling.
+ * 
+ * Features:
+ * - Automatisches Hinzufügen von Bearer Tokens
+ * - Interceptors für Error-Handling (401, 403, 409)
+ * - Typisierte API-Helper-Funktionen
+ * 
+ * @author ChatGPT-Clone Team
+ * @since 1.0.0
+ */
+
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 import { useAuthStore } from '@/stores/auth-store'
 import type { PermissionType, PrincipalType, UpdateUserPayload } from '@/types/permissions'
 
-// Create Axios instance for Cognee API calls
+/**
+ * Axios Instance für Cognee API Calls
+ * 
+ * @description
+ * Konfiguriert mit:
+ * - baseURL: '/api'
+ * - timeout: 30000ms
+ * - Standard Headers: JSON Content-Type
+ * 
+ * Automatisches Token-Management via Interceptors
+ */
 const cogneeApiClient: AxiosInstance = axios.create({
   baseURL: '/api',
   timeout: 30000,
@@ -11,7 +40,19 @@ const cogneeApiClient: AxiosInstance = axios.create({
   },
 })
 
-// Request interceptor to add authentication token
+/**
+ * ============================================================================
+ * INTERCEPTORS
+ * ============================================================================
+ */
+
+/**
+ * Request Interceptor: Fügt Bearer Token zu allen Requests hinzu
+ * 
+ * @description
+ * Liest automatisch den Auth-Token aus dem Zustand Store und
+ * fügt ihn als 'Authorization: Bearer <token>' Header hinzu.
+ */
 cogneeApiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = useAuthStore.getState().auth.accessToken
@@ -29,7 +70,15 @@ cogneeApiClient.interceptors.request.use(
   }
 )
 
-// Response interceptor to handle authentication errors
+/**
+ * Response Interceptor: Error-Handling für Authentication
+ * 
+ * @description
+ * Behandelt HTTP Status Codes:
+ * - 401: Token abgelaufen -> Clear Auth & Redirect zu Login
+ * - 403: Zugriff verweigert -> Log Error
+ * - 409: Keine Daten (NoDataError) -> Wird vom Caller behandelt
+ */
 cogneeApiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response
@@ -67,12 +116,25 @@ cogneeApiClient.interceptors.response.use(
   }
 )
 
-// Export the configured client
+/**
+ * Exportiert konfigurierten Axios Client
+ */
 export default cogneeApiClient
 
-// Helper functions for common Cognee API operations
+/**
+ * ============================================================================
+ * API HELPER FUNCTIONS
+ * ============================================================================
+ * 
+ * Collection von typisierten Helper-Funktionen für Cognee API Operations
+ */
 export const cogneeApi = {
-  // Search operations
+  /**
+   * Semantische Suche in Datasets
+   * 
+   * @param payload - Search Configuration
+   * @returns Promise mit Suchergebnissen
+   */
   search: (payload: {
     searchType?: string
     datasets?: string[]

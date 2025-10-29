@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Download, Edit, Trash2, FileText } from 'lucide-react'
+import { ArrowLeft, Download, Edit, Trash2, FileText, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -55,6 +55,7 @@ export function FileDetailPage() {
   }
 
   const getFileIcon = (type: string) => {
+    if (type === 'text/url') return '🔗'
     if (type.includes('image')) return '🖼️'
     if (type.includes('pdf')) return '📄'
     if (type.includes('text')) return '📝'
@@ -119,7 +120,19 @@ export function FileDetailPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">File Name</h4>
-                <p className="text-sm">{file.name}</p>
+                {file.type === 'text/url' || file.type === 'text/uri-list' ? (
+                  <a
+                    href={file.name}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline flex items-center gap-1 w-fit"
+                  >
+                    {file.name}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                ) : (
+                  <p className="text-sm">{file.name}</p>
+                )}
               </div>
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">File Type</h4>

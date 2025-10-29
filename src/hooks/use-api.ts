@@ -1,19 +1,56 @@
+/**
+ * ============================================================================
+ * REACT QUERY API HOOKS
+ * ============================================================================
+ * 
+ * @file use-api.ts
+ * @description 
+ * Custom React Hooks für API-Status, Chat-Historie und Settings.
+ * Nutzt TanStack Query (React Query) für State Management und Caching.
+ * 
+ * Features:
+ * - API Health Monitoring
+ * - Optimistic Updates
+ * - Cache Management
+ * - Automatic Refetching
+ * 
+ * @author ChatGPT-Clone Team
+ * @since 1.0.0
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 /**
- * Hook for monitoring API health status
+ * ============================================================================
+ * API STATUS HOOK
+ * ============================================================================
+ */
+
+/**
+ * Hook für API Health Status Monitoring
  * 
- * @description Checks the health status of both Ollama and DeepSeek APIs
- * in parallel with individual error tracking and 30-second caching.
+ * @description 
+ * Prüft parallel den Health-Status von Ollama und DeepSeek APIs.
+ * Nutzt Promise.allSettled für unabhängige Error-Behandlung.
  * 
- * @returns {Object} Query result containing:
- * - `data`: Object with API status information
- *   - `ollama`: boolean indicating Ollama API health
- *   - `deepseek`: boolean indicating DeepSeek API health
- *   - `ollamaError`: Error object for Ollama API if failed
- *   - `deepseekError`: Error object for DeepSeek API if failed
- * - `isLoading`: boolean indicating loading state
- * - `isError`: boolean indicating error state
+ * Caching: 30 Sekunden
+ * Retries: 2 Versuche
+ * 
+ * @returns {Object} Query result mit:
+ * - `data`: API Status Info
+ *   - `ollama`: boolean (true = healthy)
+ *   - `deepseek`: boolean (true = healthy)
+ *   - `ollamaError`: Error falls Ollama fehlschlägt
+ *   - `deepseekError`: Error falls DeepSeek fehlschlägt
+ * - `isLoading`: boolean
+ * - `isError`: boolean
+ * 
+ * @example
+ * ```typescript
+ * const { data } = useApiStatus();
+ * if (data?.ollama) console.log('Ollama is ready');
+ * if (data?.deepseek) console.log('DeepSeek is ready');
+ * ```
  */
 export function useApiStatus() {
   return useQuery({
@@ -37,14 +74,25 @@ export function useApiStatus() {
 }
 
 /**
- * Hook for managing chat history data
+ * ============================================================================
+ * CHAT HISTORY HOOK
+ * ============================================================================
+ */
+
+/**
+ * Hook für Chat-Historie Management
  * 
- * @description Currently uses local store for chat history management.
- * Can be extended to fetch from backend API in the future.
+ * @description 
+ * Verwaltet Chat-Historie-Daten. Aktuell nutzt lokalen Store.
+ * Kann erweitert werden für Backend-Integration.
  * 
- * @returns {Object} Query result containing:
- * - `data`: Array of chat history items (currently empty)
- * - `isLoading`: boolean indicating loading state
+ * Caching: 5 Minuten
+ * 
+ * @returns {Object} Query result mit:
+ * - `data`: Array von Chat-History Items (aktuell leer)
+ * - `isLoading`: boolean
+ * 
+ * @todo Backend-Integration für persistente Chat-Historie
  */
 export function useChatHistory() {
   return useQuery({
@@ -59,14 +107,26 @@ export function useChatHistory() {
 }
 
 /**
- * Hook for managing user settings
+ * ============================================================================
+ * USER SETTINGS HOOK
+ * ============================================================================
+ */
+
+/**
+ * Hook für Benutzereinstellungen
  * 
- * @description Fetches user settings with extended caching.
- * Currently returns default values, can be extended to fetch from backend.
+ * @description 
+ * Lädt Benutzereinstellungen mit erweitertem Caching.
+ * Aktuell: Default-Werte
+ * Erweiterbar: Backend-Integration
  * 
- * @returns {Object} Query result containing:
- * - `data`: User settings object with theme, language, and model preferences
- * - `isLoading`: boolean indicating loading state
+ * Caching: 10 Minuten
+ * 
+ * @returns {Object} Query result mit:
+ * - `data`: Settings object (theme, language, defaultModel, defaultProvider)
+ * - `isLoading`: boolean
+ * 
+ * @todo Backend-Integration für persistente Settings
  */
 export function useUserSettings() {
   return useQuery({
@@ -85,15 +145,29 @@ export function useUserSettings() {
 }
 
 /**
- * Hook for cache invalidation utilities
+ * ============================================================================
+ * CACHE INVALIDATION HOOK
+ * ============================================================================
+ */
+
+/**
+ * Hook für Cache Management Utilities
  * 
- * @description Provides convenient functions for invalidating and refetching
- * TanStack Query cache entries, particularly useful for model-related queries.
+ * @description 
+ * Bietet Convenience-Funktionen für Cache-Invalidierung und Refetching.
+ * Besonders nützlich für Model-bezogene Queries.
  * 
- * @returns {Object} Cache invalidation utilities:
- * - `invalidateModels`: Invalidates both Ollama and DeepSeek model queries
- * - `invalidateAll`: Invalidates all queries in the cache
- * - `refetchModels`: Refetches both model queries
+ * @returns {Object} Cache-Utilities:
+ * - `invalidateModels`: Invalidiert Ollama + DeepSeek Model Queries
+ * - `invalidateAll`: Invalidiert alle Queries im Cache
+ * - `refetchModels`: Refetched beide Model Queries
+ * 
+ * @example
+ * ```typescript
+ * const { invalidateModels } = useInvalidateQueries();
+ * await addModel();
+ * invalidateModels(); // Cache refresh
+ * ```
  */
 export function useInvalidateQueries() {
   const queryClient = useQueryClient()
@@ -114,16 +188,37 @@ export function useInvalidateQueries() {
 }
 
 /**
- * Hook for optimistic chat message updates
+ * ============================================================================
+ * OPTIMISTIC UPDATES HOOK
+ * ============================================================================
+ */
+
+/**
+ * Hook für Optimistic Chat Message Updates
  * 
- * @description Implements optimistic updates for chat messages with automatic
- * rollback on error and cache invalidation after completion.
+ * @description 
+ * Implementiert Optimistic Updates für Chat-Nachrichten.
+ * Features:
+ * - Sofortige UI-Updates (Optimistic)
+ * - Automatisches Rollback bei Fehler
+ * - Cache-Invalidierung nach Completion
  * 
- * @returns {Object} Mutation object containing:
- * - `mutate`: Function to add message optimistically
- * - `isPending`: Loading state during mutation
- * - `isError`: Error state if mutation failed
- * - `error`: Error object if mutation failed
+ * @returns {Object} Mutation object mit:
+ * - `mutate`: Funktion zum Hinzufügen von Messages
+ * - `isPending`: Loading-State während Mutation
+ * - `isError`: Error-State bei Fehlschlag
+ * - `error`: Error-Objekt bei Fehler
+ * 
+ * @example
+ * ```typescript
+ * const { mutate } = useOptimisticChat();
+ * 
+ * mutate({
+ *   id: 'msg-1',
+ *   content: 'Hello!',
+ *   role: 'user'
+ * });
+ * ```
  */
 export function useOptimisticChat() {
   const queryClient = useQueryClient()

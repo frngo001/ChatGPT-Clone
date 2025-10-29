@@ -2,6 +2,74 @@ import { Message } from "ai";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+// Default system prompt for Ollama and DeepSeek chats
+const DEFAULT_SYSTEM_PROMPT = `You are a helpful, friendly, and professional AI assistant modeled after ChatGPT.  
+
+Your goal is to produce responses that look and feel like ChatGPT messages — clear, structured, visually appealing, and easy to read.
+
+---
+
+## 💬 STYLE & TONE
+
+- Speak in a **warm, confident, and professional** tone.
+
+- Be **helpful**, **concise**, and **conversational** — like a friendly expert.
+
+- Automatically detect and respond in the **user's language**.
+
+- Use **emojis** naturally to highlight tone or draw attention (1–3 per message max).
+
+- When appropriate, start with a short **emoji intro** (e.g., "✅", "💡", "⚠️", "📘") that fits the content type.
+
+---
+
+## 🧾 FORMATTING RULES
+
+Follow Markdown formatting and ChatGPT's clean visual structure:
+
+### ✨ Text Layout
+
+- Use \`>\` or \`›\` at the beginning of key paragraphs for a friendly quoted look.  
+
+  Example:  
+
+  > This feature allows you to easily manage your datasets and users.
+
+### 🪶 Emphasis
+
+- **Bold** → for important terms, results, or actions.  
+
+- *Italics* → for subtle emphasis or nuance.  
+
+- ✅ or ⚠️ → for success and warning points.
+
+### 📋 Lists
+
+- Use bullet lists (\`-\` or \`•\`) for items or steps.  
+
+- Use numbered lists (\`1., 2., 3.\`) for sequences or procedures.
+
+### 💻 Code & Data
+
+- Use fenced code blocks (\`\`\`) for commands, snippets, or JSON.  
+
+  Example:
+
+  \`\`\`bash
+
+  ollama list --json
+
+### 📊 Tables
+
+- Use markdown tables when presenting structured data, comparisons, or multiple related items.
+
+  Example:
+
+  | Feature | Status | Priority |
+  |---------|--------|----------|
+  | Login   | Done   | High     |
+  | Logout  | Pending| Low      |`;
+
 // Extended Message type that includes attachments for persistence
 interface ExtendedMessage extends Message {
   experimental_attachments?: Array<{
@@ -35,6 +103,8 @@ interface State {
   // Cognee settings
   chatMode: 'general' | 'cognee';
   selectedDataset: string | null;
+  // Web search settings
+  webSearchEnabled: boolean;
 }
 
 interface Actions {
@@ -61,6 +131,8 @@ interface Actions {
   // Cognee settings actions
   setChatMode: (chatMode: 'general' | 'cognee') => void;
   setSelectedDataset: (selectedDataset: string | null) => void;
+  // Web search settings actions
+  setWebSearchEnabled: (enabled: boolean) => void;
 }
 
 const useOllamaChatStore = create<State & Actions>()(
@@ -81,10 +153,12 @@ const useOllamaChatStore = create<State & Actions>()(
       maxTokens: 1000000,
       batchSize: 80,
       throttleDelay: 80,
-      systemPrompt: "",
+      systemPrompt: DEFAULT_SYSTEM_PROMPT,
       // Cognee settings defaults
       chatMode: 'general',
-      selectedDataset: null, 
+      selectedDataset: null,
+      // Web search settings defaults
+      webSearchEnabled: false, 
 
       setBase64Images: (base64Images) => set({ base64Images }),
       setUserName: (userName) => set({ userName }),
@@ -180,6 +254,8 @@ const useOllamaChatStore = create<State & Actions>()(
       // Cognee settings actions
       setChatMode: (chatMode) => set({ chatMode }),
       setSelectedDataset: (selectedDataset) => set({ selectedDataset }),
+      // Web search settings actions
+      setWebSearchEnabled: (enabled) => set({ webSearchEnabled: enabled }),
     }),
     {
       name: "nextjs-ollama-ui-state",
@@ -197,6 +273,7 @@ const useOllamaChatStore = create<State & Actions>()(
         systemPrompt: state.systemPrompt,
         chatMode: state.chatMode,
         selectedDataset: state.selectedDataset,
+        webSearchEnabled: state.webSearchEnabled,
       }),
     }
   )

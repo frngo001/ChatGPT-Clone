@@ -1,16 +1,188 @@
 import type { ViteDevServer } from 'vite';
+import { performLangChainWebSearch } from './agents/web-search-agent.js';
 
 /**
- * Sets up chat API endpoints for Ollama and DeepSeek providers
+ * ============================================================================
+ * CHAT API SETUP - Vollständige Dokumentation aller API Endpoints
+ * ============================================================================
  * 
- * @description Configures Vite dev server middleware to handle chat API requests.
- * Provides streaming chat functionality for both Ollama and DeepSeek AI providers
- * with support for multimodal input (text and images).
+ * Diese Datei definiert alle Backend API Endpoints für das ChatGPT-Clone Projekt.
+ * Die Endpoints werden als Vite Dev Server Middleware implementiert und stellen
+ * die Schnittstelle zwischen Frontend und verschiedenen Backend-Services dar.
  * 
- * @param server - Vite development server instance
+ * @file chat-api.ts
+ * @description Zentrale Konfiguration aller API-Endpoints:
+ * 
+ * - Ollama Chat API: Streaming Chat mit lokalem Ollama Server
+ * - DeepSeek Chat API: Streaming Chat mit DeepSeek API (inkl. Web-Suche)
+ * - DeepSeek Models API: Modellisten Abfrage
+ * - Cognee Authentication: Login, Register, Logout, Verify
+ * - Cognee Permissions: Tenants, Roles, Dataset Permissions
+ * - Cognee User Management: CRUD Operationen für Benutzer
+ * - Cognee RAG Search: Semantische Suche mit DeepSeek Integration
+ * 
+ * @author ChatGPT-Clone Team
+ * @since 1.0.0
+ */
+
+/**
+ * ============================================================================
+ * HELPER FUNKTIONEN
+ * ============================================================================
+ */
+
+/**
+ * Extrahiert sicheren Text-Inhalt aus einer Nachricht
+ * 
+ * @description 
+ * Konvertiert Message-Inhalte sicher in Text-Strings für die Websuche.
+ * Vermeidet JSON-Stringification und extrahiert nur relevanten Text-Inhalt.
+ * 
+ * @param content - Message-Inhalt (kann String oder komplexes Objekt sein)
+ * @param maxLength - Maximale Länge des extrahierten Texts (default: 500)
+ * @returns Sicherer Text-String für Suchanfragen
+ */
+function extractTextContent(content: any, maxLength: number = 500): string {
+  // Wenn bereits String, direkt zurückgeben (gekürzt falls nötig)
+  if (typeof content === 'string') {
+    return content.length > maxLength ? content.substring(0, maxLength) + '...' : content;
+  }
+  
+  // Wenn Array, extrahiere Text aus Array-Items
+  if (Array.isArray(content)) {
+    return content
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item?.type === 'text' && typeof item.text === 'string') return item.text;
+        return null;
+      })
+      .filter(Boolean)
+      .join(' ')
+      .substring(0, maxLength);
+  }
+  
+  // Wenn Objekt, versuche Text-Eigenschaften zu finden
+  if (content && typeof content === 'object') {
+    // Suche nach common text properties
+    if (content.text && typeof content.text === 'string') {
+      return content.text.length > maxLength ? content.text.substring(0, maxLength) + '...' : content.text;
+    }
+    if (content.content && typeof content.content === 'string') {
+      return content.content.length > maxLength ? content.content.substring(0, maxLength) + '...' : content.content;
+    }
+    // Wenn keine Text-Eigenschaft gefunden, ignoriere komplexe Objekte
+    return '';
+  }
+  
+  // Für andere Typen, leeren String zurückgeben
+  return '';
+}
+
+/**
+ * Führt eine LangChain-basierte Web-Suche mit Tavily durch
+ * 
+ * @description 
+ * Nutzt LangChain Agent mit Tavily Search für zuverlässige Web-Suche.
+ * Die Funktion unterstützt die Extraktion von Suchergebnissen und Quellen,
+ * die dann als Kontext für AI-Antworten verwendet werden können.
+ * 
+ * Unterstützt Chat-Historie als Kontext für präzisere Suchergebnisse.
+ * 
+ * @param query - Suchanfrage als String
+ * @param chatHistory - Optionale Chat-Historie (letzte 10 Nachrichten) für Kontext
+ * 
+ * @returns Promise mit Suchergebnissen:
+ * - content: Formatierte Suchergebnisse als Text
+ * - sources: Array von Quellen mit Titel und URL
+ * 
+ * @throws Gibt leeres Objekt zurück bei Fehler (fail-safe)
+ * 
+ * @example
+ * ```typescript
+ * const { content, sources } = await performLangChainWebSearch("TypeScript tutorial");
+ * // content: "1. Introduction to TypeScript\nTypeScript is..."
+ * // sources: [{ title: "TypeScript Official", url: "https://..." }]
+ * ```
+ * 
+ * @deprecated Diese Funktion ist ein Wrapper um performLangChainWebSearch für Rückwärtskompatibilität.
+ * Nutze direkt performLangChainWebSearch aus './agents/web-search-agent.js'
+ */
+async function performDuckDuckGoSearch(
+  query: string,
+  chatHistory?: Array<{ role: string; content: string }>
+): Promise<{ content: string, sources: Array<{ title: string, url: string }> }> {
+  // Delegiere an LangChain Web Search Agent
+  return performLangChainWebSearch(query, chatHistory);
+}
+
+/**
+ * ============================================================================
+ * HAUPTFUNKTION - API SETUP
+ * ============================================================================
+ */
+
+/**
+ * Konfiguriert alle Chat und Backend API Endpoints im Vite Dev Server
+ * 
+ * @description 
+ * Diese Funktion registriert alle API-Endpoints als Middleware im Vite Dev Server.
+ * Die Endpoints sind in logische Blöcke unterteilt:
+ * 
+ * 1. Ollama Chat API - Lokaler Ollama Server für Chat
+ * 2. DeepSeek Chat API - Cloud-basierte Chat mit Web-Suche
+ * 3. DeepSeek Models API - Modellisten Abfrage
+ * 4. Cognee Authentication - Benutzeranmeldung und -verwaltung
+ * 5. Cognee Permissions - Berechtigungsverwaltung
+ * 6. Cognee User Management - Benutzer CRUD Operationen
+ * 7. Cognee RAG Search - Semantische Suche mit KI-Integration
+ * 
+ * @param server - Vite Development Server Instance
+ * 
+ * @example
+ * ```typescript
+ * // In vite-plugin-api.ts:
+ * export function apiPlugin(): Plugin {
+ *   return {
+ *     name: 'vite-plugin-api',
+ *     configureServer(server) {
+ *       setupChatApi(server);  // Alle APIs registrieren
+ *     }
+ *   }
+ * }
+ * ```
  */
 export function setupChatApi(server: ViteDevServer) {
-  // Ollama Chat API
+  
+  /**
+   * ============================================================================
+   * OLLAMA CHAT API
+   * ============================================================================
+   * 
+   * Streaming Chat API für lokalen Ollama Server
+   * Unterstützt multimodal input (Text + Bilder)
+   */
+
+  /**
+   * POST /api/ollama/chat
+   * 
+   * @description 
+   * Streaming Chat API für Ollama lokalen Server.
+   * Unterstützt multimodal input (Text + Bilder) und konfigurierbare
+   * Stream-Parameter (temperature, topP, maxTokens, batchSize).
+   * 
+   * Request Body:
+   * - messages: Array von Chat-Nachrichten
+   * - selectedModel: Name des Ollama Modells
+   * - data: Optionale Bilder (images: string[])
+   * - streamingConfig: Konfiguration für Streaming
+   * - systemPrompt: Optionaler System Prompt
+   * 
+   * Response:
+   * - Streaming text/plain mit AI SDK Data Stream Format
+   * 
+   * Environment:
+   * - VITE_OLLAMA_URL: Basis-URL für Ollama Server (default: http://imeso-ki-02:11434)
+   */
   server.middlewares.use('/api/ollama/chat', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -117,7 +289,36 @@ export function setupChatApi(server: ViteDevServer) {
     });
   });
 
-  // DeepSeek Chat API
+  /**
+   * ============================================================================
+   * DEEPSEEK CHAT API
+   * ============================================================================
+   * 
+   * Streaming Chat API mit DeepSeek Cloud Service
+   * Optional: Web-Suche mit DuckDuckGo Integration
+   */
+
+  /**
+   * POST /api/deepseek/chat
+   * 
+   * @description 
+   * Streaming Chat API für DeepSeek Cloud Service.
+   * Optional: Integration mit DuckDuckGo für Web-Suche.
+   * 
+   * Request Body:
+   * - messages: Array von Chat-Nachrichten
+   * - selectedModel: Name des DeepSeek Modells
+   * - streamingConfig: Konfiguration für Streaming
+   * - systemPrompt: Optionaler System Prompt
+   * - webSearchEnabled: Boolean für Web-Suche (optional)
+   * 
+   * Response:
+   * - Streaming text/plain mit AI SDK Data Stream Format
+   * - Bei Web-Suche: Append Sources am Ende
+   * 
+   * Environment:
+   * - DEEPSEEK_API_KEY: API Key für DeepSeek (required)
+   */
   server.middlewares.use('/api/deepseek/chat', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -135,7 +336,7 @@ export function setupChatApi(server: ViteDevServer) {
         // Dynamic import to avoid TypeScript version conflicts
         const { convertToCoreMessages } = await import('ai');
         
-        const { messages, selectedModel, data, streamingConfig, systemPrompt } = JSON.parse(body);
+        const { messages, selectedModel, data, streamingConfig, systemPrompt, webSearchEnabled } = JSON.parse(body);
 
         const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
         if (!deepseekApiKey) {
@@ -152,6 +353,52 @@ export function setupChatApi(server: ViteDevServer) {
         let messageText = currentMessage.content;
         if (data?.images?.length > 0) {
           messageText += `\n\n[Note: ${data.images.length} image(s) attached but DeepSeek doesn't support multimodal input]`;
+        }
+
+        // Perform LangChain/Tavily search if web search is enabled
+        // Wenn aktiviert, ist Websuche obligatorisch - Fehler werden zurückgegeben
+        let searchContext = '';
+        let sources: Array<{ title: string, url: string }> = [];
+        if (webSearchEnabled) {
+          // Validiere TAVILY_API_KEY wenn Websuche aktiviert ist
+          const tavilyApiKey = process.env.TAVILY_API_KEY;
+          if (!tavilyApiKey) {
+            res.statusCode = 500;
+            res.end(JSON.stringify({ 
+              error: 'TAVILY_API_KEY ist nicht konfiguriert. Bitte setze die Umgebungsvariable TAVILY_API_KEY für die Websuche.'
+            }));
+            return;
+          }
+
+          // Extract last 10 messages from history for context
+          // Use safe text extraction to avoid JSON strings and URL length issues
+          const chatHistory = initialMessages.slice(-10).map((msg) => ({
+            role: msg.role,
+            content: extractTextContent(msg.content, 500) // Safe text extraction, max 500 chars per message
+          })).filter((msg) => msg.content.length > 0); // Filter out empty messages
+          
+          // Websuche ist obligatorisch wenn aktiviert - Fehler werden propagiert
+          try {
+            const searchResult = await performLangChainWebSearch(messageText, chatHistory);
+            searchContext = searchResult.content;
+            sources = searchResult.sources;
+            
+            // Prepend search context to the user message if available
+            if (searchContext) {
+              messageText = `Kontext aus Web-Suche:\n${searchContext}\n\nFrage des Benutzers: ${messageText}`;
+            } else {
+              // Warnung wenn keine Suchergebnisse, aber fortsetzen
+              console.warn('Websuche aktiviert aber keine Ergebnisse gefunden für:', messageText);
+            }
+          } catch (searchError: any) {
+            // Websuche ist aktiviert aber fehlgeschlagen - gib Fehler zurück
+            console.error('Web search error:', searchError);
+            res.statusCode = 500;
+            res.end(JSON.stringify({ 
+              error: `Websuche fehlgeschlagen: ${searchError?.message || 'Unbekannter Fehler'}. Bitte überprüfe deine TAVILY_API_KEY Konfiguration.`
+            }));
+            return;
+          }
         }
 
         // Use simple text format for DeepSeek API with system prompt
@@ -210,6 +457,13 @@ export function setupChatApi(server: ViteDevServer) {
             if (buffer) {
               res.write(buffer);
             }
+            // Append sources to the end if web search was enabled
+            if (webSearchEnabled && sources.length > 0) {
+              // Format sources as URLs only (plain links without markdown parsing)
+              const sourcesText = `\n\n### Sources\n${sources.map(s => `- ${s.url}`).join('\n')}`;
+              const escapedSources = sourcesText.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+              res.write(`0:"${escapedSources}"\n`);
+            }
             res.end();
             return;
           }
@@ -224,6 +478,13 @@ export function setupChatApi(server: ViteDevServer) {
                 // Send any remaining buffered data
                 if (buffer) {
                   res.write(buffer);
+                }
+                // Append sources to the end if web search was enabled
+                if (webSearchEnabled && sources.length > 0) {
+                  // Format sources as URLs only (plain links without markdown parsing)
+                  const sourcesText = `\n\n### Sources\n${sources.map(s => `- ${s.url}`).join('\n')}`;
+                  const escapedSources = sourcesText.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+                  res.write(`0:"${escapedSources}"\n`);
                 }
                 res.end();
                 return;
@@ -268,7 +529,18 @@ export function setupChatApi(server: ViteDevServer) {
     });
   });
 
-  // DeepSeek Models API
+  /**
+   * GET /api/deepseek/models
+   * 
+   * @description 
+   * Abruf der verfügbaren DeepSeek Modelle.
+   * 
+   * Response:
+   * - JSON Array von verfügbaren Modellen
+   * 
+   * Environment:
+   * - DEEPSEEK_API_KEY: API Key für DeepSeek (required)
+   */
   server.middlewares.use('/api/deepseek/models', async (req, res) => {
     if (req.method !== 'GET') {
       res.statusCode = 405;
@@ -305,7 +577,32 @@ export function setupChatApi(server: ViteDevServer) {
     }
   });
 
-  // Cognee Authentication API
+  /**
+   * ============================================================================
+   * COGNEE AUTHENTICATION API
+   * ============================================================================
+   * 
+   * API Endpoints für Benutzeranmeldung und Authentifizierung
+   */
+
+  /**
+   * POST /api/cognee/auth/login
+   * 
+   * @description 
+   * Benutzeranmeldung mit Email/Passwort.
+   * Automatisches Admin-Setup für ersten Benutzer.
+   * 
+   * Request Body:
+   * - email: Benutzer Email
+   * - password: Benutzer Passwort
+   * 
+   * Response:
+   * - token: JWT Access Token
+   * - user: Benutzerdaten (inkl. tenant_id, permissions)
+   * 
+   * Environment:
+   * - VITE_COGNEE_URL: Basis-URL für Cognee Server (default: http://imeso-ki-02:8000)
+   */
   server.middlewares.use('/api/cognee/auth/login', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -426,7 +723,23 @@ export function setupChatApi(server: ViteDevServer) {
     });
   });
 
-  // Cognee Register API
+  /**
+   * POST /api/cognee/auth/register
+   * 
+   * @description 
+   * Registrierung neuer Benutzer.
+   * 
+   * Request Body:
+   * - email: Neue Benutzer Email
+   * - password: Neues Passwort
+   * - name: Optionaler Benutzername
+   * 
+   * Response:
+   * - user: Erstellte Benutzerdaten
+   * 
+   * Environment:
+   * - VITE_COGNEE_URL: Basis-URL für Cognee Server
+   */
   server.middlewares.use('/api/cognee/auth/register', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -493,7 +806,11 @@ export function setupChatApi(server: ViteDevServer) {
     });
   });
 
-  // Cognee Logout API
+  /**
+   * POST /api/cognee/auth/logout
+   * 
+   * @description Benutzer abmelden
+   */
   server.middlewares.use('/api/cognee/auth/logout', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -537,7 +854,19 @@ export function setupChatApi(server: ViteDevServer) {
     }
   });
 
-  // Cognee Permissions API - Give Dataset Permission To Principal
+  /**
+   * ============================================================================
+   * COGNEE PERMISSIONS API
+   * ============================================================================
+   * 
+   * Berechtigungsverwaltung für Datasets, Roles, Tenants
+   */
+
+  /**
+   * POST /api/cognee/permissions/datasets
+   * 
+   * @description Dataset-Berechtigung an Principal vergeben
+   */
   server.middlewares.use('/api/cognee/permissions/datasets', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -628,7 +957,11 @@ export function setupChatApi(server: ViteDevServer) {
     }
   });
 
-  // Cognee Permissions API - Create Role
+  /**
+   * POST /api/cognee/permissions/roles
+   * 
+   * @description Neue Rolle erstellen
+   */
   server.middlewares.use('/api/cognee/permissions/roles', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -952,7 +1285,11 @@ export function setupChatApi(server: ViteDevServer) {
     }
   });
 
-  // Cognee Verify Token API
+  /**
+   * GET /api/cognee/auth/verify
+   * 
+   * @description Token-Validierung
+   */
   server.middlewares.use('/api/cognee/auth/verify', async (req, res) => {
     if (req.method !== 'GET') {
       res.statusCode = 405;
@@ -1009,7 +1346,11 @@ export function setupChatApi(server: ViteDevServer) {
     }
   });
 
-  // Cognee Search API with DeepSeek Integration
+  /**
+   * POST /api/cognee/search
+   * 
+   * @description Semantische Suche mit DeepSeek Integration (RAG)
+   */
   server.middlewares.use('/api/cognee/search', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -1065,7 +1406,7 @@ export function setupChatApi(server: ViteDevServer) {
           query: query,
           systemPrompt: systemPrompt || "Du bist ein hilfreicher KI-Assistent mit Zugriff auf eine umfassende Wissensdatenbank.",
           nodeName: [],
-          topK: 20,
+          topK: 10,
           onlyContext: false, // Get full response to extract chunks
           useCombinedContext: false
         };
@@ -1115,7 +1456,46 @@ export function setupChatApi(server: ViteDevServer) {
         // Step 2: Use DeepSeek with chunks as context (reuse existing DeepSeek logic)
         const enhancedSystemPrompt = `---Role---
 
-You are a RAG assistant that MUST provide structured responses with sources.
+You are a RAG assistant that MUST provide structured responses with sources, modeled after ChatGPT's style and clarity.
+
+---STYLE & FORMATTING (ChatGPT-like)---
+
+## 💬 STYLE & TONE
+
+- Speak in a **warm, confident, and professional** tone.
+- Be **helpful**, **concise**, and **conversational** — like a friendly expert.
+- Automatically detect and respond in the **user's language**.
+- Use **emojis** naturally to highlight tone or draw attention (1–3 per message max).
+- When appropriate, start with a short **emoji intro** (e.g., "✅", "💡", "⚠️", "📘").
+
+## 🧾 FORMATTING RULES
+
+### ✨ Text Layout
+- Use \`>\` or \`›\` at the beginning of key paragraphs for a friendly quoted look.  
+  Example:  
+  > This feature allows you to easily manage your datasets and users.
+
+### 🪶 Emphasis
+- **Bold** → for important terms, results, or actions.  
+- *Italics* → for subtle emphasis or nuance.  
+- ✅ or ⚠️ → for success and warning points.
+
+### 📋 Lists
+- Use bullet lists (\`-\` or \`•\`) for items or steps.  
+- Use numbered lists (\`1., 2., 3.\`) for sequences or procedures.
+
+### 💻 Code & Data
+- Use fenced code blocks (\`\`\`) for commands, snippets, or JSON.
+
+### 📊 Tables
+- Use markdown tables when presenting structured data, comparisons, or multiple related items.
+
+  Example:
+
+  | Feature | Status | Priority |
+  |---------|--------|----------|
+  | Login   | Done   | High     |
+  | Logout  | Pending| Low      |
 
 ---CRITICAL OUTPUT FORMAT REQUIREMENTS---
 
@@ -1129,9 +1509,12 @@ Your response MUST follow this EXACT structure (NO EXCEPTIONS):
 
 2. **Sources Section (MANDATORY):**
    - Start with EXACTLY "### Sources" (three hashes, one space, capital S)
-   - List only the filenames used in your response
-   - Format: "- filename.pdf" (one filename per line)
-   - Extract filenames from the document chunks provided below
+   - List all sources used in your response
+   - Format: "- source" (one source per line)
+   - For website sources: Use COMPLETE URLs (e.g., https://example.com/page)
+   - For file sources: Use filenames (e.g., filename.pdf)
+   - Both types can appear together in the sources list
+   - Extract sources from the document chunks provided below
 
 ---Document Chunks---
 
@@ -1146,14 +1529,17 @@ ${chunks}
    - Maintain conversation history continuity
 
 2. **Sources Format - MANDATORY STRUCTURE:**
-   - Extract filenames from the document chunks
-   - List each unique filename only once
-   - Use the exact filename as it appears in the chunks
+   - Extract sources from the document chunks
+   - List each unique source only once
+   - Use exact URLs for websites (complete web addresses starting with http:// or https://)
+   - Use exact filenames for documents (e.g., .pdf, .doc, .txt files)
+   - CRITICAL: For web sources, ALWAYS include the complete URL
    - Example:
      ### Sources
      - Installation_Guide.pdf
+     - https://imeso.de/stellenangebote
      - Administratorhandbuch_Rev004.pdf
-     - Systemhandbuch_v2.1.pdf
+     - https://example.com/documentation
 
 3. **Language Consistency:**
    - If user asks in German → respond in German
@@ -1162,7 +1548,8 @@ ${chunks}
 
 4. **Quality Checks (MUST PASS):**
    - ✓ Sources section exists with "### Sources"
-   - ✓ Only filenames listed (no additional details)
+   - ✓ Website sources include complete URLs (http:// or https://)
+   - ✓ File sources include filenames with extensions
    - ✓ All sections in same language as user's question
 
 ---User Context---
@@ -1175,6 +1562,7 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
 
 ### Sources
 - Installation_Guide.pdf
+- https://imeso.de/stellenangebote
 - Administratorhandbuch_Rev004.pdf
 
 ---Response---`;
@@ -1298,11 +1686,87 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
     });
   });
 
-  // ============================================
-  // Cognee Permissions API Endpoints
-  // ============================================
+  /**
+   * ============================================================================
+   * URL METADATA API ENDPOINT
+   * ============================================================================
+   */
 
-  // 1. Create Tenant
+  /**
+   * GET /api/url/metadata?url=<encoded-url>
+   * 
+   * @description Ruft OpenGraph-Metadaten (insbesondere Beschreibung) von einer URL ab
+   */
+  server.middlewares.use('/api/url/metadata', async (req, res) => {
+    if (req.method !== 'GET') {
+      res.statusCode = 405;
+      res.end('Method Not Allowed');
+      return;
+    }
+
+    try {
+      const host = req.headers.host || 'localhost';
+      const url = new URL(req.url || '/', `http://${host}`);
+      const targetUrl = url.searchParams.get('url');
+
+      if (!targetUrl) {
+        res.statusCode = 400;
+        res.end(JSON.stringify({ error: 'URL parameter is required' }));
+        return;
+      }
+
+      // Decode the URL
+      const decodedUrl = decodeURIComponent(targetUrl);
+
+      // Fetch the URL to get OpenGraph metadata
+      const { default: axios } = await import('axios');
+      const cheerio = await import('cheerio');
+
+      const response = await axios.get(decodedUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+        timeout: 10000,
+        maxRedirects: 5,
+      });
+
+      const $ = cheerio.load(response.data);
+
+      // Try to get OpenGraph description first, then fall back to meta description
+      const ogDescription = $('meta[property="og:description"]').attr('content') ||
+                           $('meta[name="og:description"]').attr('content');
+      
+      const metaDescription = $('meta[name="description"]').attr('content');
+
+      const description = ogDescription || metaDescription || null;
+
+      // Set CORS headers
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET');
+
+      res.statusCode = 200;
+      res.end(JSON.stringify({ description }));
+    } catch (error: any) {
+      console.error('URL Metadata Fetch Error:', error);
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: 'Failed to fetch URL metadata', description: null }));
+    }
+  });
+
+  /**
+   * ============================================================================
+   * COGNEE PERMISSIONS API ENDPOINTS (Alternative Implementierung)
+   * ============================================================================
+   */
+
+  /**
+   * POST /api/cognee/permissions/create-tenant
+   * 
+   * @description Neuen Tenant erstellen
+   */
   server.middlewares.use('/api/cognee/permissions/create-tenant', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -1363,7 +1827,11 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
     });
   });
 
-  // 2. Add User to Tenant
+  /**
+   * POST /api/cognee/permissions/add-user-to-tenant
+   * 
+   * @description Benutzer zu Tenant hinzufügen
+   */
   server.middlewares.use('/api/cognee/permissions/add-user-to-tenant', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -1423,7 +1891,11 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
     });
   });
 
-  // 3. Create Role
+  /**
+   * POST /api/cognee/permissions/create-role
+   * 
+   * @description Neue Rolle erstellen
+   */
   server.middlewares.use('/api/cognee/permissions/create-role', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -1483,7 +1955,11 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
     });
   });
 
-  // 4. Add User to Role
+  /**
+   * POST /api/cognee/permissions/add-user-to-role
+   * 
+   * @description Benutzer zu Rolle hinzufügen
+   */
   server.middlewares.use('/api/cognee/permissions/add-user-to-role', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -1543,7 +2019,11 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
     });
   });
 
-  // 5. Grant Dataset Permission
+  /**
+   * POST /api/cognee/permissions/grant-permission
+   * 
+   * @description Dataset-Berechtigung vergeben
+   */
   server.middlewares.use('/api/cognee/permissions/grant-permission', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;
@@ -1603,11 +2083,17 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
     });
   });
 
-  // ============================================
-  // Cognee User Management API Endpoints
-  // ============================================
+  /**
+   * ============================================================================
+   * COGNEE USER MANAGEMENT API ENDPOINTS
+   * ============================================================================
+   */
 
-  // 1. Get User by ID
+  /**
+   * GET /api/cognee/users/:userId
+   * 
+   * @description Benutzer nach ID abrufen
+   */
   server.middlewares.use('/api/cognee/users/:userId', async (req, res) => {
     if (req.method !== 'GET') {
       res.statusCode = 405;
@@ -1660,7 +2146,11 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
     }
   });
 
-  // 2. Get All Users (Custom - TODO: Implement proper tenant query)
+  /**
+   * GET /api/cognee/users
+   * 
+   * @description Alle Benutzer abrufen
+   */
   server.middlewares.use('/api/cognee/users', async (req, res) => {
     if (req.method !== 'GET') {
       res.statusCode = 405;
@@ -1714,7 +2204,11 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
     }
   });
 
-  // 3. Update User
+  /**
+   * PATCH /api/cognee/users/:userId/update
+   * 
+   * @description Benutzer aktualisieren
+   */
   server.middlewares.use('/api/cognee/users/:userId/update', async (req, res) => {
     if (req.method !== 'PATCH') {
       res.statusCode = 405;
@@ -1775,7 +2269,11 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
     });
   });
 
-  // 4. Delete User
+  /**
+   * DELETE /api/cognee/users/:userId/delete
+   * 
+   * @description Benutzer löschen
+   */
   server.middlewares.use('/api/cognee/users/:userId/delete', async (req, res) => {
     if (req.method !== 'DELETE') {
       res.statusCode = 405;
@@ -1827,7 +2325,11 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
     }
   });
 
-  // 5. Remove User from Role (Custom)
+  /**
+   * POST /api/cognee/permissions/remove-user-from-role
+   * 
+   * @description Benutzer von Rolle entfernen
+   */
   server.middlewares.use('/api/cognee/permissions/remove-user-from-role', async (req, res) => {
     if (req.method !== 'POST') {
       res.statusCode = 405;

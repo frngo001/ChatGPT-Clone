@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useDatasetStore } from '@/stores/dataset-store'
+import { initializeUrlCache } from '@/lib/url-cache'
 
 /**
  * Hook for initial app loading
@@ -22,6 +23,9 @@ export function useInitialLoading() {
     
     const initializeApp = async () => {
       hasInitialized.current = true
+
+      // Initialize URL cache (cleanup expired entries)
+      initializeUrlCache()
 
       // Only verify token if we have one and it needs verification
       if (accessToken && shouldVerifyToken()) {

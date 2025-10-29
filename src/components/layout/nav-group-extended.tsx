@@ -159,7 +159,7 @@ function SidebarMenuCollapsibleExtended({
             )}
             <span>{item.title}</span>
             {item.badge && <NavBadge>{item.badge}</NavBadge>}
-            <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
+            <ChevronRight className='ms-auto transition-transform duration-[50ms] group-data-[state=open]/collapsible:rotate-90' />
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent className='CollapsibleContent'>
@@ -175,7 +175,7 @@ function SidebarMenuCollapsibleExtended({
                           {subItem.icon && <subItem.icon />}
                           <span>{subItem.title}</span>
                           {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
-                          <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/sub-collapsible:rotate-90' />
+                          <ChevronRight className='ms-auto transition-transform duration-[50ms] group-data-[state=open]/sub-collapsible:rotate-90' />
                         </SidebarMenuSubButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
@@ -260,7 +260,7 @@ function SidebarMenuCollapsedDropdown({
             )}
             <span>{item.title}</span>
             {item.badge && <NavBadge>{item.badge}</NavBadge>}
-            <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
+            <ChevronRight className='ms-auto transition-transform duration-[50ms] group-data-[state=open]/collapsible:rotate-90' />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent side='right' align='start' sideOffset={4}>

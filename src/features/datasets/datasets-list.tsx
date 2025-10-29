@@ -3,21 +3,68 @@ import { useEffect, useState } from 'react'
 import { useDatasetStore } from '@/stores/dataset-store'
 import { usePermissionsStore } from '@/stores/permissions-store'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Input } from '@/components/ui/input'
-import { FolderOpen, Plus, FileText, User, Calendar, Clock, Search, Filter, Grid, List } from 'lucide-react'
+import { FolderOpen, Plus, Grid, List, Search } from 'lucide-react'
 import { CreateDatasetDialog } from './components/create-dataset-dialog'
-import { ProcessingStatusBadge } from './components/processing-status-badge'
+import { DeleteDatasetDialog } from './components/delete-dataset-dialog'
+import { useDatasetFilters } from './hooks/use-dataset-filters'
+import { DatasetFilters } from './components/dataset-filters'
+import { DatasetCard } from './components/dataset-card'
 
 export function DatasetsPage() {
   const navigate = useNavigate()
   const { datasets, fetchDatasets, startStatusPolling, stopStatusPolling } = useDatasetStore()
   const { users, fetchAllUsers } = usePermissionsStore()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean
+    datasetId: string
+    datasetName: string
+    filesCount: number
+  }>({
+    open: false,
+    datasetId: '',
+    datasetName: '',
+    filesCount: 0
+  })
+
+  // Use filter hook
+  const {
+    searchQuery,
+    selectedTags,
+    statusFilter,
+    ownerFilter,
+    createdFrom,
+    createdTo,
+    updatedFrom,
+    updatedTo,
+    allTags,
+    allStatuses,
+    allOwners,
+    filteredDatasets,
+    setSearchQuery,
+    toggleTag,
+    handleStatusChange,
+    handleOwnerChange,
+    setCreatedFrom,
+    setCreatedTo,
+    setUpdatedFrom,
+    setUpdatedTo,
+    clearFilters,
+    hasActiveFilters
+  } = useDatasetFilters({ datasets, users })
+
+  const handleDeleteDataset = (datasetId: string, datasetName: string, filesCount: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDeleteDialog({
+      open: true,
+      datasetId,
+      datasetName,
+      filesCount
+    })
+  }
 
   // Lade Datasets beim Start
   useEffect(() => {
@@ -54,16 +101,6 @@ export function DatasetsPage() {
     return owner ? owner.email : 'Unbekannt'
   }
 
-  // Filtere Datasets basierend auf Suchbegriff
-  const filteredDatasets = datasets.filter(dataset => {
-    const searchLower = searchQuery.toLowerCase()
-    return (
-      dataset.name.toLowerCase().includes(searchLower) ||
-      (dataset.description && dataset.description.toLowerCase().includes(searchLower)) ||
-      getOwnerName(dataset.ownerId).toLowerCase().includes(searchLower)
-    )
-  })
-
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return 'Unbekannt'
     
@@ -99,7 +136,7 @@ export function DatasetsPage() {
           {datasets.length > 0 && (
             <p className="text-xs sm:text-sm text-muted-foreground pt-1">
               {filteredDatasets.length} von {datasets.length} {datasets.length === 1 ? 'Dataset' : 'Datasets'}
-              {searchQuery && ' gefunden'}
+              {hasActiveFilters && ' gefunden'}
             </p>
           )}
         </div>
@@ -116,24 +153,33 @@ export function DatasetsPage() {
 
       {/* Suchleiste und Filter */}
       {datasets.length > 0 && (
-        <div className="flex items-center gap-2">
-          {/* Suchfeld */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Dateien durchsuchen..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <div className="flex-1">
+            <DatasetFilters
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              selectedTags={selectedTags}
+              toggleTag={toggleTag}
+              allTags={allTags}
+              statusFilter={statusFilter}
+              handleStatusChange={handleStatusChange}
+              allStatuses={allStatuses}
+              ownerFilter={ownerFilter}
+              handleOwnerChange={handleOwnerChange}
+              allOwners={allOwners}
+              createdFrom={createdFrom}
+              createdTo={createdTo}
+              updatedFrom={updatedFrom}
+              updatedTo={updatedTo}
+              setCreatedFrom={setCreatedFrom}
+              setCreatedTo={setCreatedTo}
+              setUpdatedFrom={setUpdatedFrom}
+              setUpdatedTo={setUpdatedTo}
+              hasActiveFilters={hasActiveFilters}
+              clearFilters={clearFilters}
             />
           </div>
-
-          {/* Filter Button */}
-          <Button variant="outline" size="default">
-            <Filter className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Filter</span>
-          </Button>
-
+          
           {/* View Toggle */}
           <div className="flex rounded-lg border">
             <Button
@@ -185,130 +231,43 @@ export function DatasetsPage() {
             <Search className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Keine Ergebnisse gefunden</h3>
             <p className="text-sm text-muted-foreground mb-4 text-center max-w-sm">
-              Keine Datasets entsprechen Ihrer Suche nach "{searchQuery}"
+              Keine Datasets entsprechen Ihren Such- und Filterkriterien
             </p>
-            <Button variant="outline" onClick={() => setSearchQuery('')}>
-              Suche zurücksetzen
+            <Button variant="outline" onClick={clearFilters}>
+              Filter zurücksetzen
             </Button>
           </CardContent>
         </Card>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5 md:gap-6">
           {filteredDatasets.map((dataset) => {
             const ownerName = getOwnerName(dataset.ownerId)
             
             return (
-              <Card
+              <DatasetCard
                 key={dataset.id}
-                className="group cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all duration-200 relative"
+                dataset={dataset}
+                ownerName={ownerName}
                 onClick={() => navigate({ to: `/library/datasets/${dataset.id}` })}
-              >
-                <div className="p-3">
-                  {/* Header: Icon, Titel und Status */}
-                  <div className="flex items-start gap-2 mb-2">
-                    <div className="h-8 w-8 rounded bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0 group-hover:from-primary/30 group-hover:to-primary/20 transition-colors">
-                      <FolderOpen className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold truncate leading-tight mb-0.5" title={dataset.name}>
-                        {dataset.name}
-                      </h3>
-                      <p className="text-[11px] text-muted-foreground truncate" title={dataset.description || 'Keine Beschreibung'}>
-                        {dataset.description || 'Keine Beschreibung'}
-                      </p>
-                    </div>
-                    {dataset.processingStatus && (
-                      <div className="shrink-0">
-                        <ProcessingStatusBadge status={dataset.processingStatus} className="text-[9px] px-1.5 py-0.5 h-5" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Dateien-Count */}
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-2">
-                    <FileText className="h-3 w-3 shrink-0" />
-                    <span>{dataset.files.length} {dataset.files.length === 1 ? 'Datei' : 'Dateien'}</span>
-                  </div>
-
-                  {/* Owner */}
-                  <div className="flex items-center gap-1 mb-2">
-                    <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span className="text-[11px] text-muted-foreground truncate" title={ownerName}>
-                      {ownerName}
-                    </span>
-                  </div>
-
-                  {/* Datums-Informationen */}
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground border-t pt-2 gap-2">
-                    <div className="flex items-center gap-1 min-w-0">
-                      <Calendar className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{formatDate(dataset.createdAt)}</span>
-                    </div>
-                    {dataset.updatedAt && (
-                      <div className="flex items-center gap-1 min-w-0">
-                        <Clock className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{formatDate(dataset.updatedAt)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
+                onDelete={(e) => handleDeleteDataset(dataset.id, dataset.name, dataset.files.length, e)}
+              />
             )
           })}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filteredDatasets.map((dataset) => {
             const ownerName = getOwnerName(dataset.ownerId)
             
             return (
-              <Card
+              <DatasetCard
                 key={dataset.id}
-                className="group cursor-pointer hover:shadow-md hover:border-primary/50 transition-all duration-200"
+                dataset={dataset}
+                ownerName={ownerName}
                 onClick={() => navigate({ to: `/library/datasets/${dataset.id}` })}
-              >
-                <div className="p-3 flex items-center gap-3">
-                  {/* Icon */}
-                  <div className="h-10 w-10 rounded bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0 group-hover:from-primary/30 group-hover:to-primary/20 transition-colors">
-                    <FolderOpen className="h-5 w-5 text-primary" />
-                  </div>
-
-                  {/* Name & Beschreibung */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold truncate" title={dataset.name}>
-                      {dataset.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground truncate" title={dataset.description || 'Keine Beschreibung'}>
-                      {dataset.description || 'Keine Beschreibung'}
-                    </p>
-                  </div>
-
-                  {/* Statistik */}
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                    <FileText className="h-3.5 w-3.5 shrink-0" />
-                    <span className="hidden sm:inline">{dataset.files.length} {dataset.files.length === 1 ? 'Datei' : 'Dateien'}</span>
-                    <span className="sm:hidden">{dataset.files.length}</span>
-                  </div>
-
-                  {/* Owner */}
-                  <Badge variant="outline" className="text-xs px-2 py-0.5 max-w-[150px] shrink-0 hidden md:flex">
-                    <User className="h-3 w-3 mr-1 shrink-0" />
-                    <span className="truncate" title={ownerName}>{ownerName}</span>
-                  </Badge>
-
-                  {/* Datum */}
-                  <div className="text-xs text-muted-foreground shrink-0 hidden lg:block">
-                    {formatDate(dataset.createdAt)}
-                  </div>
-
-                  {/* Status Badge */}
-                  {dataset.processingStatus && (
-                    <div className="shrink-0">
-                      <ProcessingStatusBadge status={dataset.processingStatus} className="text-[10px]" />
-                    </div>
-                  )}
-                </div>
-              </Card>
+                onDelete={(e) => handleDeleteDataset(dataset.id, dataset.name, dataset.files.length, e)}
+                variant="list"
+              />
             )
           })}
         </div>
@@ -317,6 +276,16 @@ export function DatasetsPage() {
       <CreateDatasetDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+      />
+
+      <DeleteDatasetDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, open }))}
+        dataset={{
+          id: deleteDialog.datasetId,
+          name: deleteDialog.datasetName,
+          filesCount: deleteDialog.filesCount
+        }}
       />
     </div>
   )

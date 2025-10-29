@@ -26,7 +26,7 @@ export function DatePicker({
         <Button
           variant='outline'
           data-empty={!selected}
-          className='data-[empty=true]:text-muted-foreground w-[240px] justify-start text-start font-normal'
+          className='data-[empty=true]:text-muted-foreground w-full sm:w-[180px] justify-start text-start font-normal'
         >
           {selected ? (
             format(selected, 'MMM d, yyyy')
@@ -36,7 +36,7 @@ export function DatePicker({
           <CalendarIcon className='ms-auto h-4 w-4 opacity-50' />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className='w-auto p-0'>
+      <PopoverContent className='w-auto p-0' align="start">
         <Calendar
           mode='single'
           captionLayout='dropdown'

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Upload, Download, Trash2, Eye, Edit, Search, Filter, Grid, List } from 'lucide-react'
+import { ArrowLeft, Upload, Edit, Search, Filter, Grid, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,12 +12,21 @@ import { useDatasetStore } from '@/stores/dataset-store'
 import { AddDataDialog } from './components/add-data-dialog'
 import { ProcessingStatusBadge } from './components/processing-status-badge'
 import { DeleteFileDialog } from './components/delete-file-dialog'
+import { EditDatasetDialog } from './components/edit-dataset-dialog'
+import { PdfPreviewSheet } from './components/pdf-preview-sheet'
+import { FileCard } from './components/file-card'
+import { 
+  getFaviconUrl as getCachedFaviconUrl, 
+  getUrlDescription as getCachedUrlDescription,
+  setUrlDescription 
+} from '@/lib/url-cache'
 
 export function DatasetDetailPage() {
   const { datasetId } = useParams({ from: '/_authenticated/library/datasets/$datasetId' })
   const navigate = useNavigate()
-  const { getDatasetById, fetchDatasetDataWithCache, processDatasets, checkDatasetStatus, isFetchingInBackground } = useDatasetStore()
+  const { getDatasetById, fetchDatasetDataWithCache, processDatasets, checkDatasetStatus, isFetchingInBackground, downloadDatasetFile } = useDatasetStore()
   const [showAddDataDialog, setShowAddDataDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -30,15 +39,40 @@ export function DatasetDetailPage() {
     fileId: '',
     fileName: ''
   })
+  const [previewFile, setPreviewFile] = useState<{
+    fileId: string
+    fileName: string
+  } | null>(null)
+  const [urlDescriptions, setUrlDescriptions] = useState<Record<string, string>>({})
 
   const dataset = getDatasetById(datasetId)
   const isBackgroundFetching = datasetId ? isFetchingInBackground[datasetId] : false
+  
+  // Lade gecachte Beschreibungen beim Initialisieren
+  useEffect(() => {
+    if (!dataset) return
+    
+    const urlFiles = dataset.files.filter(file => 
+      file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
+    )
+    
+    const cachedDescriptions: Record<string, string> = {}
+    urlFiles.forEach(file => {
+      const cached = getCachedUrlDescription(file.name)
+      if (cached) {
+        cachedDescriptions[file.name] = cached
+      }
+    })
+    
+    if (Object.keys(cachedDescriptions).length > 0) {
+      setUrlDescriptions(cachedDescriptions)
+    }
+  }, [dataset])
 
   // Always use cache-aware fetch
   useEffect(() => {
     if (datasetId) {
-      fetchDatasetDataWithCache(datasetId).catch((error) => {
-        console.error('Failed to fetch dataset data:', error)
+      fetchDatasetDataWithCache(datasetId).catch(() => {
         toast.error('Fehler beim Laden der Dataset-Dateien')
       })
     }
@@ -87,13 +121,104 @@ export function DatasetDetailPage() {
   }
 
 
-  const truncateFileName = (fileName: string, maxLength: number = 30) => {
+  const truncateFileName = (fileName: string, maxLength: number = 35) => {
     if (fileName.length <= maxLength) return fileName
-    const extension = fileName.split('.').pop()
-    const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'))
-    const truncatedName = nameWithoutExt.substring(0, maxLength - extension!.length - 4) + '...'
-    return `${truncatedName}.${extension}`
+    
+    // For URLs, try to keep the domain and path visible
+    if (fileName.startsWith('http://') || fileName.startsWith('https://')) {
+      try {
+        const url = new URL(fileName)
+        const domain = url.hostname
+        const pathname = url.pathname
+        
+        // If just the domain + short path fits, show that
+        const shortPath = pathname.length > 20 ? '...' + pathname.slice(-17) : pathname
+        const displayUrl = domain + shortPath
+        
+        if (displayUrl.length <= maxLength) {
+          return displayUrl
+        }
+        
+        // Otherwise, show domain and truncated path
+        const maxDomainLength = Math.min(domain.length, Math.floor(maxLength / 2))
+        const maxPathLength = maxLength - maxDomainLength - 4
+        return domain.substring(0, maxDomainLength) + '...' + pathname.slice(-maxPathLength)
+      } catch {
+        // If URL parsing fails, fall back to regular truncation
+      }
+    }
+    
+    // Regular truncation for non-URLs or if URL parsing fails
+    const truncatedName = fileName.substring(0, maxLength - 3) + '...'
+    return truncatedName
   }
+
+  const getFaviconUrl = (url: string) => {
+    return getCachedFaviconUrl(url)
+  }
+
+  const getUrlDescription = (url: string): string => {
+    // Return cached description from state if available
+    if (urlDescriptions[url]) {
+      return urlDescriptions[url]
+    }
+    
+    // Prüfe persistenten Cache
+    const cached = getCachedUrlDescription(url)
+    if (cached) {
+      setUrlDescriptions(prev => ({ ...prev, [url]: cached }))
+      return cached
+    }
+    
+    // Return domain as fallback while fetching
+    try {
+      const urlObj = new URL(url)
+      return urlObj.hostname
+    } catch {
+      return url
+    }
+  }
+
+  // Fetch OpenGraph descriptions for URLs
+  useEffect(() => {
+    const fetchUrlDescriptions = async () => {
+      if (!dataset) return
+
+      const urlFiles = dataset.files.filter(file => 
+        file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
+      )
+
+      const urlsToFetch = urlFiles.filter(file => !urlDescriptions[file.name])
+
+      if (urlsToFetch.length === 0) return
+
+      for (const file of urlsToFetch) {
+        try {
+          const encodedUrl = encodeURIComponent(file.name)
+          const response = await fetch(`/api/url/metadata?url=${encodedUrl}`)
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (data.description) {
+              // Speichere im persistenten Cache
+              setUrlDescription(file.name, data.description)
+              
+              // Aktualisiere State für sofortige Anzeige
+              setUrlDescriptions(prev => ({
+                ...prev,
+                [file.name]: data.description
+              }))
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch metadata for ${file.name}:`, error)
+        }
+      }
+    }
+
+    fetchUrlDescriptions()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataset?.files])
 
   const handleDeleteFile = (fileId: string, fileName: string) => {
     setDeleteFileDialog({
@@ -101,6 +226,30 @@ export function DatasetDetailPage() {
       fileId,
       fileName
     })
+  }
+
+  const handleDownloadFile = async (fileId: string, fileName: string) => {
+    if (!datasetId) return
+    
+    try {
+      await downloadDatasetFile(datasetId, fileId, fileName)
+      toast.success('Datei erfolgreich heruntergeladen')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Herunterladen der Datei'
+      toast.error(errorMessage)
+    }
+  }
+
+  const handlePreviewFile = (fileId: string, fileName: string, fileType?: string, fileExtension?: string) => {
+    // Check if file is a PDF
+    const isPdf = fileType === 'application/pdf' || fileExtension?.toLowerCase() === 'pdf'
+    
+    if (!isPdf) {
+      toast.error('Nur PDF-Dateien können in der Vorschau angezeigt werden')
+      return
+    }
+    
+    setPreviewFile({ fileId, fileName })
   }
 
   const handleProcessDataset = async () => {
@@ -130,7 +279,7 @@ export function DatasetDetailPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -141,10 +290,7 @@ export function DatasetDetailPage() {
             <span className="hidden sm:inline">Zurück</span>
           </Button>
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
-        </div>
-        
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex flex-col gap-2 flex-1 min-w-0 sm:flex-row sm:items-center sm:gap-3">
             <h1 className="text-lg sm:text-xl font-bold truncate">{dataset.name}</h1>
             <div className="flex items-center gap-2">
               <ProcessingStatusBadge status={dataset.processingStatus} />
@@ -153,13 +299,38 @@ export function DatasetDetailPage() {
                   Aktualisiere...
                 </Badge>
               )}
-              <Button variant="outline" size="sm" className="h-7 text-xs w-fit">
-                <Edit className="mr-1 h-3 w-3" />
+              <Button 
+                variant="outline" 
+                className="h-6 px-2 py-0.5 text-xs w-fit gap-1.5"
+                onClick={() => setShowEditDialog(true)}
+              >
+                <Edit className="h-3 w-3" />
                 <span className="hidden sm:inline">Bearbeiten</span>
                 <span className="sm:hidden">Edit</span>
               </Button>
             </div>
           </div>
+          <div className="flex items-center gap-2 ml-auto">
+            {needsProcessing && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={handleProcessDataset}
+                disabled={isProcessing}
+                className="hidden sm:flex"
+              >
+                {isProcessing ? 'Wird verarbeitet...' : 'Dataset verarbeiten'}
+              </Button>
+            )}
+            <Button size="sm" onClick={() => setShowAddDataDialog(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Daten hinzufügen</span>
+              <span className="sm:hidden">Hinzufügen</span>
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex-1 min-w-0 sm:ml-[calc(2rem+1px)]">
           <p className="text-sm text-muted-foreground mt-1">{dataset.description}</p>
           {/* Tags */}
           {dataset.tags.length > 0 && (
@@ -171,25 +342,6 @@ export function DatasetDetailPage() {
               ))}
             </div>
           )}
-        </div>
-        
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {needsProcessing && (
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={handleProcessDataset}
-              disabled={isProcessing}
-              className="w-full sm:w-auto"
-            >
-              {isProcessing ? 'Wird verarbeitet...' : 'Dataset verarbeiten'}
-            </Button>
-          )}
-          <Button size="sm" onClick={() => setShowAddDataDialog(true)} className="w-full sm:w-auto">
-            <Upload className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Daten hinzufügen</span>
-            <span className="sm:hidden">Hinzufügen</span>
-          </Button>
         </div>
       </div>
 
@@ -280,86 +432,21 @@ export function DatasetDetailPage() {
           ) : (
             <div className={
               viewMode === 'grid'
-                ? 'grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
-                : 'space-y-2'
+                ? 'grid gap-4 sm:gap-5 grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
+                : 'space-y-2 sm:space-y-3'
             }>
               {filteredFiles.map((file) => (
-                viewMode === 'grid' ? (
-                  <Card
-                    key={file.id}
-                    className="cursor-pointer transition-colors hover:bg-muted/50"
-                  >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-sm" title={file.name}>{truncateFileName(file.name)}</CardTitle>
-                          <CardDescription className="mt-1 text-xs">
-                            {file.type}
-                          </CardDescription>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => e.stopPropagation()}>
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => e.stopPropagation()}>
-                                ⋯
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem>
-                                <Download className="mr-2 h-3 w-3" />
-                                Herunterladen
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteFile(file.id, file.name)}>
-                                <Trash2 className="mr-2 h-3 w-3" />
-                                Löschen
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{file.extension?.toUpperCase() || 'UNKNOWN'}</span>
-                        <span>{formatDate(file.uploadDate)}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div
-                    key={file.id}
-                    className="flex items-center justify-between p-2 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate" title={file.name}>{truncateFileName(file.name)}</div>
-                    </div>
-                    
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                        <Download className="h-3 w-3" />
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                            ⋯
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteFile(file.id, file.name)}>
-                            <Trash2 className="mr-2 h-3 w-3" />
-                            Löschen
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                )
+                <FileCard
+                  key={file.id}
+                  file={file}
+                  onPreview={handlePreviewFile}
+                  onDownload={handleDownloadFile}
+                  onDelete={handleDeleteFile}
+                  getFaviconUrl={getFaviconUrl}
+                  getUrlDescription={getUrlDescription}
+                  truncateFileName={truncateFileName}
+                  variant={viewMode === 'list' ? 'list' : 'grid'}
+                />
               ))}
             </div>
           )}
@@ -380,10 +467,27 @@ export function DatasetDetailPage() {
         fileName={deleteFileDialog.fileName}
         onSuccess={() => {
           // Refresh dataset data after successful deletion
-          fetchDatasetData(datasetId).catch((error) => {
-            console.error('Failed to refresh dataset data:', error)
+          fetchDatasetDataWithCache(datasetId).catch(() => {
+            // Error handling already done in the store
           })
         }}
+      />
+
+      <EditDatasetDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        datasetId={datasetId}
+        onSuccess={() => {
+          // Dialog will close automatically
+        }}
+      />
+
+      <PdfPreviewSheet
+        open={!!previewFile}
+        onOpenChange={(open) => !open && setPreviewFile(null)}
+        fileId={previewFile?.fileId ?? ''}
+        fileName={previewFile?.fileName ?? ''}
+        datasetId={datasetId}
       />
     </div>
   )

@@ -2,14 +2,6 @@ import React, { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Message } from "ai/react";
 import type { ChatRequestOptions } from "ai";
-
-// Extended Message type that includes attachments for persistence
-interface ExtendedMessage extends Message {
-  experimental_attachments?: Array<{
-    contentType?: string;
-    url: string;
-  }>;
-}
 import { CheckIcon, CopyIcon } from "@radix-ui/react-icons";
 import { RefreshCcw } from "lucide-react";
 import {
@@ -20,27 +12,45 @@ import ButtonWithTooltip from "@/components/button-with-tooltip";
 import { Button } from "@/components/ui/button";
 import TableDisplayBlock from "@/components/table-display-block";
 import { Response } from "@/components/ui/response";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import {
   Sources,
   SourcesTrigger,
   SourcesContent,
   Source,
 } from "@/components/ui/ai/sources";
+import { PdfPreviewSheet } from "@/features/datasets/components/pdf-preview-sheet";
+import { useDatasetStore } from "@/stores/dataset-store";
+import useOllamaChatStore from "@/stores/ollama-chat-store";
+import { toast } from "sonner";
 
+/**
+ * Erweiterte Message-Type, die Anhänge für Persistenz enthält
+ */
+interface ExtendedMessage extends Message {
+  experimental_attachments?: Array<{
+    contentType?: string;
+    url: string;
+  }>;
+}
+
+/**
+ * Props für die OllamaChatMessage-Komponente
+ */
 export type ChatMessageProps = {
   message: ExtendedMessage;
   isLast: boolean;
   isLoading: boolean | undefined;
-  reload: (chatRequestOptions?: ChatRequestOptions) => Promise<string | null | undefined>;
+  reload: (
+    chatRequestOptions?: ChatRequestOptions
+  ) => Promise<string | null | undefined>;
   isSecondLast?: boolean;
   isCogneeMode?: boolean;
 };
 
+/**
+ * Framer Motion Konfiguration für Nachricht-Animationen
+ */
 const MOTION_CONFIG = {
   initial: { opacity: 0, scale: 1, y: 20, x: 0 },
   animate: { opacity: 1, scale: 1, y: 0, x: 0 },
@@ -55,13 +65,45 @@ const MOTION_CONFIG = {
   },
 };
 
-function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false }: ChatMessageProps) {
+/**
+ * OllamaChatMessage - Komponente für einzelne Chat-Nachrichten
+ * 
+ * Diese Komponente rendert einzelne Chat-Nachrichten mit folgenden Funktionen:
+ * - Markdown-Rendering für Text
+ * - Code-Block-Highlighting
+ * - Tabellen-Anzeige
+ * - Bild-Anhänge mit Vorschau
+ * - Thinking-Process für DeepSeek R1 Modelle
+ * - Copy/Regenerate-Buttons
+ * - Sources-Anzeige für Cognee-Modus mit PDF-Vorschau
+ * 
+ * @param {ChatMessageProps} props - Props für die Nachricht
+ * @returns {JSX.Element} Renderte Chat-Nachricht mit allen Features
+ */
+function OllamaChatMessage({
+  message,
+  isLast,
+  reload,
+  isCogneeMode = false,
+}: ChatMessageProps) {
+  // Local States
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [isThinkCollapsed, setIsThinkCollapsed] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState<boolean>(false);
+  const [selectedPdfFile, setSelectedPdfFile] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const thinkContentRef = React.useRef<HTMLDivElement>(null);
 
-  // Extract "think" content from Deepseek R1 models and clean message (rest) content
+  // Zustand aus dem Store
+  const selectedDataset = useOllamaChatStore((state) => state.selectedDataset);
+  const { getDatasetById } = useDatasetStore();
+
+  /**
+   * Extrahiere "think" Content von DeepSeek R1 Modellen und bereinige Nachricht
+   */
   const { thinkContent, cleanContent } = useMemo(() => {
     const getThinkContent = (content: string) => {
       const match = content.match(/<think>([\s\S]*?)(?:<\/think>|$)/);
@@ -69,25 +111,39 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false }: Ch
     };
 
     return {
-      thinkContent: message.role === "assistant" ? getThinkContent(message.content) : null,
-      cleanContent: message.content.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, '').trim(),
+      thinkContent:
+        message.role === "assistant" ? getThinkContent(message.content) : null,
+      cleanContent: message.content
+        .replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "")
+        .trim(),
     };
   }, [message.content, message.role]);
 
-  // Auto-collapse think content when streaming starts (when cleanContent has content)
+  /**
+   * Auto-Collapse Think-Content, wenn Streaming startet
+   */
   React.useEffect(() => {
-    if (thinkContent && cleanContent && cleanContent.length > 0 && !isThinkCollapsed) {
+    if (
+      thinkContent &&
+      cleanContent &&
+      cleanContent.length > 0 &&
+      !isThinkCollapsed
+    ) {
       setIsThinkCollapsed(true);
     }
   }, [thinkContent, cleanContent, isThinkCollapsed]);
 
-  // Auto-scroll think content to bottom when content changes
+  /**
+   * Auto-Scroll Think-Content nach unten, wenn Content sich ändert
+   */
   React.useEffect(() => {
     if (thinkContentRef.current && thinkContent && !isThinkCollapsed) {
-      thinkContentRef.current.scrollTop = thinkContentRef.current.scrollHeight;
+      thinkContentRef.current.scrollTop =
+        thinkContentRef.current.scrollHeight;
     }
   }, [thinkContent, isThinkCollapsed]);
 
+  // Teile Content für Code-Block-Rendering
   const contentParts = useMemo(() => cleanContent.split("```"), [cleanContent]);
 
   // Function to convert markdown text to HTML
@@ -332,6 +388,31 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false }: Ch
 
   const sources = getSourcesFromMessage()
 
+  // Handler for source click (PDF files)
+  const handleSourceClick = (sourceName: string) => {
+    if (!selectedDataset) {
+      toast.error("Kein Dataset ausgewählt");
+      return;
+    }
+
+    const dataset = getDatasetById(selectedDataset);
+    if (!dataset) {
+      toast.error("Dataset nicht gefunden");
+      return;
+    }
+
+    // Find file by name (first match)
+    const file = dataset.files.find((f) => f.name === sourceName);
+    if (!file) {
+      toast.error("PDF-Datei nicht im Dataset gefunden");
+      return;
+    }
+
+    // Open PDF preview
+    setSelectedPdfFile({ id: file.id, name: file.name });
+    setPdfPreviewOpen(true);
+  };
+
   const renderActionButtons = () => (
     <div className="pt-2 flex gap-2 items-center text-muted-foreground">
       <ButtonWithTooltip side="bottom" toolTipText="Copy">
@@ -366,12 +447,14 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false }: Ch
           <Sources className="mb-0 text-muted-foreground text-xs">
             <SourcesTrigger count={sources.length} />
             <SourcesContent
-              className="absolute left-0 top-full mt-2 z-50 bg-popover border rounded-md p-2 shadow-md w-auto min-w-full max-w-[10vw]"
+              className="absolute left-0 top-full mt-2 z-50 bg-popover border rounded-md p-2 shadow-md w-auto min-w-full max-w-[50vw]"
+              datasetId={selectedDataset || undefined}
+              onSourceClick={handleSourceClick}
             >
               {sources.map((source, index) => (
                 <Source
                   key={index}
-                  href="#"
+                  href={source}
                   title={source}
                 />
               ))}
@@ -416,6 +499,17 @@ function OllamaChatMessage({ message, isLast, reload, isCogneeMode = false }: Ch
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* PDF Preview Sheet */}
+      {selectedPdfFile && selectedDataset && (
+        <PdfPreviewSheet
+          open={pdfPreviewOpen}
+          onOpenChange={setPdfPreviewOpen}
+          fileId={selectedPdfFile.id}
+          fileName={selectedPdfFile.name}
+          datasetId={selectedDataset}
+        />
+      )}
     </>
   );
 }

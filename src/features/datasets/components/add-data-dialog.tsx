@@ -45,7 +45,7 @@ interface UrlWithProgress {
 }
 
 export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogProps) {
-  const { uploadFileToDataset, addTextToDataset, addUrlToDataset } = useDatasetStore()
+  const { addBulkDataToDataset } = useDatasetStore()
   const [files, setFiles] = useState<FileWithProgress[]>([])
   const [texts, setTexts] = useState<TextWithProgress[]>([])
   const [urls, setUrls] = useState<UrlWithProgress[]>([])
@@ -116,16 +116,47 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
 
   const addUrl = () => {
     if (newUrl.trim()) {
-      try {
-        new URL(newUrl.trim()) // Validate URL
+      const trimmedUrl = newUrl.trim()
+      
+      // Validate different URL types
+      const isValidUrl = (() => {
+        // HTTP/HTTPS URLs
+        if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+          try {
+            new URL(trimmedUrl)
+            return true
+          } catch {
+            return false
+          }
+        }
+        
+        // GitHub URLs
+        if (trimmedUrl.startsWith('github.com') || trimmedUrl.startsWith('https://github.com/')) {
+          return true
+        }
+        
+        // S3 paths
+        if (trimmedUrl.startsWith('s3://')) {
+          return true
+        }
+        
+        // Local file paths
+        if (trimmedUrl.startsWith('/') || trimmedUrl.startsWith('file://') || trimmedUrl.startsWith('file:///')) {
+          return true
+        }
+        
+        return false
+      })()
+      
+      if (isValidUrl) {
         setUrls(prev => [...prev, {
-          url: newUrl.trim(),
+          url: trimmedUrl,
           progress: 0,
           status: 'pending'
         }])
         setNewUrl('')
-      } catch {
-        toast.error('Bitte geben Sie eine gültige URL ein')
+      } else {
+        toast.error('Bitte geben Sie eine gültige URL ein (HTTP/HTTPS, GitHub, S3 oder Dateipfad)')
       }
     }
   }
@@ -147,128 +178,73 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
     if (totalItems === 0) return
 
     setIsUploading(true)
-    let hasErrors = false
     
-    // Upload files
-    for (let i = 0; i < files.length; i++) {
-      const fileWithProgress = files[i]
-      
-      setFiles(prev => prev.map((f, idx) => 
-        idx === i ? { ...f, status: 'uploading' } : f
-      ))
+    // Mark all items as uploading
+    setFiles(prev => prev.map(f => ({ ...f, status: 'uploading', progress: 50 })))
+    setTexts(prev => prev.map(t => ({ ...t, status: 'uploading', progress: 50 })))
+    setUrls(prev => prev.map(u => ({ ...u, status: 'uploading', progress: 50 })))
 
-      try {
-        for (let progress = 0; progress <= 100; progress += 10) {
-          await new Promise(resolve => setTimeout(resolve, 100))
-          setFiles(prev => prev.map((f, idx) => 
-            idx === i ? { ...f, progress } : f
-          ))
-        }
+    try {
+      const fileArray = files.map(f => f.file)
+      const urlArray = urls.map(u => u.url)
+      const textArray = texts.map(t => t.text)
 
-        await uploadFileToDataset(datasetId, fileWithProgress.file, {
-          fileName: fileWithProgress.file.name,
-          fileType: fileWithProgress.file.type,
-          fileSize: fileWithProgress.file.size,
-        })
+      await addBulkDataToDataset(
+        datasetId,
+        fileArray.length > 0 ? fileArray : undefined,
+        urlArray.length > 0 ? urlArray : undefined,
+        textArray.length > 0 ? textArray : undefined
+      )
 
-        setFiles(prev => prev.map((f, idx) => 
-          idx === i ? { ...f, status: 'completed', progress: 100 } : f
-        ))
-      } catch (error) {
-        hasErrors = true
-        setFiles(prev => prev.map((f, idx) => 
-          idx === i ? { 
-            ...f, 
-            status: 'error', 
-            error: error instanceof Error ? error.message : 'Upload fehlgeschlagen'
-          } : f
-        ))
+      // Mark all as completed
+      setFiles(prev => prev.map(f => ({ ...f, status: 'completed', progress: 100 })))
+      setTexts(prev => prev.map(t => ({ ...t, status: 'completed', progress: 100 })))
+      setUrls(prev => prev.map(u => ({ ...u, status: 'completed', progress: 100 })))
+
+      setIsUploading(false)
+
+      // Show success toast with summary
+      const fileCount = files.length
+      const urlCount = urls.length
+      const textCount = texts.length
+      const parts: string[] = []
+      if (fileCount > 0) parts.push(`${fileCount} Datei${fileCount !== 1 ? 'en' : ''}`)
+      if (urlCount > 0) parts.push(`${urlCount} URL${urlCount !== 1 ? 's' : ''}`)
+      if (textCount > 0) parts.push(`${textCount} Text${textCount !== 1 ? 'e' : ''}`)
+
+      toast.success(`${parts.join(', ')} erfolgreich hinzugefügt`)
+
+      // Close dialog and reset state after short delay
+      setTimeout(() => {
+        onOpenChange(false)
+        setFiles([])
+        setTexts([])
+        setUrls([])
+      }, 500)
+
+    } catch (error) {
+      // Mark all as error
+      const errorMessage = error instanceof Error ? error.message : 'Upload fehlgeschlagen'
+      setFiles(prev => prev.map(f => ({ ...f, status: 'error', error: errorMessage })))
+      setTexts(prev => prev.map(t => ({ ...t, status: 'error', error: errorMessage })))
+      setUrls(prev => prev.map(u => ({ ...u, status: 'error', error: errorMessage })))
+
+      setIsUploading(false)
+
+      // Show error toast with specific error message
+      if (errorMessage.includes('400')) {
+        toast.error('Ungültige Daten - Bitte überprüfen Sie die Eingaben')
+      } else if (errorMessage.includes('403')) {
+        toast.error('Keine Berechtigung für dieses Dataset')
+      } else if (errorMessage.includes('409')) {
+        toast.error('Fehler während der Verarbeitung')
+      } else if (errorMessage.includes('Network') || errorMessage.includes('fetch')) {
+        toast.error('Verbindung zum Server fehlgeschlagen')
+      } else {
+        toast.error(errorMessage)
       }
     }
-
-    // Upload texts
-    for (let i = 0; i < texts.length; i++) {
-      const textWithProgress = texts[i]
-      
-      setTexts(prev => prev.map((t, idx) => 
-        idx === i ? { ...t, status: 'uploading' } : t
-      ))
-
-      try {
-        for (let progress = 0; progress <= 100; progress += 10) {
-          await new Promise(resolve => setTimeout(resolve, 100))
-          setTexts(prev => prev.map((t, idx) => 
-            idx === i ? { ...t, progress } : t
-          ))
-        }
-
-        await addTextToDataset(datasetId, textWithProgress.text)
-
-        setTexts(prev => prev.map((t, idx) => 
-          idx === i ? { ...t, status: 'completed', progress: 100 } : t
-        ))
-      } catch (error) {
-        hasErrors = true
-        setTexts(prev => prev.map((t, idx) => 
-          idx === i ? { 
-            ...t, 
-            status: 'error', 
-            error: error instanceof Error ? error.message : 'Upload fehlgeschlagen'
-          } : t
-        ))
-      }
-    }
-
-    // Upload URLs
-    for (let i = 0; i < urls.length; i++) {
-      const urlWithProgress = urls[i]
-      
-      setUrls(prev => prev.map((u, idx) => 
-        idx === i ? { ...u, status: 'uploading' } : u
-      ))
-
-      try {
-        for (let progress = 0; progress <= 100; progress += 10) {
-          await new Promise(resolve => setTimeout(resolve, 100))
-          setUrls(prev => prev.map((u, idx) => 
-            idx === i ? { ...u, progress } : u
-          ))
-        }
-
-        await addUrlToDataset(datasetId, urlWithProgress.url)
-
-        setUrls(prev => prev.map((u, idx) => 
-          idx === i ? { ...u, status: 'completed', progress: 100 } : u
-        ))
-      } catch (error) {
-        hasErrors = true
-        setUrls(prev => prev.map((u, idx) => 
-          idx === i ? { 
-            ...u, 
-            status: 'error', 
-            error: error instanceof Error ? error.message : 'Upload fehlgeschlagen'
-          } : u
-        ))
-      }
-    }
-
-    setIsUploading(false)
-    
-    // Auto-close dialog only if no errors occurred
-    if (!hasErrors) {
-      // Show success toast
-      toast.success(`${totalItems} Element${totalItems !== 1 ? 'e' : ''} erfolgreich hinzugefügt`)
-      
-      // Close dialog and reset state
-      onOpenChange(false)
-      setFiles([])
-      setTexts([])
-      setUrls([])
-    } else {
-      // Show error toast
-      toast.error('Einige Elemente konnten nicht hinzugefügt werden')
-    }
-  }, [files, texts, urls, datasetId, uploadFileToDataset, addTextToDataset, addUrlToDataset, onOpenChange])
+  }, [files, texts, urls, datasetId, addBulkDataToDataset, onOpenChange])
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'

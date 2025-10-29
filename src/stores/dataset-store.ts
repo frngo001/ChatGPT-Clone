@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { datasetsApi, convertApiResponseToDataset, convertDatasetToApiRequest, AddDataResponse, DataType } from '@/lib/api/datasets-api'
+import { datasetsApi, convertApiResponseToDataset, convertDatasetToApiRequest, convertDatasetToUpdateRequest, AddDataResponse, DataType } from '@/lib/api/datasets-api'
 import { cogneeApi } from '@/lib/api/cognee-api-client'
 import type { DatasetPermission } from '@/types/permissions'
 
@@ -48,6 +48,18 @@ interface DatasetStore {
   documentsCacheTimestamp: Record<string, number>
   isFetchingInBackground: Record<string, boolean>
   
+  // Filter fields
+  filterState: {
+    searchQuery: string
+    selectedTags: string[]
+    statusFilter: string | null
+    ownerFilter: string | null
+    createdFrom: string | null
+    createdTo: string | null
+    updatedFrom: string | null
+    updatedTo: string | null
+  }
+  
   // Actions
   createDataset: (name: string, description: string, tags?: string[]) => Promise<void>
   updateDataset: (id: string, updates: Partial<Omit<Dataset, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>
@@ -60,8 +72,10 @@ interface DatasetStore {
   addTextToDataset: (datasetId: string, text: string, metadata?: Record<string, any>) => Promise<void>
   addUrlToDataset: (datasetId: string, url: string, metadata?: Record<string, any>) => Promise<void>
   addUrlsToDataset: (datasetId: string, urls: string[], metadata?: Record<string, any>) => Promise<void>
+  addBulkDataToDataset: (datasetId: string, data?: File[], urls?: string[], texts?: string[], nodeSet?: string[]) => Promise<{ successful: number; failed: number }>
   removeFileFromDataset: (datasetId: string, fileId: string) => Promise<void>
   updateFileInDataset: (datasetId: string, fileId: string, updates: Partial<DatasetFile>) => Promise<void>
+  downloadDatasetFile: (datasetId: string, fileId: string, fileName: string) => Promise<void>
   
   // API actions
   fetchDatasets: () => Promise<void>
@@ -87,6 +101,10 @@ interface DatasetStore {
   // Permissions actions
   shareDatasetWithTenant: (datasetId: string, tenantId: string) => Promise<void>
   fetchDatasetPermissions: (datasetId: string) => Promise<DatasetPermission[]>
+  
+  // Filter actions
+  setFilterState: (filters: Partial<DatasetStore['filterState']>) => void
+  clearFilterState: () => void
 }
 
 // Example datasets are no longer needed as we fetch from API
@@ -103,6 +121,18 @@ export const useDatasetStore = create<DatasetStore>()(
       // Cache initialization
       documentsCacheTimestamp: {},
       isFetchingInBackground: {},
+      
+      // Filter state initialization
+      filterState: {
+        searchQuery: '',
+        selectedTags: [],
+        statusFilter: null,
+        ownerFilter: null,
+        createdFrom: null,
+        createdTo: null,
+        updatedFrom: null,
+        updatedTo: null,
+      },
 
       createDataset: async (name, description, tags = []) => {
         set({ isLoading: true, error: null })
@@ -127,17 +157,15 @@ export const useDatasetStore = create<DatasetStore>()(
       updateDataset: async (id, updates) => {
         set({ isLoading: true, error: null })
         try {
-          // For now, we'll update locally since the API doesn't have an update endpoint
-          // In a real implementation, you might need to call a PUT/PATCH endpoint
+          const apiRequest = convertDatasetToUpdateRequest(updates)
+          const apiResponse = await datasetsApi.updateDataset(id, apiRequest)
+          const updatedDataset = convertApiResponseToDataset(apiResponse)
+          
           set((state) => ({
             datasets: state.datasets.map((dataset) =>
-              dataset.id === id
-                ? { ...dataset, ...updates, updatedAt: new Date() }
-                : dataset
+              dataset.id === id ? updatedDataset : dataset
             ),
-            currentDataset: state.currentDataset?.id === id
-              ? { ...state.currentDataset, ...updates, updatedAt: new Date() }
-              : state.currentDataset,
+            currentDataset: state.currentDataset?.id === id ? updatedDataset : state.currentDataset,
             isLoading: false,
           }))
         } catch (error) {
@@ -445,6 +473,110 @@ export const useDatasetStore = create<DatasetStore>()(
         }
       },
 
+      addBulkDataToDataset: async (datasetId, data, urls, texts, nodeSet) => {
+        set({ isLoading: true, error: null })
+        
+        const totalItems = (data?.length || 0) + (urls?.length || 0) + (texts?.length || 0)
+        if (totalItems === 0) {
+          set({ isLoading: false, error: 'Keine Daten zum Hochladen' })
+          return { successful: 0, failed: 0 }
+        }
+
+        try {
+          const apiResponse: AddDataResponse = await datasetsApi.addBulkDataToDataset({
+            data: data,
+            urls: urls,
+            text_data: texts,
+            datasetId,
+            node_set: nodeSet,
+          })
+
+          if (apiResponse.status !== 'PipelineRunCompleted') {
+            set({ isLoading: false, error: `Upload fehlgeschlagen mit Status: ${apiResponse.status}` })
+            return { successful: 0, failed: totalItems }
+          }
+
+          // Create file entries from data_ingestion_info
+          const newFiles: DatasetFile[] = apiResponse.data_ingestion_info.map((info, index) => {
+            // Try to match with original files/urls/texts
+            let name = `Item ${index + 1}`
+            let type = 'unknown'
+            let size = 0
+            let extension = ''
+            let dataType: DataType = 'file'
+
+            // Determine which type based on the order
+            if (data && index < data.length) {
+              name = data[index].name
+              type = data[index].type
+              size = data[index].size
+              extension = data[index].name.split('.').pop() || 'unknown'
+              dataType = 'file'
+            } else if (urls && index < (data?.length || 0) + urls.length) {
+              const urlIndex = index - (data?.length || 0)
+              const url = urls[urlIndex] || ''
+              name = `URL - ${new URL(url).hostname}`
+              type = 'text/uri-list'
+              size = url.length
+              extension = 'url'
+              dataType = 'url'
+            } else if (texts) {
+              const textIndex = index - (data?.length || 0) - (urls?.length || 0)
+              name = `Text Input - ${new Date().toLocaleString()}`
+              type = 'text/plain'
+              size = texts[textIndex]?.length || 0
+              extension = 'txt'
+              dataType = 'text'
+            }
+
+            return {
+              id: info.data_id,
+              name,
+              type,
+              size,
+              uploadDate: new Date(),
+              extension,
+              dataType,
+            }
+          })
+
+          set((state) => ({
+            datasets: state.datasets.map((dataset) =>
+              dataset.id === datasetId
+                ? {
+                    ...dataset,
+                    files: [...dataset.files, ...newFiles],
+                    updatedAt: new Date(),
+                    processingStatus: 'DATASET_PROCESSING_INITIATED',
+                  }
+                : dataset
+            ),
+            currentDataset: state.currentDataset?.id === datasetId
+              ? {
+                  ...state.currentDataset,
+                  files: [...state.currentDataset.files, ...newFiles],
+                  updatedAt: new Date(),
+                  processingStatus: 'DATASET_PROCESSING_INITIATED',
+                }
+              : state.currentDataset,
+            isLoading: false,
+          }))
+          
+          // Invalidate cache after successful upload
+          get().invalidateDatasetCache(datasetId)
+          
+          return { successful: totalItems, failed: 0 }
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to add bulk data to dataset',
+            isLoading: false 
+          })
+          // Return information about failure
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          throw new Error(`Bulk upload failed: ${errorMessage}`)
+        }
+      },
+
       removeFileFromDataset: async (datasetId, fileId) => {
         set({ isLoading: true, error: null })
         try {
@@ -514,6 +646,43 @@ export const useDatasetStore = create<DatasetStore>()(
             isLoading: false 
           })
           throw error
+        }
+      },
+
+      downloadDatasetFile: async (datasetId, fileId, fileName) => {
+        try {
+          // Fetch the raw data as Blob
+          const blob = await datasetsApi.getRawData(datasetId, fileId)
+          
+          // Create a temporary URL for the blob
+          const url = URL.createObjectURL(blob)
+          
+          // Create a temporary anchor element to trigger download
+          const link = document.createElement('a')
+          link.href = url
+          link.download = fileName
+          document.body.appendChild(link)
+          link.click()
+          
+          // Cleanup
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+        } catch (error) {
+          // Handle specific error cases
+          if (error instanceof Error) {
+            if (error.message.includes('404')) {
+              throw new Error('Datei nicht gefunden')
+            } else if (error.message.includes('403')) {
+              throw new Error('Keine Berechtigung zum Herunterladen')
+            } else if (error.message.includes('500')) {
+              throw new Error('Serverfehler beim Herunterladen')
+            } else if (error.message.includes('Failed to fetch') || error.message.includes('Network')) {
+              throw new Error('Verbindungsfehler beim Herunterladen')
+            }
+          }
+          
+          // Generic error
+          throw new Error('Fehler beim Herunterladen der Datei')
         }
       },
 
@@ -650,11 +819,11 @@ export const useDatasetStore = create<DatasetStore>()(
             return {
               id: file.id,
               name: file.name,
-              type: file.mimeType,
+              type: file.originalMimeType,
               size: 0, // Size not provided in new API format
               uploadDate,
               content: undefined, // Content not provided in new API format
-              extension: file.extension,
+              extension: file.originalExtension,
             }
           })
 
@@ -958,6 +1127,31 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
         // For now, return empty array as placeholder
         return []
       },
+      
+      // Filter actions
+      setFilterState: (filters) => {
+        set((state) => ({
+          filterState: {
+            ...state.filterState,
+            ...filters,
+          }
+        }))
+      },
+      
+      clearFilterState: () => {
+        set({
+          filterState: {
+            searchQuery: '',
+            selectedTags: [],
+            statusFilter: null,
+            ownerFilter: null,
+            createdFrom: null,
+            createdTo: null,
+            updatedFrom: null,
+            updatedTo: null,
+          }
+        })
+      },
     }),
     {
       name: 'dataset-store',
@@ -975,6 +1169,8 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
         } : null,
         // Persist cache timestamps but not background fetch state
         documentsCacheTimestamp: state.documentsCacheTimestamp,
+        // Persist filter state
+        filterState: state.filterState,
       }),
     }
   )

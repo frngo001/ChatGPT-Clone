@@ -13,13 +13,17 @@ import { WifiOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cogneeApi } from "@/lib/api/cognee-api-client";
 
-// Type definition for Attachment
+/**
+ * Typ-Definition für Anhänge
+ */
 type Attachment = {
   contentType?: string;
   url: string;
 };
 
-// Extended Message type that includes attachments for persistence
+/**
+ * Erweiterte Message-Type, die Anhänge für Persistenz enthält
+ */
 interface ExtendedMessage extends Message {
   experimental_attachments?: Array<{
     contentType?: string;
@@ -27,32 +31,62 @@ interface ExtendedMessage extends Message {
   }>;
 }
 
+/**
+ * Props für die OllamaChat-Komponente
+ */
 export interface ChatProps {
   id: string;
   initialMessages: ExtendedMessage[] | [];
 }
 
-// Helper function to format message history for Cognee
+/**
+ * Hilfs-Funktion zum Formatieren der Nachrichtenhistorie für Cognee
+ * 
+ * @param {Message[]} messages - Array von Nachrichten
+ * @returns {string} Formatierte Nachrichtenhistorie
+ */
 const formatMessageHistoryForCognee = (messages: Message[]): string => {
   return messages
     .map((message) => {
-      const role = message.role === 'user' ? 'User' : 'AI';
+      const role = message.role === "user" ? "User" : "AI";
       return `${role}: ${message.content}`;
     })
-    .join('\n\n');
+    .join("\n\n");
 };
 
+/**
+ * OllamaChat - Haupt-Komponente für den Chat mit Ollama, DeepSeek und Cognee
+ * 
+ * Diese Komponente ist das Herzstück des Chat-Systems und verwaltet:
+ * - Zwei Chat-Modi: General (Ollama/DeepSeek) und Cognee (RAG mit Datasets)
+ * - Nachrichtenpersistenz über den Store
+ * - Fehlerbehandlung für verschiedene API-Fehler
+ * - Streaming-Antworten für LLM-Chats
+ * - Bild-Upload für visuelle Eingaben
+ * - Web-Suche (optional für DeepSeek)
+ * 
+ * @param {ChatProps} props - Props für den Chat
+ * @param {string} props.id - Eindeutige Chat-ID
+ * @param {ExtendedMessage[]} props.initialMessages - Initiale Nachrichten
+ * 
+ * @returns {JSX.Element} Vollständige Chat-Interface mit Topbar, Liste und Bottom Bar
+ */
 export default function OllamaChat({ initialMessages, id }: ChatProps) {
+  // Navigation and error state
   const navigate = useNavigate();
   const [apiError, setApiError] = React.useState<string | null>(null);
-  
+
+  // Get state from store for images and model
   const base64Images = useOllamaChatStore((state) => state.base64Images);
   const setBase64Images = useOllamaChatStore((state) => state.setBase64Images);
   const selectedModel = useOllamaChatStore((state) => state.selectedModel);
   const selectedProvider = useOllamaChatStore((state) => state.selectedProvider);
   const saveMessages = useOllamaChatStore((state) => state.saveMessages);
   const getMessagesById = useOllamaChatStore((state) => state.getMessagesById);
-  const setSelectedDataset = useOllamaChatStore((state) => state.setSelectedDataset);
+  const setSelectedDataset = useOllamaChatStore(
+    (state) => state.setSelectedDataset
+  );
+
   // Chat settings from store
   const temperature = useOllamaChatStore((state) => state.temperature);
   const topP = useOllamaChatStore((state) => state.topP);
@@ -60,10 +94,20 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   const batchSize = useOllamaChatStore((state) => state.batchSize);
   const throttleDelay = useOllamaChatStore((state) => state.throttleDelay);
   const systemPrompt = useOllamaChatStore((state) => state.systemPrompt);
+
   // Cognee settings from store
   const chatMode = useOllamaChatStore((state) => state.chatMode);
   const selectedDataset = useOllamaChatStore((state) => state.selectedDataset);
+
+  // Web search settings from store
+  const webSearchEnabled = useOllamaChatStore(
+    (state) => state.webSearchEnabled
+  );
   
+  /**
+   * useChat Hook für AI SDK Integration
+   * Verwaltet alle Chat-Operationen (Streaming, Senden, Stop, etc.)
+   */
   const {
     messages,
     input,
@@ -77,71 +121,102 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   } = useChat({
     id,
     initialMessages,
-    api: chatMode === 'cognee' ? "/api/cognee/search" : (selectedProvider === 'ollama' ? "/api/ollama/chat" : "/api/deepseek/chat"),
+    // Wähle API-Endpunkt basierend auf Chat-Modus und Provider
+    api:
+      chatMode === "cognee"
+        ? "/api/cognee/search"
+        : selectedProvider === "ollama"
+          ? "/api/ollama/chat"
+          : "/api/deepseek/chat",
     fetch: async (url, options) => {
-      // Add authorization header for Cognee requests
-      if (chatMode === 'cognee') {
+      // Füge Authorization-Header für Cognee-Anfragen hinzu
+      if (chatMode === "cognee") {
         const token = useAuthStore.getState().auth.accessToken;
         if (token) {
           options = {
             ...options,
             headers: {
               ...options?.headers,
-              'Authorization': `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
             },
           };
         }
       }
-      
+
       return fetch(url, options);
     },
     onResponse: (response) => {
       if (response) {
         setLoadingSubmit(false);
         setApiError(null); // Clear error on successful response
-        
       }
     },
     onFinish: (message) => {
+      // Save message to store
       const savedMessages = getMessagesById(id);
       saveMessages(id, [...savedMessages, message as ExtendedMessage]);
       setLoadingSubmit(false);
       setApiError(null); // Clear error on successful completion
-      
-      
+
+      // Navigate to chat page
       navigate({ to: `/chat/${id}` });
     },
     onError: (error) => {
       setLoadingSubmit(false);
       console.error(error.message);
       console.error(error);
-      
-      
+
       // Determine error type and show appropriate message
-      let errorMessage = "Ein unbekannter Fehler ist aufgetreten.";
-      
+      let errorMessage = "An unknown error occurred.";
+
       // Handle Cognee-specific errors
-      if (error.message.includes("Cognee API Error: 409") || 
-          error.message.includes("NoDataError") ||
-          error.message.includes("No data found in the system")) {
-        errorMessage = "Dataset-Fehler: Das ausgewählte Dataset enthält keine verarbeiteten Daten. Bitte fügen Sie Dokumente hinzu und verarbeiten Sie diese zuerst.";
-      } else if (error.message.includes("Failed to fetch") || 
-          error.message.includes("NetworkError") ||
-          error.message.includes("Connection refused") ||
-          error.message.includes("ECONNREFUSED")) {
-        errorMessage = "Verbindungsproblem: Der Ollama-Server ist nicht erreichbar. Bitte überprüfen Sie, ob der Server läuft.";
-      } else if (error.message.includes("Internal Server Error") ||
-                 error.message.includes("500") ||
-                 error.message.includes("llama runner process has terminated")) {
-        errorMessage = "Server-Fehler: Der Ollama-Server hat ein Problem. Bitte starten Sie den Server neu oder überprüfen Sie die Modell-Konfiguration.";
-      } else if (error.message.includes("timeout") || 
-                 error.message.includes("TIMEOUT")) {
-        errorMessage = "Zeitüberschreitung: Die Anfrage dauert zu lange. Bitte versuchen Sie es erneut.";
-      } else if (error.message.includes("model") && 
-                 error.message.includes("not supported")) {
-        errorMessage = "Modell-Fehler: Das gewählte Modell wird nicht unterstützt. Bitte wählen Sie ein anderes Modell.";
+      if (
+        error.message.includes("Cognee API Error: 409") ||
+        error.message.includes("NoDataError") ||
+        error.message.includes("No data found in the system")
+      ) {
+        errorMessage =
+          "Dataset-Fehler: Das ausgewählte Dataset enthält keine verarbeiteten Daten. Bitte fügen Sie Dokumente hinzu und verarbeiten Sie diese zuerst.";
+      } else if (
+        error.message.includes("Web Search Error") ||
+        error.message.includes("DuckDuckGo")
+      ) {
+        errorMessage =
+          "Web-Suche fehlgeschlagen: Die Web-Suche konnte nicht ausgeführt werden. Versuchen Sie es später erneut oder deaktivieren Sie die Web-Suche.";
+        toast.warning("Web-Suche Fehler", {
+          description:
+            "Die Web-Suche konnte nicht durchgeführt werden. Der Chat wurde ohne Web-Suchergebnisse fortgesetzt.",
+          duration: 6000,
+        });
+      } else if (
+        error.message.includes("Failed to fetch") ||
+        error.message.includes("NetworkError") ||
+        error.message.includes("Connection refused") ||
+        error.message.includes("ECONNREFUSED")
+      ) {
+        errorMessage =
+          "Verbindungsproblem: Der Ollama-Server ist nicht erreichbar. Bitte überprüfen Sie, ob der Server läuft.";
+      } else if (
+        error.message.includes("Internal Server Error") ||
+        error.message.includes("500") ||
+        error.message.includes("llama runner process has terminated")
+      ) {
+        errorMessage =
+          "Server-Fehler: Der Ollama-Server hat ein Problem. Bitte starten Sie den Server neu oder überprüfen Sie die Modell-Konfiguration.";
+      } else if (
+        error.message.includes("timeout") ||
+        error.message.includes("TIMEOUT")
+      ) {
+        errorMessage =
+          "Zeitüberschreitung: Die Anfrage dauert zu lange. Bitte versuchen Sie es erneut.";
+      } else if (
+        error.message.includes("model") &&
+        error.message.includes("not supported")
+      ) {
+        errorMessage =
+          "Modell-Fehler: Das gewählte Modell wird nicht unterstützt. Bitte wählen Sie ein anderes Modell.";
       }
-      
+
       setApiError(errorMessage);
       toast.error("Chat-Fehler", {
         description: errorMessage,
@@ -149,7 +224,8 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       });
     },
   });
-  
+
+  // Loading state for submission
   const [loadingSubmit, setLoadingSubmit] = React.useState(false);
 
   // Update messages when initialMessages or id changes
@@ -170,12 +246,12 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
 
     // Validation based on chat mode
     if (chatMode === 'general' && !selectedModel) {
-      toast.error("Please select a model");
+      toast.error("Bitte wählen Sie ein Modell aus");
       return;
     }
     
     if (chatMode === 'cognee' && !selectedDataset) {
-      toast.error("Please select a dataset");
+      toast.error("Bitte wählen Sie ein Dataset aus");
       return;
     }
 
@@ -236,6 +312,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
           batchSize: batchSize,
           throttleDelay: throttleDelay,
         },
+        ...(chatMode === 'general' && selectedProvider === 'deepseek' && { webSearchEnabled }),
       },
       ...(base64Images && {
         data: {
@@ -345,7 +422,8 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
                     maxTokens: 1000000,
                     batchSize: 80,
                     throttleDelay: 80,
-                  }
+                  },
+                  ...(chatMode === 'general' && { webSearchEnabled }),
                 },
               };
 

@@ -5,6 +5,7 @@ import type { HTMLAttributes } from "react"
 import { memo, useMemo } from "react"
 import ReactMarkdown, { type Options } from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { ExternalLink } from "lucide-react"
 
 /**
  * Simplified and optimized markdown parser that handles incomplete tokens during streaming.
@@ -95,27 +96,27 @@ const AIResponse = memo(
         </h1>
       ),
       h2: ({ children, ...props }) => (
-        <h2 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight mt-3" {...props}>
+        <h2 className="scroll-m-20 border-b pb-2 text-lg font-semibold tracking-tight mt-3" {...props}>
           {children}
         </h2>
       ),
       h3: ({ children, ...props }) => (
-        <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight mt-3" {...props}>
+        <h3 className="scroll-m-20 text-base font-semibold tracking-tight mt-3" {...props}>
           {children}
         </h3>
       ),
       h4: ({ children, ...props }) => (
-        <h4 className="scroll-m-20 text-xl font-semibold tracking-tight mt-3" {...props}>
+        <h4 className="scroll-m-20 text-sm font-semibold tracking-tight mt-3" {...props}>
           {children}
         </h4>
       ),
       h5: ({ children, ...props }) => (
-        <h5 className="scroll-m-20 text-lg font-semibold tracking-tight mt-2" {...props}>
+        <h5 className="scroll-m-20 text-xs font-semibold tracking-tight mt-2" {...props}>
           {children}
         </h5>
       ),
       h6: ({ children, ...props }) => (
-        <h6 className="scroll-m-20 text-base font-semibold tracking-tight mt-2" {...props}>
+        <h6 className="scroll-m-20 text-xs font-semibold tracking-tight mt-2" {...props}>
           {children}
         </h6>
       ),
@@ -140,7 +141,7 @@ const AIResponse = memo(
         </li>
       ),
       blockquote: ({ children, ...props }) => (
-        <blockquote className="mt-6 border-l-2 pl-6 italic" {...props}>
+        <blockquote className="mt-6 border-l-4 pl-6" {...props}>
           {children}
         </blockquote>
       ),
@@ -153,13 +154,14 @@ const AIResponse = memo(
         }
         return (
           <a
-            className="font-medium underline underline-offset-4"
+            className="inline-flex items-center gap-1 font-medium underline decoration-dotted underline-offset-2"
             href={href}
             target="_blank"
             rel="noopener noreferrer"
             {...props}
           >
             {children}
+            <ExternalLink className="h-3 w-3 flex-shrink-0" />
           </a>
         )
       },
@@ -178,9 +180,9 @@ const AIResponse = memo(
           {children}
         </del>
       ),
-      // Render inline code as plain text (no styling)
+      // Render inline code with proper styling
       code: ({ children, ...props }) => (
-        <span {...props}>{children}</span>
+        <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>{children}</code>
       ),
       // Render code blocks as plain text (no styling)
       pre: ({ children, ...props }) => (

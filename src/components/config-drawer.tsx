@@ -146,7 +146,7 @@ function RadioGroupItem({
   return (
     <Item
       value={item.value}
-      className={cn('group outline-none', 'transition duration-200 ease-in')}
+      className={cn('group outline-none', 'transition duration-[50ms] ease-in')}
       aria-label={`Select ${item.label.toLowerCase()}`}
       aria-describedby={`${item.value}-description`}
     >

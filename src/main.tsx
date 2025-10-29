@@ -50,7 +50,7 @@ const queryClient = new QueryClient({
 
         if (error instanceof AxiosError) {
           if (error.response?.status === 304) {
-            toast.error('Content not modified!')
+            toast.error('Inhalt nicht geändert!')
           }
         }
       },
@@ -61,7 +61,7 @@ const queryClient = new QueryClient({
       if (error instanceof AxiosError) {
         // Handle authentication errors
         if (error.response?.status === 401) {
-          toast.error('Session expired!')
+          toast.error('Sitzung abgelaufen!')
           useAuthStore.getState().auth.reset()
           const redirect = `${router.history.location.href}`
           router.navigate({ to: '/login', search: { redirect } })
@@ -69,7 +69,7 @@ const queryClient = new QueryClient({
         
         // Handle server errors
         if (error.response?.status === 500) {
-          toast.error('Internal Server Error!')
+          toast.error('Interner Server-Fehler!')
           router.navigate({ to: '/500' })
         }
         

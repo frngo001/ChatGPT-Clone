@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Cross2Icon,
-  StopIcon,
-} from "@radix-ui/react-icons";
+import { Cross2Icon, StopIcon } from "@radix-ui/react-icons";
 import { Mic, CircleArrowUp, X, ChevronDown } from "lucide-react";
+import { GlobeAmericasSolidIcon } from "@/components/ui/icons/heroicons-globe-americas-solid";
 import useSpeechToText from "@/hooks/useSpeechRecognition";
 import MultiImagePicker from "@/components/image-embedder";
 import useOllamaChatStore from "@/stores/ollama-chat-store";
@@ -17,7 +15,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ButtonWithTooltip from "@/components/button-with-tooltip";
 
+/**
+ * Props for the OllamaChatBottombar component
+ */
 interface ChatBottombarProps {
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   handleSubmit: (
@@ -30,6 +32,21 @@ interface ChatBottombarProps {
   input: string;
 }
 
+/**
+ * OllamaChatBottombar - Bottom bar for chat input with extended features
+ * 
+ * This component provides the input bar for the chat with the following functions:
+ * - Text input with multi-line support
+ * - Speech-to-text recognition
+ * - Multiple image upload
+ * - Chat mode switch (General/Cognee)
+ * - Web search (optional for General mode)
+ * - Image preview with remove function
+ * - Auto-hide for error messages
+ * 
+ * @param {ChatBottombarProps} props - Props for the bottom bar
+ * @returns {JSX.Element} Bottom bar component with all input functions
+ */
 export default function OllamaChatBottombar({
   input,
   handleInputChange,
@@ -38,16 +55,26 @@ export default function OllamaChatBottombar({
   stop,
   setInput,
 }: ChatBottombarProps) {
+  // Reference for the input field
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // Get state from store
   const base64Images = useOllamaChatStore((state) => state.base64Images);
   const setBase64Images = useOllamaChatStore((state) => state.setBase64Images);
   const selectedModel = useOllamaChatStore((state) => state.selectedModel);
   const chatMode = useOllamaChatStore((state) => state.chatMode);
   const setChatMode = useOllamaChatStore((state) => state.setChatMode);
   const selectedDataset = useOllamaChatStore((state) => state.selectedDataset);
-  
+  const webSearchEnabled = useOllamaChatStore((state) => state.webSearchEnabled);
+  const setWebSearchEnabled = useOllamaChatStore((state) => state.setWebSearchEnabled);
+
+  // Local state for error display
   const [showError, setShowError] = useState(false);
 
+  /**
+   * Handler for keyboard events
+   * Sends message on Enter (without Shift)
+   */
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
@@ -55,36 +82,51 @@ export default function OllamaChatBottombar({
     }
   };
 
+  // Speech-to-text hook
   const { isListening, transcript, error, startListening, stopListening } =
     useSpeechToText({ continuous: true, lang: "de-DE" });
 
+  /**
+   * Toggle for speech recording
+   */
   const listen = () => {
     isListening ? stopVoiceInput() : startListening();
   };
 
+  /**
+   * Ends speech recording and sets content into input field
+   */
   const stopVoiceInput = () => {
     setInput && setInput(transcript.length ? transcript : "");
     stopListening();
   };
 
+  /**
+   * Handler for microphone click
+   */
   const handleListenClick = () => {
     listen();
   };
 
-  // Auto-hide error after 5 seconds
+  /**
+   * Auto-hide for error messages after 5 seconds
+   */
   useEffect(() => {
     if (error) {
       setShowError(true);
       const timer = setTimeout(() => {
         setShowError(false);
       }, 5000);
-      
+
       return () => clearTimeout(timer);
     } else {
       setShowError(false);
     }
   }, [error]);
 
+  /**
+   * Auto-focus on input field
+   */
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
@@ -92,7 +134,8 @@ export default function OllamaChatBottombar({
   }, [inputRef]);
 
   return (
-    <div className="px-4 pb-7 flex justify-between w-full items-center relative ">
+    <div className="px-4 pb-7 flex justify-between w-full items-center relative">
+      {/* Error banner with animation */}
       <AnimatePresence>
         {showError && error && (
           <motion.div
@@ -114,11 +157,14 @@ export default function OllamaChatBottombar({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Main form */}
       <AnimatePresence initial={false}>
         <form
           onSubmit={handleSubmit}
-          className="w-full items-center flex flex-col  bg-accent dark:bg-secondary rounded-lg "
+          className="w-full items-center flex flex-col bg-accent dark:bg-secondary rounded-lg"
         >
+          {/* Chat input field */}
           <ChatInput
             value={isListening ? (transcript.length ? transcript : "") : input}
             ref={inputRef}
@@ -129,9 +175,10 @@ export default function OllamaChatBottombar({
             className="max-h-40 px-6 pt-6 border-0 shadow-none bg-accent rounded-lg text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed dark:bg-secondary"
           />
 
+          {/* Button area */}
           <div className="flex w-full items-center p-2">
             {isLoading ? (
-              // Loading state
+              /* Loading state */
               <div className="flex w-full justify-between">
                 <MultiImagePicker disabled onImagesPick={setBase64Images} />
                 <div>
@@ -159,13 +206,16 @@ export default function OllamaChatBottombar({
                 </div>
               </div>
             ) : (
-              // Default state
+              /* Default state */
               <div className="flex w-full justify-between">
+                {/* Left side: Image picker and mode selection */}
                 <div className="flex items-center gap-2">
+                  {/* Image upload */}
                   <MultiImagePicker
                     disabled={isLoading}
                     onImagesPick={setBase64Images}
                   />
+                  {/* Chat mode dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -174,68 +224,115 @@ export default function OllamaChatBottombar({
                         className="h-8 px-3 text-xs"
                         disabled={isLoading}
                       >
-                        {chatMode === 'general' ? 'General' : 'Cognee'}
+                        {chatMode === "general" ? "General" : "Cognee"}
                         <ChevronDown className="ml-1 h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
                       <DropdownMenuItem
-                        onClick={() => setChatMode('general')}
-                        className={chatMode === 'general' ? 'bg-accent' : ''}
+                        onClick={() => setChatMode("general")}
+                        className={chatMode === "general" ? "bg-accent" : ""}
                       >
                         General Chat
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => setChatMode('cognee')}
-                        className={chatMode === 'cognee' ? 'bg-accent' : ''}
+                        onClick={() => setChatMode("cognee")}
+                        className={chatMode === "cognee" ? "bg-accent" : ""}
                       >
                         Cognee
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
+                {/* Right side: action buttons */}
                 <div>
                   {/* Microphone button with animation when listening */}
-                  <Button
-                    className={`shrink-0 rounded-full ${
+                  <ButtonWithTooltip
+                    toolTipText={
                       isListening
-                        ? "relative bg-blue-500/30 hover:bg-blue-400/30"
-                        : ""
-                    }`}
-                    variant="ghost"
-                    size="icon"
-                    type="button"
-                    onClick={handleListenClick}
-                    disabled={isLoading}
+                        ? "Sprachaufnahme stoppen"
+                        : "Sprachaufnahme"
+                    }
+                    side="top"
                   >
-                    <Mic className="size-6" />
-                    {isListening && (
-                      <span className="animate-pulse absolute h-[120%] w-[120%] rounded-full bg-blue-500/30" />
-                    )}
-                  </Button>
+                    <Button
+                      className={`shrink-0 rounded-full ${
+                        isListening
+                          ? "relative bg-blue-500/30 hover:bg-blue-400/30"
+                          : ""
+                      }`}
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      onClick={handleListenClick}
+                      disabled={isLoading}
+                    >
+                      <Mic className="size-6" />
+                      {isListening && (
+                        <span className="animate-pulse absolute h-[120%] w-[120%] rounded-full bg-blue-500/30" />
+                      )}
+                    </Button>
+                  </ButtonWithTooltip>
+
+                  {/* Web search button - only visible in general mode */}
+                  {chatMode === "general" && (
+                    <ButtonWithTooltip
+                      toolTipText={
+                        webSearchEnabled
+                          ? "Web-Suche deaktivieren"
+                          : "Web-Suche aktivieren"
+                      }
+                      side="top"
+                    >
+                      <Button
+                        className={`shrink-0 rounded-full ${
+                          webSearchEnabled
+                            ? "bg-primary/30 hover:bg-primary/40"
+                            : ""
+                        }`}
+                        variant="ghost"
+                        size="icon"
+                        type="button"
+                        onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                        disabled={isLoading}
+                      >
+                        <GlobeAmericasSolidIcon
+                          className={`size-6 ${
+                            webSearchEnabled
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          }`}
+                        />
+                      </Button>
+                    </ButtonWithTooltip>
+                  )}
 
                   {/* Send button */}
-                  <Button
-                    className="shrink-0 rounded-full"
-                    variant="ghost"
-                    size="icon"
-                    type="submit"
-                    disabled={
-                      isLoading ||
-                      !input?.trim() ||
-                      isListening ||
-                      (chatMode === 'general' && !selectedModel) ||
-                      (chatMode === 'cognee' && !selectedDataset)
-                    }
-                  >
-                    <CircleArrowUp className="size-6" />
-                  </Button>
+                  <ButtonWithTooltip toolTipText="Send message" side="top">
+                    <Button
+                      className="shrink-0 rounded-full"
+                      variant="ghost"
+                      size="icon"
+                      type="submit"
+                      disabled={
+                        isLoading ||
+                        !input?.trim() ||
+                        isListening ||
+                        (chatMode === "general" && !selectedModel) ||
+                        (chatMode === "cognee" && !selectedDataset)
+                      }
+                    >
+                      <CircleArrowUp className="size-6" />
+                    </Button>
+                  </ButtonWithTooltip>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Image preview with remove button */}
           {base64Images && (
-            <div className="w-full flex px-2 pb-2 gap-2 ">
+            <div className="w-full flex px-2 pb-2 gap-2">
               {base64Images.map((image, index) => {
                 return (
                   <div
@@ -251,6 +348,7 @@ export default function OllamaChatBottombar({
                         alt=""
                       />
                     </div>
+                    {/* Remove button */}
                     <Button
                       onClick={() => {
                         const updatedImages = (prevImages: string[]) =>
@@ -258,7 +356,7 @@ export default function OllamaChatBottombar({
                         setBase64Images(updatedImages(base64Images));
                       }}
                       size="icon"
-                      className="absolute -top-1.5 -right-1.5 text-white cursor-pointer  bg-red-500 hover:bg-red-600 w-4 h-4 rounded-full flex items-center justify-center"
+                      className="absolute -top-1.5 -right-1.5 text-white cursor-pointer bg-red-500 hover:bg-red-600 w-4 h-4 rounded-full flex items-center justify-center"
                     >
                       <Cross2Icon className="w-3 h-3" />
                     </Button>

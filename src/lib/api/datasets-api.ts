@@ -1,17 +1,66 @@
-// API service for datasets management
-// Connects to the Cognee API at http://imeso-ki-02:8000
+/**
+ * ============================================================================
+ * DATASET MANAGEMENT API SERVICE
+ * ============================================================================
+ * 
+ * @file datasets-api.ts
+ * @description 
+ * Vollständige API-Schnittstelle für Dataset-Verwaltung im ChatGPT-Clone Projekt.
+ * Bietet CRUD-Operationen für Datasets, Daten-Upload, Cognify-Verarbeitung
+ * und Graph-Visualisierung.
+ * 
+ * Verbindet mit Cognee API Server (Standard: http://imeso-ki-02:8000)
+ * 
+ * @author ChatGPT-Clone Team
+ * @since 1.0.0
+ */
 
 import { useAuthStore } from '@/stores/auth-store'
 
+/**
+ * Basis URL für alle API-Requests
+ */
 const API_BASE_URL = '/api/v1'
 
-// Types for API requests and responses
+/**
+ * ============================================================================
+ * TYPE DEFINITIONS
+ * ============================================================================
+ */
+
+/**
+ * Request für Dataset-Erstellung
+ * 
+ * @interface CreateDatasetRequest
+ */
 export interface CreateDatasetRequest {
+  /** Name des Datasets (wird automatisch sanitized) */
   name: string
+  /** Beschreibung des Datasets */
   description: string
+  /** Optionale Tags für Kategorisierung */
   tags?: string[]
 }
 
+/**
+ * Request für Dataset-Updates
+ * 
+ * @interface UpdateDatasetRequest
+ */
+export interface UpdateDatasetRequest {
+  /** Neuer Name (optional) */
+  name?: string
+  /** Neue Beschreibung (optional) */
+  description?: string
+  /** Neue Tags (optional) */
+  tags?: string[]
+}
+
+/**
+ * Response für Dataset-Informationen
+ * 
+ * @interface DatasetResponse
+ */
 export interface DatasetResponse {
   id: string
   name: string
@@ -28,9 +77,10 @@ export interface DatasetFileResponse {
   name: string
   createdAt: string
   updatedAt: string
-  extension: string
-  mimeType: string
+  originalExtension: string
+  originalMimeType: string
   datasetId: string
+  rawDataLocation?: string
 }
 
 // New interface for the actual API response
@@ -65,6 +115,15 @@ export interface AddDataRequest {
   metadata?: Record<string, any>
 }
 
+// New interface for bulk upload with separate arrays
+export interface AddBulkDataRequest {
+  data?: File[] // Array of files
+  urls?: string[] // Array of URLs/paths
+  text_data?: string[] // Array of text strings
+  datasetId: string // Required UUID
+  node_set?: string[]
+}
+
 export interface DatasetStatusResponse {
   id: string
   name: string
@@ -92,15 +151,48 @@ export interface CognifyResponse {
   }
 }
 
-// API service class
+/**
+ * ============================================================================
+ * API SERVICE CLASS
+ * ============================================================================
+ */
+
+/**
+ * Service-Klasse für Dataset-Management API Operationen
+ * 
+ * @class DatasetsApiService
+ * @description 
+ * Zentrale Klasse für alle Dataset-bezogenen API-Operationen.
+ * Verwaltet Authentifizierung, Fehlerbehandlung und Daten-Mapping.
+ * 
+ * Alle Methoden sind asynchron und verwenden automatisch den Auth-Token
+ * aus dem Auth Store für alle Requests.
+ * 
+ * @example
+ * ```typescript
+ * const api = new DatasetsApiService();
+ * const datasets = await api.getDatasets();
+ * const newDataset = await api.createDataset({ name: "Test", description: "..." });
+ * ```
+ */
 export class DatasetsApiService {
   private baseUrl: string
 
+  /**
+   * Initialisiert den API Service
+   * 
+   * @param baseUrl - Basis-URL für API Requests (default: '/api/v1')
+   */
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl
   }
 
-  // Get authorization headers
+  /**
+   * Erstellt Authorization Headers mit Bearer Token
+   * 
+   * @private
+   * @returns Headers mit Content-Type und Authorization
+   */
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -115,7 +207,14 @@ export class DatasetsApiService {
     return headers
   }
 
-  // Handle API errors
+  /**
+   * Verarbeitet API Response und wirft Fehler bei HTTP-Status != 2xx
+   * 
+   * @private
+   * @param response - Fetch Response Object
+   * @returns Parsed JSON Response
+   * @throws Error mit HTTP Status Code und Error Text
+   */
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       const errorText = await response.text()
@@ -124,7 +223,20 @@ export class DatasetsApiService {
     return response.json()
   }
 
-  // Sanitize dataset name to comply with backend requirements
+  /**
+   * Bereinigt Dataset-Namen für Backend-Kompatibilität
+   * 
+   * @private
+   * @param name - Originaler Dataset-Name
+   * @returns Sanitized Name (erlaubt: a-z, A-Z, 0-9, -, _)
+   * 
+   * Regeln:
+   * - Leerzeichen -> Underscores
+   * - Entfernt Dots
+   * - Entfernt Sonderzeichen außer -, _
+   * - Reduziert mehrfache Underscores
+   * - Entfernt führende/trailing Underscores
+   */
   private sanitizeDatasetName(name: string): string {
     // Replace spaces with underscores and remove dots
     return name
@@ -135,7 +247,12 @@ export class DatasetsApiService {
       .replace(/^_|_$/g, '') // Remove leading and trailing underscores
   }
 
-  // GET /api/v1/datasets - Get all datasets
+  /**
+   * Ruft alle Datasets des aktuellen Benutzers ab
+   * 
+   * @returns Array von DatasetResponse Objekten
+   * @throws Error bei HTTP-Fehlern
+   */
   async getDatasets(): Promise<DatasetResponse[]> {
     const response = await fetch(`${this.baseUrl}/datasets`, {
       method: 'GET',
@@ -145,7 +262,22 @@ export class DatasetsApiService {
     return this.handleResponse<DatasetResponse[]>(response)
   }
 
-  // POST /api/v1/datasets - Create new dataset
+  /**
+   * Erstellt ein neues Dataset
+   * 
+   * @param data - Dataset-Erstellungsdaten
+   * @returns Erstelltes Dataset mit ID und Timestamps
+   * @throws Error bei HTTP-Fehlern oder ungültigen Daten
+   * 
+   * @example
+   * ```typescript
+   * const dataset = await api.createDataset({
+   *   name: "My Dataset",
+   *   description: "Dataset description",
+   *   tags: ["tag1", "tag2"]
+   * });
+   * ```
+   */
   async createDataset(data: CreateDatasetRequest): Promise<DatasetResponse> {
     // Sanitize dataset name before creating to prevent backend validation errors
     const sanitizedData = {
@@ -162,7 +294,36 @@ export class DatasetsApiService {
     return this.handleResponse<DatasetResponse>(response)
   }
 
-  // DELETE /api/v1/datasets/{dataset_id} - Delete dataset
+  /**
+   * Aktualisiert Dataset-Metadaten
+   * 
+   * @param datasetId - UUID des Datasets
+   * @param data - Zu aktualisierende Felder
+   * @returns Aktualisierte Dataset-Informationen
+   */
+  async updateDataset(datasetId: string, data: UpdateDatasetRequest): Promise<DatasetResponse> {
+    const sanitizedData: UpdateDatasetRequest = { ...data }
+    
+    // Sanitize dataset name if provided
+    if (data.name) {
+      sanitizedData.name = this.sanitizeDatasetName(data.name)
+    }
+    
+    const response = await fetch(`${this.baseUrl}/datasets/${datasetId}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(sanitizedData),
+    })
+
+    return this.handleResponse<DatasetResponse>(response)
+  }
+
+  /**
+   * Löscht ein Dataset und alle zugehörigen Daten
+   * 
+   * @param datasetId - UUID des Datasets
+   * @throws Error bei HTTP-Fehlern oder fehlenden Berechtigungen
+   */
   async deleteDataset(datasetId: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/datasets/${datasetId}`, {
       method: 'DELETE',
@@ -175,7 +336,12 @@ export class DatasetsApiService {
     }
   }
 
-  // GET /api/v1/datasets/{dataset_id}/data - Get dataset data
+  /**
+   * Ruft alle Daten eines Datasets ab
+   * 
+   * @param datasetId - UUID des Datasets
+   * @returns Array von Dataset-Dateien
+   */
   async getDatasetData(datasetId: string): Promise<DatasetFileResponse[]> {
     const response = await fetch(`${this.baseUrl}/datasets/${datasetId}/data`, {
       method: 'GET',
@@ -199,7 +365,7 @@ export class DatasetsApiService {
   }
 
   // GET /api/v1/datasets/{dataset_id}/data/{data_id}/raw - Get raw data
-  async getRawData(datasetId: string, dataId: string): Promise<string> {
+  async getRawData(datasetId: string, dataId: string): Promise<Blob> {
     const response = await fetch(`${this.baseUrl}/datasets/${datasetId}/data/${dataId}/raw`, {
       method: 'GET',
       headers: this.getHeaders(),
@@ -210,7 +376,7 @@ export class DatasetsApiService {
       throw new Error(`API Error: ${response.status} - ${errorText}`)
     }
 
-    return response.text()
+    return response.blob()
   }
 
   // GET /api/v1/datasets/{dataset_id}/graph - Get dataset graph
@@ -233,7 +399,18 @@ export class DatasetsApiService {
     return this.handleResponse<DatasetStatusResponse[]>(response)
   }
 
-  // POST /api/v1/add - Add data to dataset (files, text, URLs, etc.)
+  /**
+   * Fügt Daten zu einem Dataset hinzu (Files, Text, URLs)
+   * 
+   * @param request - Request mit Daten und Dataset-ID
+   * @returns Information über den Upload-Prozess
+   * 
+   * Unterstützt:
+   * - File Uploads (FormData)
+   * - Text Daten
+   * - URLs (einzelne oder Array)
+   * - Optionale node_set Konfiguration
+   */
   async addDataToDataset(request: AddDataRequest): Promise<AddDataResponse> {
     const formData = new FormData()
     
@@ -260,6 +437,57 @@ export class DatasetsApiService {
     
     if (request.metadata) {
       formData.append('metadata', JSON.stringify(request.metadata))
+    }
+
+    // Create headers without Content-Type for FormData (browser will set it automatically)
+    const headers: HeadersInit = {}
+    const token = useAuthStore.getState().auth.accessToken
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
+    const response = await fetch(`${this.baseUrl}/add`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+
+    return this.handleResponse<AddDataResponse>(response)
+  }
+
+  // POST /api/v1/add - Bulk add data to dataset (new API format with separate arrays)
+  async addBulkDataToDataset(request: AddBulkDataRequest): Promise<AddDataResponse> {
+    const formData = new FormData()
+    
+    // Add data (files)
+    if (request.data && request.data.length > 0) {
+      request.data.forEach((file) => {
+        formData.append('data', file)
+      })
+    }
+    
+    // Add URLs
+    if (request.urls && request.urls.length > 0) {
+      request.urls.forEach((url) => {
+        formData.append('urls', url)
+      })
+    }
+    
+    // Add text_data
+    if (request.text_data && request.text_data.length > 0) {
+      request.text_data.forEach((text) => {
+        formData.append('text_data', text)
+      })
+    }
+    
+    // Add datasetId (required)
+    formData.append('datasetId', request.datasetId)
+    
+    // Add node_set (optional)
+    if (request.node_set && request.node_set.length > 0) {
+      request.node_set.forEach((node) => {
+        formData.append('node_set', node)
+      })
     }
 
     // Create headers without Content-Type for FormData (browser will set it automatically)
@@ -392,17 +620,26 @@ export function convertApiResponseToDataset(apiResponse: DatasetResponse): any {
     files: apiResponse.files?.map(file => ({
       id: file.id,
       name: file.name,
-      type: file.mimeType,
+      type: file.originalMimeType,
       size: 0, // Size not provided in new API format
       uploadDate: safeParseDate(file.createdAt),
       content: undefined, // Content not provided in new API format
-      extension: file.extension,
+      extension: file.originalExtension,
     })) || [],
   }
 }
 
 // Helper function to convert local Dataset format to API request
 export function convertDatasetToApiRequest(dataset: any): CreateDatasetRequest {
+  return {
+    name: dataset.name,
+    description: dataset.description,
+    tags: dataset.tags || [],
+  }
+}
+
+// Helper function to convert local Dataset format to API update request
+export function convertDatasetToUpdateRequest(dataset: any): UpdateDatasetRequest {
   return {
     name: dataset.name,
     description: dataset.description,

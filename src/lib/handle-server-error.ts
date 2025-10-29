@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 
 export function handleServerError(error: unknown) {
 
-  let errMsg = 'Something went wrong!'
+  let errMsg = 'Etwas ist schiefgelaufen!'
 
   if (
     error &&
@@ -11,7 +11,7 @@ export function handleServerError(error: unknown) {
     'status' in error &&
     Number(error.status) === 204
   ) {
-    errMsg = 'Content not found.'
+    errMsg = 'Inhalt nicht gefunden.'
   }
 
   if (error instanceof AxiosError) {
