@@ -645,8 +645,9 @@ export function convertApiResponseToDataset(apiResponse: any): any {
     tags: apiResponse.tags || [],
     files: apiResponse.files?.map((file: any) => {
       // Extract extension and MIME type from filename instead of using API values
+      // Pass filename as second parameter to enable URL detection
       const extension = getFileExtension(file.name)
-      const mimeType = getMimeTypeFromExtension(extension)
+      const mimeType = getMimeTypeFromExtension(extension, file.name)
       
       return {
         id: file.id,

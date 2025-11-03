@@ -472,7 +472,7 @@ export const useDatasetStore = create<DatasetStore>()(
           const newFiles: DatasetFile[] = apiResponse.data_ingestion_info.map((info) => ({
             id: info.data_id,
             name: `URL - ${new URL(url).hostname}`,
-            type: 'text/uri-list',
+            type: 'url',
             size: url.length,
             uploadDate: new Date(),
             extension: 'url',
@@ -530,7 +530,7 @@ export const useDatasetStore = create<DatasetStore>()(
           const newFiles: DatasetFile[] = apiResponse.data_ingestion_info.map((info, index) => ({
             id: info.data_id,
             name: `URL ${index + 1} - ${new URL(urls[index] || '').hostname}`,
-            type: 'text/uri-list',
+            type: 'url',
             size: (urls[index] || '').length,
             uploadDate: new Date(),
             extension: 'url',
@@ -615,7 +615,7 @@ export const useDatasetStore = create<DatasetStore>()(
               const urlIndex = index - (data?.length || 0)
               const url = urls[urlIndex] || ''
               name = `URL - ${new URL(url).hostname}`
-              type = 'text/uri-list'
+              type = 'url'
               size = url.length
               extension = 'url'
               dataType = 'url'
@@ -636,6 +636,10 @@ export const useDatasetStore = create<DatasetStore>()(
               uploadDate: new Date(),
               extension,
               dataType,
+              // Store the full URL in content for navigation
+              content: urls && index >= (data?.length || 0) && index < (data?.length || 0) + urls.length 
+                ? urls[index - (data?.length || 0)] 
+                : undefined,
             }
           })
 
@@ -954,8 +958,9 @@ export const useDatasetStore = create<DatasetStore>()(
             }
             
             // Extract extension and MIME type from filename instead of using API values
+            // Pass filename as second parameter to enable URL detection
             const extension = getFileExtension(file.name)
-            const mimeType = getMimeTypeFromExtension(extension)
+            const mimeType = getMimeTypeFromExtension(extension, file.name)
             
             return {
               id: file.id,

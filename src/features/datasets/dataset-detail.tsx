@@ -71,7 +71,7 @@ export function DatasetDetailPage() {
     if (!dataset) return {}
     
     const urlFiles = dataset.files.filter(file => 
-      file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
+      file.type === 'url' || file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
     )
     
     const descriptions: Record<string, string> = {}
@@ -97,7 +97,7 @@ export function DatasetDetailPage() {
     if (!dataset) return
     
     const urlFiles = dataset.files.filter(file => 
-      file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
+      file.type === 'url' || file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
     )
     
     // Lade alle gecachten Beschreibungen in den Ref
@@ -205,15 +205,16 @@ export function DatasetDetailPage() {
       if (!dataset) return
 
       const urlFiles = dataset.files.filter(file => 
-        file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
+        file.type === 'url' || file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
       )
 
       // Prüfe welche URLs noch nicht gefetcht wurden
       const urlsToFetch = urlFiles.filter(file => {
+        const actualUrl = file.content || file.name
         // Prüfe ob bereits im persistenten Cache
-        const cached = getCachedUrlDescription(file.name)
+        const cached = getCachedUrlDescription(actualUrl)
         // Prüfe ob bereits im Ref-Cache
-        const inRefCache = fetchedDescriptionsRef.current[file.name]
+        const inRefCache = fetchedDescriptionsRef.current[actualUrl]
         return !cached && !inRefCache
       })
 
@@ -222,16 +223,17 @@ export function DatasetDetailPage() {
       // Fetch alle URLs parallel mit Promise.allSettled (robust gegen einzelne Fehler)
       const fetchPromises = urlsToFetch.map(async (file) => {
         try {
-          const encodedUrl = encodeURIComponent(file.name)
+          const actualUrl = file.content || file.name
+          const encodedUrl = encodeURIComponent(actualUrl)
           const response = await fetch(`/api/url/metadata?url=${encodedUrl}`)
           
           if (response.ok) {
             const data = await response.json()
             if (data.description) {
               // Speichere im persistenten Cache
-              setUrlDescription(file.name, data.description)
+              setUrlDescription(actualUrl, data.description)
               
-              return { url: file.name, description: data.description }
+              return { url: actualUrl, description: data.description }
             }
           }
         } catch (error) {

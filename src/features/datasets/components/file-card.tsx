@@ -36,14 +36,16 @@ const FileCardComponent = ({
   className,
   variant = 'grid',
 }: FileCardProps) => {
-  const isUrl = file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
-  const faviconUrl = isUrl && getFaviconUrl ? getFaviconUrl(file.name) : null
+  const isUrl = file.type === 'url' || file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
+  // Get the actual URL - prefer file.content (full URL) or file.name if it looks like a URL
+  const urlForNavigation = isUrl ? (file.content || (file.name?.startsWith('http://') || file.name?.startsWith('https://') ? file.name : null)) : null
+  const faviconUrl = isUrl && getFaviconUrl ? getFaviconUrl(file.content || file.name) : null
   const isListVariant = variant === 'list'
 
   const handleCardClick = () => {
-    if (isUrl) {
+    if (isUrl && urlForNavigation) {
       // For URLs, open in new tab
-      window.open(file.name, '_blank', 'noopener,noreferrer')
+      window.open(urlForNavigation, '_blank', 'noopener,noreferrer')
     } else if (onPreview) {
       // For files, trigger preview
       onPreview(file.id, file.name, file.type, file.extension)
@@ -96,14 +98,14 @@ const FileCardComponent = ({
 
           {/* Name */}
           <div className="flex-1 min-w-0">
-            {isUrl ? (
+            {isUrl && urlForNavigation ? (
               <a
-                href={file.name}
+                href={urlForNavigation}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="text-xs sm:text-sm md:text-xs font-medium text-primary underline decoration-dotted underline-offset-2 flex items-center gap-1.5 truncate"
-                title={file.name}
+                title={urlForNavigation}
               >
                 <span className="truncate">{truncateFileName(file.name)}</span>
                 <ExternalLink className="h-3 w-3 shrink-0 opacity-70" />
@@ -115,7 +117,7 @@ const FileCardComponent = ({
             )}
             <div className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2 mt-0.5">
               {isUrl && getUrlDescription 
-                ? getUrlDescription(file.name)
+                ? getUrlDescription(urlForNavigation || file.name)
                 : file.type || 'Unbekannter Typ'
               }
             </div>
@@ -196,14 +198,14 @@ const FileCardComponent = ({
         <div className="flex items-start justify-between gap-2">
           {/* Content */}
           <div className="flex-1 min-w-0 space-y-0">
-            {isUrl ? (
+            {isUrl && urlForNavigation ? (
               <a
-                href={file.name}
+                href={urlForNavigation}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="text-[11px] sm:text-xs md:text-[11px] font-semibold text-primary underline decoration-dotted underline-offset-2 flex items-center gap-1 w-fit group/link leading-tight"
-                title={file.name}
+                title={urlForNavigation}
               >
                 {faviconUrl && (
                   <img 
@@ -231,7 +233,7 @@ const FileCardComponent = ({
             
             <CardDescription className="text-[9px] sm:text-[10px] line-clamp-2 mt-0">
               {isUrl && getUrlDescription 
-                ? getUrlDescription(file.name)
+                ? getUrlDescription(urlForNavigation || file.name)
                 : file.type || 'Unbekannter Typ'
               }
             </CardDescription>

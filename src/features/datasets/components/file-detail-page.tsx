@@ -47,7 +47,7 @@ export function FileDetailPage() {
   }
 
   const getFileIcon = (type: string) => {
-    if (type === 'text/url') return '🔗'
+    if (type === 'url' || type === 'text/url') return '🔗'
     if (type.includes('image')) return '🖼️'
     if (type.includes('pdf')) return '📄'
     if (type.includes('text')) return '📝'
@@ -112,14 +112,14 @@ export function FileDetailPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">File Name</h4>
-                {file.type === 'text/url' || file.type === 'text/uri-list' ? (
+                {file.type === 'url' || file.type === 'text/url' || file.type === 'text/uri-list' ? (
                   <a
-                    href={file.name}
+                    href={file.content || file.name}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-primary hover:underline flex items-center gap-1 w-fit"
                   >
-                    {file.name}
+                    {file.content || file.name}
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : (
