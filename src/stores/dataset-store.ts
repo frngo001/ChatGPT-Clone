@@ -94,6 +94,7 @@ interface DatasetStore {
   processDatasets: (datasetIds: string[]) => Promise<void>
   checkDatasetStatus: (datasetId: string) => Promise<void>
   checkAllDatasetStatuses: () => Promise<boolean> // Gibt zurück ob sich Status geändert hat
+  setDatasetProcessingStatus: (datasetId: string, status: string) => void // Setzt Status sofort ohne API-Call
   startStatusPolling: () => void
   stopStatusPolling: () => void
   getUnprocessedDatasets: () => Dataset[]
@@ -1092,7 +1093,7 @@ export const useDatasetStore = create<DatasetStore>()(
 
 Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbasis zu erstellen, die alle Informationen aus den bereitgestellten Dokumenten und Bildern optimal nutzt.`
           })
-          // Update datasets with pipeline run ID and start polling
+          // Update datasets with pipeline run ID, set status to PROCESSING_STARTED immediately, and start polling
           set((state) => ({
             datasets: state.datasets.map((dataset) => {
               const processingInfo = response[dataset.id]
@@ -1100,6 +1101,7 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
                 return {
                   ...dataset,
                   pipelineRunId: processingInfo.pipeline_run_id,
+                  processingStatus: 'DATASET_PROCESSING_STARTED',
                   updatedAt: new Date(),
                 }
               }
@@ -1109,6 +1111,7 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
               ? {
                   ...state.currentDataset,
                   pipelineRunId: response[state.currentDataset.id].pipeline_run_id,
+                  processingStatus: 'DATASET_PROCESSING_STARTED',
                   updatedAt: new Date(),
                 }
               : state.currentDataset,
@@ -1171,6 +1174,19 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
         } catch (error) {
           console.error('Failed to check dataset status:', error)
         }
+      },
+
+      setDatasetProcessingStatus: (datasetId, status) => {
+        set((state) => ({
+          datasets: state.datasets.map((dataset) =>
+            dataset.id === datasetId
+              ? { ...dataset, processingStatus: status, updatedAt: new Date() }
+              : dataset
+          ),
+          currentDataset: state.currentDataset?.id === datasetId
+            ? { ...state.currentDataset, processingStatus: status, updatedAt: new Date() }
+            : state.currentDataset,
+        }))
       },
 
       getUnprocessedDatasets: () => {

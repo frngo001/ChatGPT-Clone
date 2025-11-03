@@ -1,8 +1,7 @@
 import {
-  Library,
   FolderPlus,
   FolderSearch2,
-  FolderOpen,
+  Folder,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 import { useDatasetStore } from '@/stores/dataset-store'
@@ -18,7 +17,7 @@ export function useDynamicSidebarData(): SidebarData {
   const datasetItems = datasets.map((dataset) => ({
     title: dataset.name,
     url: `/library/datasets/${dataset.id}` as const,
-    icon: FolderOpen,
+    icon: Folder,
     badge: dataset.files.length > 0 ? dataset.files.length.toString() : '...',
   }))
 
@@ -40,22 +39,16 @@ export function useDynamicSidebarData(): SidebarData {
             icon: SquarePenIcon,
           },
           {
-            title: 'Bibliothek',
-            icon: Library,
+            title: 'Datasets',
+            icon: FoldersIcon,
             items: [
               {
-                title: 'Datasets',
-                icon: FoldersIcon,
-                items: [
-                  {
-                    title: 'Verwalten',
-                    url: '/library/datasets',
-                    icon: FolderSearch2
-                  },
-                  // Add dynamic datasets as sub-items
-                  ...datasetItems,
-                ],
+                title: 'Verwalten',
+                url: '/library/datasets',
+                icon: FolderSearch2
               },
+              // Add dynamic datasets as sub-items
+              ...datasetItems,
             ],
           },
           {

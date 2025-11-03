@@ -17,6 +17,8 @@ import { EditDatasetDialog } from './components/edit-dataset-dialog'
 const PdfPreviewSheet = lazy(() => import('./components/pdf-preview-sheet').then(module => ({ default: module.PdfPreviewSheet })))
 // Lazy load Text/Markdown Preview Sheet
 const TextMarkdownPreviewSheet = lazy(() => import('./components/text-markdown-preview-sheet').then(module => ({ default: module.TextMarkdownPreviewSheet })))
+// Lazy load Image Preview Sheet
+const ImagePreviewSheet = lazy(() => import('./components/image-preview-sheet').then(module => ({ default: module.ImagePreviewSheet })))
 import { FileCard } from './components/file-card'
 import { 
   getFaviconUrl as getCachedFaviconUrl, 
@@ -29,10 +31,16 @@ export function DatasetDetailPage() {
   const { datasetId } = useParams({ from: '/_authenticated/library/datasets/$datasetId' })
   const navigate = useNavigate()
   // Selektive Selektoren für optimale Performance - verhindert unnötige Re-renders
-  const getDatasetById = useDatasetStore((state) => state.getDatasetById)
+  // Reaktiver Selektor für dataset - aktualisiert sich automatisch bei Store-Änderungen
+  const dataset = useDatasetStore((state) => 
+    state.currentDataset?.id === datasetId 
+      ? state.currentDataset 
+      : state.datasets.find(d => d.id === datasetId)
+  )
   const fetchDatasetDataWithCache = useDatasetStore((state) => state.fetchDatasetDataWithCache)
   const processDatasets = useDatasetStore((state) => state.processDatasets)
   const checkDatasetStatus = useDatasetStore((state) => state.checkDatasetStatus)
+  const setDatasetProcessingStatus = useDatasetStore((state) => state.setDatasetProcessingStatus)
   const downloadDatasetFile = useDatasetStore((state) => state.downloadDatasetFile)
   // isFetchingInBackground ist ein Objekt, daher selektiver Selektor
   const isFetchingInBackground = useDatasetStore((state) => state.isFetchingInBackground)
@@ -56,9 +64,6 @@ export function DatasetDetailPage() {
     fileType?: string
     fileExtension?: string
   } | null>(null)
-  
-  // WICHTIG: dataset MUSS VOR useMemo deklariert werden!
-  const dataset = getDatasetById(datasetId)
   const isBackgroundFetching = datasetId ? isFetchingInBackground[datasetId] : false
   
   // Ref für gefetchte URL-Descriptions (kein State-Update während Rendering)
@@ -132,11 +137,11 @@ export function DatasetDetailPage() {
     
     if (!isProcessing) return
     
-    // Erhöhtes Intervall (10 Sekunden statt 5) um Redundanz mit globalem Polling zu reduzieren
+    // Lokales Polling mit 3 Sekunden Intervall für schnelle Status-Updates
     // Das globale Polling in datasets-list.tsx läuft alle 5 Sekunden für alle Datasets
     const interval = setInterval(() => {
       checkDatasetStatus(datasetId)
-    }, 10000) // Check every 10 seconds (reduziert von 5 auf 10)
+    }, 3000) // Check every 3 seconds
 
     return () => clearInterval(interval)
   }, [dataset?.processingStatus, datasetId, checkDatasetStatus])
@@ -294,8 +299,13 @@ export function DatasetDetailPage() {
     // Check if file is a PDF
     const isPdf = fileType === 'application/pdf' || fileExtension?.toLowerCase() === 'pdf'
     
-    // Check if file is a text or markdown file
+    // Check if file is an image
     const ext = fileExtension?.toLowerCase() || fileName.split('.').pop()?.toLowerCase() || ''
+    const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp', 'image/tiff']
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico']
+    const isImage = imageTypes.includes(fileType || '') || imageExtensions.includes(ext)
+    
+    // Check if file is a text or markdown file
     const isTextOrMarkdown = 
       fileType?.startsWith('text/') ||
       fileType === 'application/json' ||
@@ -303,8 +313,8 @@ export function DatasetDetailPage() {
       fileType === 'application/typescript' ||
       ['txt', 'md', 'markdown', 'json', 'jsonl', 'xml', 'html', 'css', 'js', 'jsx', 'ts', 'tsx', 'csv', 'log', 'sh', 'bash', 'yaml', 'yml'].includes(ext)
     
-    if (!isPdf && !isTextOrMarkdown) {
-      toast.error('Nur PDF-, Text- und Markdown-Dateien können in der Vorschau angezeigt werden')
+    if (!isPdf && !isTextOrMarkdown && !isImage) {
+      toast.error('Nur PDF-, Bild-, Text- und Markdown-Dateien können in der Vorschau angezeigt werden')
       return
     }
     
@@ -315,20 +325,25 @@ export function DatasetDetailPage() {
     if (!dataset) return
 
     setIsProcessing(true)
+    
+    // Set status immediately (optimistic update) before API call
+    const previousStatus = dataset.processingStatus
+    setDatasetProcessingStatus(datasetId, 'DATASET_PROCESSING_STARTED')
+    
     try {
       await processDatasets([datasetId])
       toast.success(`Dataset "${dataset.name}" wird verarbeitet.`)
       
-      // Check dataset status after 1 second to see if processing started
-      setTimeout(() => {
-        checkDatasetStatus(datasetId)
-      }, 50)
+      // Check dataset status immediately to get actual API status
+      await checkDatasetStatus(datasetId)
     } catch (error) {
+      // Revert status on error
+      setDatasetProcessingStatus(datasetId, previousStatus || 'DATASET_PROCESSING_INITIATED')
       toast.error(`Verarbeitung fehlgeschlagen: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`)
     } finally {
       setIsProcessing(false)
     }
-  }, [datasetId, dataset, processDatasets, checkDatasetStatus]) // Dependencies: datasetId, dataset, processDatasets, checkDatasetStatus
+  }, [datasetId, dataset, processDatasets, checkDatasetStatus, setDatasetProcessingStatus]) // Dependencies: datasetId, dataset, processDatasets, checkDatasetStatus, setDatasetProcessingStatus
 
   // useCallback für weitere Event-Handler um Referenz-Stabilität zu gewährleisten
   const handleNavigateBack = useCallback(() => {
@@ -558,43 +573,71 @@ export function DatasetDetailPage() {
       {previewFile && (() => {
         const isPdf = previewFile.fileType === 'application/pdf' || previewFile.fileExtension?.toLowerCase() === 'pdf'
         
-        return isPdf ? (
-          <Suspense fallback={
-            <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-2">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">PDF-Viewer wird geladen...</p>
+        const ext = previewFile.fileExtension?.toLowerCase() || previewFile.fileName.split('.').pop()?.toLowerCase() || ''
+        const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp', 'image/tiff']
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico']
+        const isImage = imageTypes.includes(previewFile.fileType || '') || imageExtensions.includes(ext)
+        
+        if (isPdf) {
+          return (
+            <Suspense fallback={
+              <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">PDF-Viewer wird geladen...</p>
+                </div>
               </div>
-            </div>
-          }>
-            <PdfPreviewSheet
-              open={!!previewFile}
-              onOpenChange={(open) => !open && setPreviewFile(null)}
-              fileId={previewFile?.fileId ?? ''}
-              fileName={previewFile?.fileName ?? ''}
-              datasetId={datasetId}
-            />
-          </Suspense>
-        ) : (
-          <Suspense fallback={
-            <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-2">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Vorschau wird geladen...</p>
+            }>
+              <PdfPreviewSheet
+                open={!!previewFile}
+                onOpenChange={(open) => !open && setPreviewFile(null)}
+                fileId={previewFile?.fileId ?? ''}
+                fileName={previewFile?.fileName ?? ''}
+                datasetId={datasetId}
+              />
+            </Suspense>
+          )
+        } else if (isImage) {
+          return (
+            <Suspense fallback={
+              <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Bild-Vorschau wird geladen...</p>
+                </div>
               </div>
-            </div>
-          }>
-            <TextMarkdownPreviewSheet
-              open={!!previewFile}
-              onOpenChange={(open) => !open && setPreviewFile(null)}
-              fileId={previewFile?.fileId ?? ''}
-              fileName={previewFile?.fileName ?? ''}
-              datasetId={datasetId}
-              fileType={previewFile?.fileType}
-              fileExtension={previewFile?.fileExtension}
-            />
-          </Suspense>
-        )
+            }>
+              <ImagePreviewSheet
+                open={!!previewFile}
+                onOpenChange={(open) => !open && setPreviewFile(null)}
+                fileId={previewFile?.fileId ?? ''}
+                fileName={previewFile?.fileName ?? ''}
+                datasetId={datasetId}
+              />
+            </Suspense>
+          )
+        } else {
+          return (
+            <Suspense fallback={
+              <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Vorschau wird geladen...</p>
+                </div>
+              </div>
+            }>
+              <TextMarkdownPreviewSheet
+                open={!!previewFile}
+                onOpenChange={(open) => !open && setPreviewFile(null)}
+                fileId={previewFile?.fileId ?? ''}
+                fileName={previewFile?.fileName ?? ''}
+                datasetId={datasetId}
+                fileType={previewFile?.fileType}
+                fileExtension={previewFile?.fileExtension}
+              />
+            </Suspense>
+          )
+        }
       })()}
     </div>
   )

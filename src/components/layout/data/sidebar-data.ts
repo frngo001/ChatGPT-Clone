@@ -1,11 +1,10 @@
 import {
-  Library,
   FolderPlus,
   SquarePen,
-  Database,
-  FileText,
+  FolderSearch2,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
+import { FoldersIcon } from '@/components/ui/folders-icon'
 
 export const sidebarData: SidebarData = {
   teams: [
@@ -24,18 +23,13 @@ export const sidebarData: SidebarData = {
           icon: SquarePen,
         },
         {
-          title: 'Bibliothek',
-          icon: Library,
+          title: 'Datasets',
+          icon: FoldersIcon,
           items: [
             {
-              title: 'Datasets',
+              title: 'Verwalten',
               url: '/library/datasets',
-              icon: Database,
-            },
-            {
-              title: 'Dokumente',
-              url: '/library/documents',
-              icon: FileText,
+              icon: FolderSearch2,
             },
           ],
         },

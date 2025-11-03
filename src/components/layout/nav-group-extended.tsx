@@ -1,6 +1,6 @@
 import { type ReactNode, useRef, useCallback } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Folder, FolderOpen, FolderSearch, FolderSearch2 } from 'lucide-react'
 import { useDatasetStore } from '@/stores/dataset-store'
 import {
   Collapsible,
@@ -183,18 +183,43 @@ function SidebarMenuCollapsibleExtended({
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <div className="ml-4 space-y-1">
-                          {('items' in subItem && subItem.items) ? subItem.items.map((nestedItem: any) => (
-                            <Link
-                              key={nestedItem.title}
-                              to={nestedItem.url}
-                              onClick={() => setOpenMobile(false)}
-                              className="flex items-center gap-2 px-2 py-1 text-sm text-muted-foreground hover:text-foreground rounded hover:bg-muted/50 transition-colors"
-                            >
-                              {nestedItem.icon && <nestedItem.icon className="h-4 w-4" />}
-                              <span className="truncate">{nestedItem.title}</span>
-                              {nestedItem.badge && <NavBadge>{nestedItem.badge}</NavBadge>}
-                            </Link>
-                          )) : null}
+                          {('items' in subItem && subItem.items) ? subItem.items.map((nestedItem: any) => {
+                            // Dynamisches Icon für Dataset-Items: FolderOpen wenn aktiv, Folder wenn nicht aktiv
+                            const isActive = nestedItem.url && (href === nestedItem.url || href.split('?')[0] === nestedItem.url)
+                            
+                            // Prüfe ob es ein Dataset-Item ist (URL enthält /library/datasets/ aber nicht /library/datasets ohne ID)
+                            const isDatasetItem = nestedItem.url && typeof nestedItem.url === 'string' && 
+                                                  nestedItem.url.includes('/library/datasets/') && 
+                                                  nestedItem.url !== '/library/datasets'
+                            
+                            return (
+                              <Link
+                                key={nestedItem.title}
+                                to={nestedItem.url}
+                                onClick={() => setOpenMobile(false)}
+                                className="flex items-center gap-2 px-2 py-1 text-sm text-muted-foreground hover:text-foreground rounded hover:bg-muted/50 transition-colors"
+                              >
+                                {isDatasetItem ? (
+                                  <div className="relative size-4 shrink-0">
+                                    <Folder 
+                                      className={`absolute inset-0 size-4 transition-opacity duration-300 ease-in-out ${
+                                        isActive ? 'opacity-0' : 'opacity-100'
+                                      }`}
+                                    />
+                                    <FolderOpen 
+                                      className={`absolute inset-0 size-4 transition-opacity duration-300 ease-in-out ${
+                                        isActive ? 'opacity-100' : 'opacity-0'
+                                      }`}
+                                    />
+                                  </div>
+                                ) : (
+                                  nestedItem.icon && <nestedItem.icon className="h-4 w-4" />
+                                )}
+                                <span className="truncate">{nestedItem.title}</span>
+                                {nestedItem.badge && <NavBadge>{nestedItem.badge}</NavBadge>}
+                              </Link>
+                            )
+                          }) : null}
                         </div>
                       </CollapsibleContent>
                     </SidebarMenuSubItem>
@@ -203,6 +228,17 @@ function SidebarMenuCollapsibleExtended({
               }
 
               // Regular sub-item without nested items
+              // Dynamisches Icon für Dataset-Items: FolderOpen wenn aktiv, Folder wenn nicht aktiv
+              const isActive = subItem.url && (href === subItem.url || href.split('?')[0] === subItem.url)
+              
+              // Prüfe ob es ein Dataset-Item ist (URL enthält /library/datasets/ aber nicht /library/datasets ohne ID)
+              const isDatasetItem = subItem.url && typeof subItem.url === 'string' && 
+                                    subItem.url.includes('/library/datasets/') && 
+                                    subItem.url !== '/library/datasets'
+              
+              // Prüfe ob es der "Verwalten" Button ist
+              const isVerwaltenButton = subItem.url === '/library/datasets'
+              
               return (
                 <SidebarMenuSubItem key={subItem.title}>
                   <SidebarMenuSubButton
@@ -210,7 +246,35 @@ function SidebarMenuCollapsibleExtended({
                     isActive={checkIsActive(href, subItem as any)}
                   >
                     <Link to={subItem.url} onClick={() => setOpenMobile(false)}>
-                      {subItem.icon && <subItem.icon />}
+                      {isDatasetItem ? (
+                        <div className="relative size-4 shrink-0">
+                          <Folder 
+                            className={`absolute inset-0 size-4 transition-opacity duration-300 ease-in-out ${
+                              isActive ? 'opacity-0' : 'opacity-100'
+                            }`}
+                          />
+                          <FolderOpen 
+                            className={`absolute inset-0 size-4 transition-opacity duration-300 ease-in-out ${
+                              isActive ? 'opacity-100' : 'opacity-0'
+                            }`}
+                          />
+                        </div>
+                      ) : isVerwaltenButton ? (
+                        <div className="relative size-4 shrink-0">
+                          <FolderSearch2 
+                            className={`absolute inset-0 size-4 transition-opacity duration-300 ease-in-out ${
+                              isActive ? 'opacity-0' : 'opacity-100'
+                            }`}
+                          />
+                          <FolderSearch 
+                            className={`absolute inset-0 size-4 transition-opacity duration-300 ease-in-out ${
+                              isActive ? 'opacity-100' : 'opacity-0'
+                            }`}
+                          />
+                        </div>
+                      ) : (
+                        subItem.icon && <subItem.icon />
+                      )}
                       <span>{subItem.title}</span>
                       {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
                     </Link>
@@ -272,20 +336,61 @@ function SidebarMenuCollapsedDropdown({
             {item.title} {item.badge ? `(${item.badge})` : ''}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {item.items.map((sub) => (
-            <DropdownMenuItem key={`${sub.title}-${sub.url}`} asChild>
-              <Link
-                to={sub.url}
-                className={`${checkIsActive(href, sub as any) ? 'bg-secondary' : ''}`}
-              >
-                {sub.icon && <sub.icon />}
-                <span className='max-w-52 text-wrap'>{sub.title}</span>
-                {sub.badge && (
-                  <span className='ms-auto text-xs'>{sub.badge}</span>
-                )}
-              </Link>
-            </DropdownMenuItem>
-          ))}
+          {item.items.map((sub) => {
+            // Dynamisches Icon für Dataset-Items: FolderOpen wenn aktiv, Folder wenn nicht aktiv
+            const isActive = sub.url && (href === sub.url || href.split('?')[0] === sub.url)
+            
+            // Prüfe ob es ein Dataset-Item ist (URL enthält /library/datasets/ aber nicht /library/datasets ohne ID)
+            const isDatasetItem = sub.url && typeof sub.url === 'string' && 
+                                  sub.url.includes('/library/datasets/') && 
+                                  sub.url !== '/library/datasets'
+            
+            // Prüfe ob es der "Verwalten" Button ist
+            const isVerwaltenButton = sub.url === '/library/datasets'
+            
+            return (
+              <DropdownMenuItem key={`${sub.title}-${sub.url}`} asChild>
+                <Link
+                  to={sub.url}
+                  className={`${checkIsActive(href, sub as any) ? 'bg-secondary' : ''}`}
+                >
+                  {isDatasetItem ? (
+                    <div className="relative size-4 shrink-0">
+                      <Folder 
+                        className={`absolute inset-0 size-4 transition-opacity duration-300 ease-in-out ${
+                          isActive ? 'opacity-0' : 'opacity-100'
+                        }`}
+                      />
+                      <FolderOpen 
+                        className={`absolute inset-0 size-4 transition-opacity duration-300 ease-in-out ${
+                          isActive ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      />
+                    </div>
+                  ) : isVerwaltenButton ? (
+                    <div className="relative size-4 shrink-0">
+                      <FolderSearch2 
+                        className={`absolute inset-0 size-4 transition-opacity duration-300 ease-in-out ${
+                          isActive ? 'opacity-0' : 'opacity-100'
+                        }`}
+                      />
+                      <FolderSearch 
+                        className={`absolute inset-0 size-4 transition-opacity duration-300 ease-in-out ${
+                          isActive ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      />
+                    </div>
+                  ) : (
+                    sub.icon && <sub.icon />
+                  )}
+                  <span className='max-w-52 text-wrap'>{sub.title}</span>
+                  {sub.badge && (
+                    <span className='ms-auto text-xs'>{sub.badge}</span>
+                  )}
+                </Link>
+              </DropdownMenuItem>
+            )
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
     </SidebarMenuItem>
