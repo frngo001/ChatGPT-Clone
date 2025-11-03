@@ -5,14 +5,12 @@ import { Separator } from '@/components/ui/separator'
 import { usePermissionsStore } from '@/stores/permissions-store'
 import { Shield, Users, UserPlus } from 'lucide-react'
 import { AssignUserToRoleDialog } from './assign-user-to-role-dialog'
-import { useToast } from '@/hooks/use-sonner-toast'
 import type { Role } from '@/types/permissions'
 
 export function RolesList() {
   const { roles, users } = usePermissionsStore()
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
-  const { toast } = useToast()
 
   // Zähle User pro Rolle
   const getUsersForRole = (roleId: string) => {

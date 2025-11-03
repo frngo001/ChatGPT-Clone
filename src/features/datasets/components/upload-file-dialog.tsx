@@ -13,6 +13,7 @@ import { Progress } from '@/components/ui/progress'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useDatasetStore } from '@/stores/dataset-store'
+import { truncateFileName } from '@/lib/utils'
 
 interface UploadFileDialogProps {
   open: boolean
@@ -163,10 +164,6 @@ export function UploadFileDialog({ open, onOpenChange, datasetId }: UploadFileDi
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  const truncateFileName = (fileName: string, maxLength: number = 30) => {
-    if (fileName.length <= maxLength) return fileName
-    return fileName.substring(0, maxLength) + '...'
-  }
 
   const getStatusIcon = (status: FileWithProgress['status']) => {
     switch (status) {
@@ -230,7 +227,7 @@ export function UploadFileDialog({ open, onOpenChange, datasetId }: UploadFileDi
                   {getStatusIcon(fileWithProgress.status)}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium">
-                      {truncateFileName(fileWithProgress.file.name)}
+                      {truncateFileName(fileWithProgress.file.name, { maxLength: 30 })}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {formatFileSize(fileWithProgress.file.size)}

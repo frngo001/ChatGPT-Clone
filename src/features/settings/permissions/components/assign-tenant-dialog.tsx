@@ -35,7 +35,8 @@ export function AssignTenantDialog({
   open,
   onOpenChange,
 }: AssignTenantDialogProps) {
-  const { tenants, assignTenantToUser } = usePermissionsStore()
+  const tenants = usePermissionsStore((state) => state.tenants)
+  const assignTenantToUser = usePermissionsStore((state) => state.assignTenantToUser)
   const [selectedTenantId, setSelectedTenantId] = useState<string>(currentTenantId || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
@@ -69,6 +70,8 @@ export function AssignTenantDialog({
       setIsSubmitting(false)
     }
   }
+
+  if (!open) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

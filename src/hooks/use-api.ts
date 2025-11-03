@@ -19,6 +19,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { CACHE_CONFIG } from '@/config/cache-config'
 
 /**
  * ============================================================================
@@ -68,7 +69,7 @@ export function useApiStatus() {
         deepseekError: deepseekResponse.status === 'rejected' ? deepseekResponse.reason : null,
       }
     },
-    staleTime: 30 * 1000, // 30 seconds
+    ...CACHE_CONFIG.API_STATUS,
     retry: 2,
   })
 }
@@ -102,7 +103,7 @@ export function useChatHistory() {
       // Currently we use the local store
       return []
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    ...CACHE_CONFIG.CHAT_HISTORY,
   })
 }
 
@@ -140,7 +141,7 @@ export function useUserSettings() {
         defaultProvider: 'ollama' as const,
       }
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    ...CACHE_CONFIG.USER_SETTINGS,
   })
 }
 

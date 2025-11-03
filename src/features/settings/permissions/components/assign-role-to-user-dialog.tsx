@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { usePermissionsStore } from '@/stores/permissions-store'
 import { useToast } from '@/hooks/use-sonner-toast'
 import { Loader2 } from 'lucide-react'
-import type { Role } from '@/types/permissions'
 
 interface AssignRoleToUserDialogProps {
   open: boolean
@@ -18,18 +17,21 @@ interface AssignRoleToUserDialogProps {
 export function AssignRoleToUserDialog({ open, onOpenChange, userId, userEmail }: AssignRoleToUserDialogProps) {
   const [selectedRoleId, setSelectedRoleId] = useState<string>('')
   const [isAssigning, setIsAssigning] = useState(false)
-  const { roles, assignUserToRole, users } = usePermissionsStore()
+  const roles = usePermissionsStore((state) => state.roles)
+  const assignUserToRole = usePermissionsStore((state) => state.assignUserToRole)
+  const users = usePermissionsStore((state) => state.users)
   const { toast } = useToast()
 
   // Hole User-Daten aus dem Store (enthält bereits Rollen)
-  const user = users.find(u => u.id === userId)
-  const userRoles = user?.roles || []
-
+  const user = useMemo(() => users.find(u => u.id === userId), [users, userId])
+  const userRoles = useMemo(() => user?.roles || [], [user])
 
   // Filtere Rollen, die der User noch nicht hat
-  const availableRoles = roles.filter(
-    (role) => !userRoles.some((userRole) => userRole.id === role.id)
-  )
+  const availableRoles = useMemo(() => {
+    return roles.filter(
+      (role) => !userRoles.some((userRole) => userRole.id === role.id)
+    )
+  }, [roles, userRoles])
 
 
   const handleAssign = async () => {
@@ -60,6 +62,8 @@ export function AssignRoleToUserDialog({ open, onOpenChange, userId, userEmail }
       setIsAssigning(false)
     }
   }
+
+  if (!open) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

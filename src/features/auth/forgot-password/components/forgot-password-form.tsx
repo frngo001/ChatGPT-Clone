@@ -36,7 +36,7 @@ export function ForgotPasswordForm({
   function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
-    toast.promise(sleep(2000), {
+    toast.promise(sleep(1000), {
       loading: 'Sending email...',
       success: () => {
         setIsLoading(false)

@@ -75,24 +75,24 @@ export function DatasetFilters({
   }
   
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 md:space-y-2">
       {/* Search Bar */}
       <div className="relative w-full">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground md:h-3 md:w-3" />
         <Input
           placeholder="Datasets durchsuchen (Name, Beschreibung, Tags)..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
+          className="pl-10 md:h-9 md:text-sm"
         />
       </div>
       
       {/* Filters Row */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-2 w-full">
         {/* Tag Multi-Select (Popover with Checkboxes) */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto md:h-8 md:px-3 md:text-xs">
               Tags {selectedTags.length > 0 && `(${selectedTags.length})`}
             </Button>
           </PopoverTrigger>
@@ -120,7 +120,7 @@ export function DatasetFilters({
         
         {/* Status Filter */}
         <Select value={statusFilter || 'all'} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px] md:h-8 md:text-xs md:px-2">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -135,7 +135,7 @@ export function DatasetFilters({
         
         {/* Owner Filter */}
         <Select value={ownerFilter || 'all'} onValueChange={handleOwnerChange}>
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px] md:h-8 md:text-xs md:px-2">
             <SelectValue placeholder="Owner" />
           </SelectTrigger>
           <SelectContent>
@@ -151,7 +151,7 @@ export function DatasetFilters({
         {/* Date Filters - Collapsible in Popover */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto md:h-8 md:px-3 md:text-xs">
               Datum
               {(createdFrom || createdTo || updatedFrom || updatedTo) && (
                 <Badge variant="secondary" className="ml-1 h-4 px-1">
@@ -160,19 +160,19 @@ export function DatasetFilters({
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[400px] p-4" align="start">
+          <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[400px] p-4 md:p-3" align="start">
             <div className="space-y-4">
               <div>
                 <Label className="text-xs font-medium mb-2 block">Erstellt</Label>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <DatePicker
                     selected={createdFrom || undefined}
-                    onSelect={setCreatedFrom}
+                    onSelect={(date) => setCreatedFrom(date || null)}
                     placeholder="Von"
                   />
                   <DatePicker
                     selected={createdTo || undefined}
-                    onSelect={setCreatedTo}
+                    onSelect={(date) => setCreatedTo(date || null)}
                     placeholder="Bis"
                   />
                 </div>
@@ -183,12 +183,12 @@ export function DatasetFilters({
                 <div className="flex flex-col sm:flex-row gap-2">
                   <DatePicker
                     selected={updatedFrom || undefined}
-                    onSelect={setUpdatedFrom}
+                    onSelect={(date) => setUpdatedFrom(date || null)}
                     placeholder="Von"
                   />
                   <DatePicker
                     selected={updatedTo || undefined}
-                    onSelect={setUpdatedTo}
+                    onSelect={(date) => setUpdatedTo(date || null)}
                     placeholder="Bis"
                   />
                 </div>
@@ -199,7 +199,7 @@ export function DatasetFilters({
         
         {/* Clear Filters Button */}
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto md:h-8 md:px-3 md:text-xs">
             <X className="h-4 w-4 mr-1" />
             Zurücksetzen
           </Button>

@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { usePermissionsStore } from '@/stores/permissions-store'
 import { useDatasetStore } from '@/stores/dataset-store'
 import { useToast } from '@/hooks/use-sonner-toast'
@@ -16,23 +19,43 @@ interface DatasetPermissionsDialogProps {
 }
 
 export function DatasetPermissionsDialog({ open, onOpenChange }: DatasetPermissionsDialogProps) {
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string>('')
+  const [selectedDatasetIds, setSelectedDatasetIds] = useState<string[]>([])
   const [principalType, setPrincipalType] = useState<PrincipalType>('user')
   const [selectedPrincipalId, setSelectedPrincipalId] = useState<string>('')
   const [permissionType, setPermissionType] = useState<PermissionType>('read')
   const [isGranting, setIsGranting] = useState(false)
 
-  const { users, roles, giveDatasetPermission } = usePermissionsStore()
+  const users = usePermissionsStore((state) => state.users)
+  const roles = usePermissionsStore((state) => state.roles)
+  const giveDatasetPermission = usePermissionsStore((state) => state.giveDatasetPermission)
   const datasets = useDatasetStore((state) => state.datasets)
   const { toast } = useToast()
 
-  const principals = principalType === 'user' ? users : roles
+  const principals = useMemo(() => {
+    return principalType === 'user' ? users : roles
+  }, [principalType, users, roles])
+
+  const handleDatasetToggle = (datasetId: string) => {
+    setSelectedDatasetIds((prev) => 
+      prev.includes(datasetId)
+        ? prev.filter((id) => id !== datasetId)
+        : [...prev, datasetId]
+    )
+  }
+
+  const handleSelectAll = () => {
+    if (selectedDatasetIds.length === datasets.length) {
+      setSelectedDatasetIds([])
+    } else {
+      setSelectedDatasetIds(datasets.map((d) => d.id))
+    }
+  }
 
   const handleGrant = async () => {
-    if (!selectedDatasetId || !selectedPrincipalId) {
+    if (selectedDatasetIds.length === 0 || !selectedPrincipalId) {
       toast({ 
         title: 'Fehler', 
-        description: 'Bitte wählen Sie ein Dataset und einen Principal aus', 
+        description: 'Bitte wählen Sie mindestens ein Dataset und einen Principal aus', 
         variant: 'error' 
       })
       return
@@ -41,24 +64,27 @@ export function DatasetPermissionsDialog({ open, onOpenChange }: DatasetPermissi
     setIsGranting(true)
     try {
       await giveDatasetPermission({
-        dataset_id: selectedDatasetId,
+        dataset_ids: selectedDatasetIds,
         principal_id: selectedPrincipalId,
         principal_type: principalType,
         permission_type: permissionType,
       })
 
-      const dataset = datasets.find((d) => d.id === selectedDatasetId)
+      const selectedDatasets = datasets.filter((d) => selectedDatasetIds.includes(d.id))
       const principal = principals.find((p) => p.id === selectedPrincipalId)
       const principalName = 'email' in principal! ? principal!.email : principal!.name
 
+      const datasetNames = selectedDatasets.map((d) => d.name).join(', ')
+      const datasetCount = selectedDatasets.length
+
       toast({ 
         title: 'Berechtigung erteilt', 
-        description: `"${principalName}" hat jetzt ${permissionType}-Zugriff auf "${dataset?.name || 'Dataset'}"`, 
+        description: `"${principalName}" hat jetzt ${permissionType}-Zugriff auf ${datasetCount} Dataset${datasetCount > 1 ? 's' : ''}: ${datasetNames}`, 
         variant: 'success' 
       })
       
       // Reset form
-      setSelectedDatasetId('')
+      setSelectedDatasetIds([])
       setSelectedPrincipalId('')
       setPrincipalType('user')
       setPermissionType('read')
@@ -74,38 +100,95 @@ export function DatasetPermissionsDialog({ open, onOpenChange }: DatasetPermissi
     }
   }
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      // Reset form when dialog closes
+      setSelectedDatasetIds([])
+      setSelectedPrincipalId('')
+      setPrincipalType('user')
+      setPermissionType('read')
+    }
+    onOpenChange(newOpen)
+  }
+
+
+  if (!open) return null
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="!max-w-[18vw] !w-[18vw] sm:!max-w-[30vw] sm:!w-[30vw] md:!max-w-[28vw] md:!w-[28vw] lg:!max-w-[28vw] lg:!w-[28vw] xl:!max-w-[28vw] xl:!w-[28vw] max-h-[98vh]">
         <DialogHeader>
           <DialogTitle>Dataset-Berechtigung vergeben</DialogTitle>
           <DialogDescription>
-            Erteilen Sie einem Benutzer oder einer Rolle Zugriff auf ein Dataset.
+            Erteilen Sie einem Benutzer oder einer Rolle Zugriff auf ein oder mehrere Datasets.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Dataset Selection */}
+          {/* Dataset Selection Table */}
           <div className="space-y-2">
-            <Label htmlFor="dataset">Dataset auswählen *</Label>
-            <Select value={selectedDatasetId} onValueChange={setSelectedDatasetId} disabled={isGranting}>
-              <SelectTrigger id="dataset">
-                <SelectValue placeholder="Dataset wählen..." />
-              </SelectTrigger>
-              <SelectContent>
-                {datasets.length === 0 ? (
-                  <div className="px-2 py-6 text-sm text-center text-muted-foreground">
-                    Keine Datasets verfügbar
-                  </div>
-                ) : (
-                  datasets.map((dataset) => (
-                    <SelectItem key={dataset.id} value={dataset.id}>
-                      {dataset.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center justify-between">
+              <Label>Dataset auswählen *</Label>
+              {datasets.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSelectAll}
+                  disabled={isGranting}
+                  className="h-7 text-xs"
+                >
+                  {selectedDatasetIds.length === datasets.length ? 'Alle abwählen' : 'Alle auswählen'}
+                </Button>
+              )}
+            </div>
+            <ScrollArea className="h-64 rounded-md border">
+              {datasets.length === 0 ? (
+                <div className="px-2 py-6 text-sm text-center text-muted-foreground">
+                  Keine Datasets verfügbar
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10 sm:w-12"></TableHead>
+                      <TableHead className="w-[120px] sm:w-[150px] md:w-[180px] lg:w-[200px]">Dataset</TableHead>
+                      <TableHead className="min-w-[200px]">Beschreibung</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {datasets.map((dataset) => (
+                      <TableRow key={dataset.id}>
+                        <TableCell className="w-10 sm:w-12">
+                          <Checkbox
+                            id={`dataset-${dataset.id}`}
+                            checked={selectedDatasetIds.includes(dataset.id)}
+                            onCheckedChange={() => handleDatasetToggle(dataset.id)}
+                            disabled={isGranting}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium w-[120px] sm:w-[150px] md:w-[180px] lg:w-[200px]">
+                          <Label
+                            htmlFor={`dataset-${dataset.id}`}
+                            className="cursor-pointer break-words"
+                          >
+                            {dataset.name}
+                          </Label>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground whitespace-pre-wrap min-w-[200px]">
+                          {dataset.description || 'Keine Beschreibung verfügbar.'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </ScrollArea>
+            {selectedDatasetIds.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {selectedDatasetIds.length} Dataset{selectedDatasetIds.length > 1 ? 's' : ''} ausgewählt
+              </p>
+            )}
           </div>
 
           {/* Principal Type Selection */}
@@ -207,7 +290,7 @@ export function DatasetPermissionsDialog({ open, onOpenChange }: DatasetPermissi
           </Button>
           <Button 
             onClick={handleGrant} 
-            disabled={isGranting || !selectedDatasetId || !selectedPrincipalId}
+            disabled={isGranting || selectedDatasetIds.length === 0 || !selectedPrincipalId}
           >
             {isGranting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Berechtigung erteilen

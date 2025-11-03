@@ -1,13 +1,7 @@
-import { useState } from 'react'
+import { memo } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Eye,
   Download,
@@ -17,7 +11,7 @@ import {
   Calendar,
 } from 'lucide-react'
 import type { DatasetFile } from '@/stores/dataset-store'
-import { cn } from '@/lib/utils'
+import { cn, formatDate } from '@/lib/utils'
 
 interface FileCardProps {
   file: DatasetFile
@@ -31,7 +25,7 @@ interface FileCardProps {
   variant?: 'grid' | 'list'
 }
 
-export const FileCard = ({
+const FileCardComponent = ({
   file,
   onPreview,
   onDownload,
@@ -42,22 +36,11 @@ export const FileCard = ({
   className,
   variant = 'grid',
 }: FileCardProps) => {
-  const [isHovered, setIsHovered] = useState(false)
   const isUrl = file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
   const faviconUrl = isUrl && getFaviconUrl ? getFaviconUrl(file.name) : null
   const isListVariant = variant === 'list'
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('de-DE', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(date))
-  }
-
-  const handleCardClick = (e: React.MouseEvent) => {
+  const handleCardClick = () => {
     if (isUrl) {
       // For URLs, open in new tab
       window.open(file.name, '_blank', 'noopener,noreferrer')
@@ -95,8 +78,6 @@ export const FileCard = ({
           className
         )}
         onClick={handleCardClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         <div className="flex-1 min-w-0 flex items-center gap-3">
           {/* Icon/Favicon */}
@@ -209,8 +190,6 @@ export const FileCard = ({
         className
       )}
       onClick={handleCardClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
 
       <CardHeader className="relative z-10 pb-1.5 sm:pb-2 flex-shrink-0 px-3 sm:px-4 pt-2 sm:pt-2.5">
@@ -326,8 +305,8 @@ export const FileCard = ({
         </div>
         <div className="flex items-center gap-1 shrink-0 min-w-0">
           <Calendar className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
-          <span className="truncate" title={formatDate(file.uploadDate)}>
-            {formatDate(file.uploadDate)}
+          <span className="truncate" title={formatDate(file.uploadDate, { includeTime: true })}>
+            {formatDate(file.uploadDate, { includeTime: true })}
           </span>
         </div>
       </CardContent>
@@ -335,3 +314,32 @@ export const FileCard = ({
   )
 }
 
+// Memoized FileCard mit custom comparison function für optimale Performance
+// memo gibt true zurück wenn KEIN Re-render nötig ist (Props sind gleich)
+export const FileCard = memo(FileCardComponent, (prevProps, nextProps) => {
+  // Prüfe ob sich relevante Props geändert haben
+  const prevDate = prevProps.file.uploadDate instanceof Date 
+    ? prevProps.file.uploadDate.getTime() 
+    : (prevProps.file.uploadDate ? new Date(prevProps.file.uploadDate).getTime() : null)
+  const nextDate = nextProps.file.uploadDate instanceof Date 
+    ? nextProps.file.uploadDate.getTime() 
+    : (nextProps.file.uploadDate ? new Date(nextProps.file.uploadDate).getTime() : null)
+  
+  const propsChanged = (
+    prevProps.file.id !== nextProps.file.id ||
+    prevProps.file.name !== nextProps.file.name ||
+    prevProps.file.type !== nextProps.file.type ||
+    prevProps.file.extension !== nextProps.file.extension ||
+    prevDate !== nextDate ||
+    prevProps.variant !== nextProps.variant ||
+    prevProps.className !== nextProps.className
+  )
+  
+  // Wenn Props sich geändert haben, return false (Re-render nötig)
+  // Wenn Props gleich sind, return true (kein Re-render)
+  // Callbacks (onPreview, onDownload, onDelete, getFaviconUrl, getUrlDescription, truncateFileName) 
+  // werden ignoriert, da sie Referenzen sind die häufig neu erstellt werden
+  return !propsChanged
+})
+
+FileCard.displayName = 'FileCard'

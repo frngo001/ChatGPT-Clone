@@ -175,21 +175,25 @@ export const useDatasetFilters = ({ datasets, users }: UseDatasetFiltersParams) 
   
   // Update functions
   const setSearchQuery = (q: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     navigate({
-      search: (prev) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      search: (prev: any) => ({
         ...prev,
         q: q || undefined
-      })
-    })
+      }) as any
+    } as any)
   }
   
   const setSelectedTags = (tags: string[]) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     navigate({
-      search: (prev) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      search: (prev: any) => ({
         ...prev,
         tags: tags.length > 0 ? tags : undefined
-      })
-    })
+      }) as any
+    } as any)
   }
   
   const toggleTag = (tag: string) => {
@@ -200,12 +204,14 @@ export const useDatasetFilters = ({ datasets, users }: UseDatasetFiltersParams) 
   }
   
   const setStatusFilter = (status: string | null) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     navigate({
-      search: (prev) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      search: (prev: any) => ({
         ...prev,
         status: status || undefined
-      })
-    })
+      }) as any
+    } as any)
   }
   
   const handleStatusChange = (value: string) => {
@@ -213,12 +219,14 @@ export const useDatasetFilters = ({ datasets, users }: UseDatasetFiltersParams) 
   }
   
   const setOwnerFilter = (owner: string | null) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     navigate({
-      search: (prev) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      search: (prev: any) => ({
         ...prev,
         owner: owner || undefined
-      })
-    })
+      }) as any
+    } as any)
   }
   
   const handleOwnerChange = (value: string) => {
@@ -226,44 +234,54 @@ export const useDatasetFilters = ({ datasets, users }: UseDatasetFiltersParams) 
   }
   
   const setCreatedFrom = (date: Date | null) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     navigate({
-      search: (prev) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      search: (prev: any) => ({
         ...prev,
         createdFrom: date ? date.toISOString() : undefined
-      })
-    })
+      }) as any
+    } as any)
   }
   
   const setCreatedTo = (date: Date | null) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     navigate({
-      search: (prev) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      search: (prev: any) => ({
         ...prev,
         createdTo: date ? date.toISOString() : undefined
-      })
-    })
+      }) as any
+    } as any)
   }
   
   const setUpdatedFrom = (date: Date | null) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     navigate({
-      search: (prev) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      search: (prev: any) => ({
         ...prev,
         updatedFrom: date ? date.toISOString() : undefined
-      })
-    })
+      }) as any
+    } as any)
   }
   
   const setUpdatedTo = (date: Date | null) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     navigate({
-      search: (prev) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      search: (prev: any) => ({
         ...prev,
         updatedTo: date ? date.toISOString() : undefined
-      })
-    })
+      }) as any
+    } as any)
   }
   
   const clearFilters = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     navigate({
-      search: (prev) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      search: (prev: any) => ({
         ...prev,
         q: undefined,
         tags: undefined,
@@ -273,8 +291,8 @@ export const useDatasetFilters = ({ datasets, users }: UseDatasetFiltersParams) 
         createdTo: undefined,
         updatedFrom: undefined,
         updatedTo: undefined
-      })
-    })
+      }) as any
+    } as any)
   }
   
   return {

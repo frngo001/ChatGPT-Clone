@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Message } from "ai/react";
 import type { ChatRequestOptions } from "ai";
 import OllamaChatMessage from "./ollama-chat-message";
@@ -34,13 +35,13 @@ interface ChatListProps {
  * 
  * @returns {JSX.Element} List with chat messages and loading indicator
  */
-export default function OllamaChatList({
+const OllamaChatListComponent = ({
   messages,
   isLoading,
   loadingSubmit,
   reload,
   isCogneeMode = false,
-}: ChatListProps) {
+}: ChatListProps) => {
   return (
     <div className="flex-1 w-full overflow-y-auto">
       <ChatMessageList>
@@ -67,3 +68,26 @@ export default function OllamaChatList({
     </div>
   );
 }
+
+// Memoized OllamaChatList mit custom comparison function für optimale Performance
+const OllamaChatList = memo(OllamaChatListComponent, (prevProps, nextProps) => {
+  // Re-render nur wenn sich relevante Props ändern
+  const messagesChanged = prevProps.messages.length !== nextProps.messages.length ||
+    prevProps.messages.some((msg, idx) => {
+      const nextMsg = nextProps.messages[idx]
+      return !nextMsg || msg.id !== nextMsg.id || msg.content !== nextMsg.content
+    })
+  
+  return (
+    !messagesChanged &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.loadingSubmit === nextProps.loadingSubmit &&
+    prevProps.isCogneeMode === nextProps.isCogneeMode &&
+    // reload ist eine Funktion - prüfe nicht auf Gleichheit (wird vom Parent neu erstellt)
+    true
+  )
+})
+
+OllamaChatList.displayName = 'OllamaChatList'
+
+export default OllamaChatList

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -9,56 +9,34 @@ import {
   Calendar,
   Clock,
   Trash2,
+  Share2,
 } from 'lucide-react'
 import type { Dataset } from '@/stores/dataset-store'
 import { ProcessingStatusBadge } from './processing-status-badge'
-import { cn } from '@/lib/utils'
+import { cn, formatDate } from '@/lib/utils'
 
 interface DatasetCardProps {
   dataset: Dataset
   ownerName?: string
   onClick?: () => void
   onDelete?: (e: React.MouseEvent) => void
+  onShare?: (e: React.MouseEvent) => void
   className?: string
   variant?: 'grid' | 'list'
+  showShareButton?: boolean
 }
 
-export const DatasetCard = ({
+const DatasetCardComponent = ({
   dataset,
   ownerName = 'Unbekannt',
   onClick,
   onDelete,
+  onShare,
   className,
   variant = 'grid',
+  showShareButton = false,
 }: DatasetCardProps) => {
-  const [isHovered, setIsHovered] = useState(false)
   const isListVariant = variant === 'list'
-
-  const formatDate = (date: Date | string | undefined) => {
-    if (!date) return 'Unbekannt'
-    
-    try {
-      const dateObj = typeof date === 'string' ? new Date(date) : date
-      
-      if (isNaN(dateObj.getTime())) {
-        return 'Unbekannt'
-      }
-      
-      return new Intl.DateTimeFormat('de-DE', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      }).format(dateObj)
-    } catch {
-      return 'Unbekannt'
-    }
-  }
-
-  const truncateDescription = (text: string | undefined | null, maxLength: number = 50) => {
-    if (!text) return 'Keine Beschreibung'
-    if (text.length <= maxLength) return text
-    return text.slice(0, maxLength).trim() + '...'
-  }
 
   return (
     <Card
@@ -70,8 +48,6 @@ export const DatasetCard = ({
         className
       )}
       onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <div className={cn(
         'relative z-10',
@@ -137,6 +113,20 @@ export const DatasetCard = ({
                 />
               </div>
             )}
+            {!isListVariant && showShareButton && onShare && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onShare?.(e)
+                }}
+              >
+                <Share2 className="h-4 w-4" />
+                <span className="sr-only">Teilen</span>
+              </Button>
+            )}
             {!isListVariant && onDelete && (
               <Button
                 variant="ghost"
@@ -199,15 +189,15 @@ export const DatasetCard = ({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1 min-w-0 flex-1">
                   <Calendar className="h-3 w-3 shrink-0" />
-                  <span className="truncate" title={formatDate(dataset.createdAt)}>
-                    {formatDate(dataset.createdAt)}
+                  <span className="truncate" title={formatDate(dataset.createdAt, { includeTime: false })}>
+                    {formatDate(dataset.createdAt, { includeTime: false })}
                   </span>
                 </div>
                 {dataset.updatedAt && (
                   <div className="flex items-center gap-1 min-w-0 flex-1 justify-end">
                     <Clock className="h-3 w-3 shrink-0" />
-                    <span className="truncate" title={formatDate(dataset.updatedAt)}>
-                      {formatDate(dataset.updatedAt)}
+                    <span className="truncate" title={formatDate(dataset.updatedAt, { includeTime: false })}>
+                      {formatDate(dataset.updatedAt, { includeTime: false })}
                     </span>
                   </div>
                 )}
@@ -240,8 +230,24 @@ export const DatasetCard = ({
 
             {/* Date */}
             <div className="hidden lg:block text-xs text-muted-foreground shrink-0">
-              {formatDate(dataset.createdAt)}
+              {formatDate(dataset.createdAt, { includeTime: false })}
             </div>
+
+            {/* Share Button */}
+            {showShareButton && onShare && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 shrink-0 hover:bg-primary/10 hover:text-primary"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onShare?.(e)
+                }}
+              >
+                <Share2 className="h-4 w-4" />
+                <span className="sr-only">Teilen</span>
+              </Button>
+            )}
 
             {/* Delete Button */}
             {onDelete && (
@@ -264,4 +270,46 @@ export const DatasetCard = ({
     </Card>
   )
 }
+
+// Memoized DatasetCard mit custom comparison function für optimale Performance
+// memo gibt true zurück wenn KEIN Re-render nötig ist (Props sind gleich)
+export const DatasetCard = memo(DatasetCardComponent, (prevProps, nextProps) => {
+  // Prüfe ob sich relevante Props geändert haben
+  const prevCreatedAt = prevProps.dataset.createdAt instanceof Date 
+    ? prevProps.dataset.createdAt.getTime() 
+    : (prevProps.dataset.createdAt ? new Date(prevProps.dataset.createdAt).getTime() : null)
+  const nextCreatedAt = nextProps.dataset.createdAt instanceof Date 
+    ? nextProps.dataset.createdAt.getTime() 
+    : (nextProps.dataset.createdAt ? new Date(nextProps.dataset.createdAt).getTime() : null)
+  
+  const prevUpdatedAt = prevProps.dataset.updatedAt instanceof Date 
+    ? prevProps.dataset.updatedAt.getTime() 
+    : (prevProps.dataset.updatedAt ? new Date(prevProps.dataset.updatedAt).getTime() : null)
+  const nextUpdatedAt = nextProps.dataset.updatedAt instanceof Date 
+    ? nextProps.dataset.updatedAt.getTime() 
+    : (nextProps.dataset.updatedAt ? new Date(nextProps.dataset.updatedAt).getTime() : null)
+  
+  const propsChanged = (
+    prevProps.dataset.id !== nextProps.dataset.id ||
+    prevProps.dataset.name !== nextProps.dataset.name ||
+    prevProps.dataset.description !== nextProps.dataset.description ||
+    prevProps.dataset.files.length !== nextProps.dataset.files.length ||
+    prevProps.dataset.tags.length !== nextProps.dataset.tags.length ||
+    prevProps.dataset.tags.some((tag, idx) => nextProps.dataset.tags[idx] !== tag) ||
+    prevProps.dataset.processingStatus !== nextProps.dataset.processingStatus ||
+    prevCreatedAt !== nextCreatedAt ||
+    prevUpdatedAt !== nextUpdatedAt ||
+    prevProps.ownerName !== nextProps.ownerName ||
+    prevProps.variant !== nextProps.variant ||
+    prevProps.className !== nextProps.className ||
+    prevProps.showShareButton !== nextProps.showShareButton
+  )
+  
+  // Wenn Props sich geändert haben, return false (Re-render nötig)
+  // Wenn Props gleich sind, return true (kein Re-render)
+  // Callbacks (onClick, onDelete, onShare) werden ignoriert, da sie Referenzen sind die häufig neu erstellt werden
+  return !propsChanged
+})
+
+DatasetCard.displayName = 'DatasetCard'
 

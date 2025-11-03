@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { CACHE_CONFIG } from '@/config/cache-config'
 
 /**
  * Represents an Ollama model with detailed information
@@ -90,7 +91,7 @@ export function useOllamaModels() {
       }
       return response.json()
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    ...CACHE_CONFIG.OLLAMA_MODELS,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
@@ -119,7 +120,7 @@ export function useDeepSeekModels() {
       }
       return response.json()
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes (DeepSeek models change less frequently)
+    ...CACHE_CONFIG.DEEPSEEK_MODELS,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })

@@ -14,7 +14,10 @@ export function useInitialLoading() {
   const accessToken = useAuthStore((state) => state.auth.accessToken)
   const shouldVerifyToken = useAuthStore((state) => state.auth.shouldVerifyToken)
   const verifyToken = useAuthStore((state) => state.auth.verifyToken)
-  const { fetchDatasets } = useDatasetStore()
+  // Selektive Selektoren: Nur benötigte Properties abonnieren
+  const datasets = useDatasetStore((state) => state.datasets)
+  const isLoading = useDatasetStore((state) => state.isLoading)
+  const fetchDatasets = useDatasetStore((state) => state.fetchDatasets)
   const hasInitialized = useRef(false)
 
   useEffect(() => {
@@ -38,7 +41,14 @@ export function useInitialLoading() {
       }
 
       // Load datasets summary (without details) for sidebar
-      if (accessToken) {
+      // Prüfe ob Datasets vollständig geladen sind (haben processingStatus)
+      // Nach einem Reload können Datasets aus dem persistierten Zustand kommen,
+      // aber ohne processingStatus (wird nicht persistiert)
+      const hasDatasetsWithoutStatus = datasets.length > 0 && 
+        datasets.some(d => !d.processingStatus)
+      
+      // Request-Deduplizierung: Lade wenn keine Datasets vorhanden oder unvollständig
+      if (accessToken && (datasets.length === 0 || hasDatasetsWithoutStatus) && !isLoading) {
         try {
           await fetchDatasets()
           // Note: Only basic dataset info is loaded, details are loaded on demand
@@ -51,5 +61,5 @@ export function useInitialLoading() {
 
     initializeApp()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Empty dependency array - only run once on mount
+  }, [datasets.length, isLoading]) // Abhängig von datasets.length und isLoading für Request-Deduplizierung
 }

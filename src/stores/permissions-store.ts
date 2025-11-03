@@ -9,6 +9,7 @@ interface PermissionsStore {
   users: UserWithRoles[]
   isLoading: boolean
   error: string | null
+  pendingFetchAllUsers: Promise<void> | null // Request-Deduplizierung
   
   // New: User Management
   searchQuery: string
@@ -34,8 +35,9 @@ interface PermissionsStore {
   toggleUserRole: (userId: string, roleName: 'admin' | 'user') => Promise<void>
   assignTenantToUser: (userId: string, tenantId: string) => Promise<void>
   assignUserToRole: (userId: string, roleId: string) => Promise<void>
+  assignUsersToRole: (userIds: string[], roleId: string) => Promise<void>
   giveDatasetPermission: (payload: {
-    dataset_id: string
+    dataset_ids: string[]
     principal_id: string
     principal_type: PrincipalType
     permission_type: PermissionType
@@ -53,6 +55,7 @@ export const usePermissionsStore = create<PermissionsStore>()((set, get) => ({
   users: [],
   isLoading: false,
   error: null,
+  pendingFetchAllUsers: null, // Request-Deduplizierung
   
   // New: User Management State
   searchQuery: '',
@@ -168,6 +171,27 @@ export const usePermissionsStore = create<PermissionsStore>()((set, get) => ({
     // Alias for assignRoleToUser
     return get().assignRoleToUser(userId, roleId)
   },
+
+  assignUsersToRole: async (userIds: string[], roleId: string) => {
+    set({ isLoading: true, error: null })
+    try {
+      // Batch-Zuweisung: Weise alle Benutzer gleichzeitig zu
+      const assignments = userIds.map((userId) => 
+        cogneeApi.permissions.addUserToRole(userId, roleId)
+      )
+      await Promise.all(assignments)
+      
+      // Refresh users to update role assignments
+      await get().fetchAllUsers()
+      set({ isLoading: false })
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to assign users to role',
+        isLoading: false 
+      })
+      throw error
+    }
+  },
   
   addUserToTenant: async (userId: string) => {
     const { tenant } = get()
@@ -194,14 +218,28 @@ export const usePermissionsStore = create<PermissionsStore>()((set, get) => ({
 
   // New: User Management Actions
   fetchAllUsers: async () => {
+    const state = get()
+    
+    // Request-Deduplizierung: Wenn bereits ein Fetch läuft, warte darauf
+    if (state.pendingFetchAllUsers) {
+      return state.pendingFetchAllUsers
+    }
+    
+    // Wenn Users bereits vorhanden und nicht im Loading-State, skip Fetch
+    if (state.users.length > 0 && !state.isLoading) {
+      return Promise.resolve()
+    }
+    
     set({ isLoading: true, error: null })
-    try {
-      const response = await cogneeApi.users.getAllUsersV2()
-      const users = response.data
+    
+    const fetchPromise = (async () => {
+      try {
+        const response = await cogneeApi.users.getAllUsersV2()
+        const users = response.data
       
       // Extract unique tenants from users
       const tenantsMap = new Map<string, Tenant>()
-      users.forEach(user => {
+      users.forEach((user: any) => {
         if (user.tenant && !tenantsMap.has(user.tenant.id)) {
           tenantsMap.set(user.tenant.id, user.tenant)
         }
@@ -210,22 +248,33 @@ export const usePermissionsStore = create<PermissionsStore>()((set, get) => ({
       
       // Extract unique roles from users
       const rolesMap = new Map<string, Role>()
-      users.forEach(user => {
-        user.roles.forEach(role => {
+      users.forEach((user: any) => {
+        user.roles.forEach((role: any) => {
           if (!rolesMap.has(role.id)) {
             rolesMap.set(role.id, role)
           }
         })
       })
-      const roles = Array.from(rolesMap.values())
-      
-      set({ users, tenants, roles, isLoading: false })
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to fetch users',
-        isLoading: false 
-      })
-    }
+        const roles = Array.from(rolesMap.values())
+        
+        set({ users, tenants, roles, isLoading: false })
+      } catch (error) {
+        set({ 
+          error: error instanceof Error ? error.message : 'Failed to fetch users',
+          isLoading: false,
+          pendingFetchAllUsers: null // Clear pending promise on error
+        })
+        throw error
+      } finally {
+        // Clear pending promise after completion
+        set({ pendingFetchAllUsers: null })
+      }
+    })()
+    
+    // Speichere Promise für Deduplizierung
+    set({ pendingFetchAllUsers: fetchPromise })
+    
+    return fetchPromise
   },
 
   updateUser: async (userId: string, payload: UpdateUserPayload) => {
@@ -331,7 +380,7 @@ export const usePermissionsStore = create<PermissionsStore>()((set, get) => ({
   },
   
   giveDatasetPermission: async (payload: {
-    dataset_id: string
+    dataset_ids: string[]
     principal_id: string
     principal_type: PrincipalType
     permission_type: PermissionType

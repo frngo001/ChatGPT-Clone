@@ -54,7 +54,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
           >
             <Header fixed>
               {isChatPage && (
-                <div className='absolute left-1/2 transform -translate-x-1/2 flex items-center'>
+                <div className='absolute left-1/2 transform -translate-x-1/2 hidden md:flex items-center'>
                   {chatMode === 'general' ? (
                     <ModelSelector />
                   ) : (

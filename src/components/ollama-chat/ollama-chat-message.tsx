@@ -99,7 +99,9 @@ function OllamaChatMessage({
 
   // Zustand aus dem Store
   const selectedDataset = useOllamaChatStore((state) => state.selectedDataset);
-  const { getDatasetById } = useDatasetStore();
+  // Selektiver Store-Selektor: Nur die Funktion abonnieren, nicht den ganzen Store
+  // Verhindert, dass jede Chat-Nachricht bei jedem Dataset-Store-Update re-rendert
+  const getDatasetById = useDatasetStore((state) => state.getDatasetById);
 
   /**
    * Extrahiere "think" Content von DeepSeek R1 Modellen und bereinige Nachricht

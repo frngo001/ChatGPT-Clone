@@ -3,9 +3,9 @@ import type { Dataset } from '@/stores/dataset-store'
 
 export function canShareDataset(user: AuthUser | null, dataset: Dataset): boolean {
   if (!user) return false
-  const isAdmin = user.roles?.some(r => r.name === 'admin')
   const isOwner = dataset.ownerId === user.id
-  return isAdmin && isOwner && !dataset.isShared
+  // Normale Nutzer können ihre eigenen Datasets teilen
+  return isOwner
 }
 
 export function canDeleteDataset(user: AuthUser | null, dataset: Dataset): boolean {

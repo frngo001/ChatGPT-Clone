@@ -104,16 +104,6 @@ function extractTextContent(content: any, maxLength: number = 500): string {
  * // sources: [{ title: "TypeScript Official", url: "https://..." }]
  * ```
  * 
- * @deprecated Diese Funktion ist ein Wrapper um performLangChainWebSearch für Rückwärtskompatibilität.
- * Nutze direkt performLangChainWebSearch aus './agents/web-search-agent.js'
- */
-async function performDuckDuckGoSearch(
-  query: string,
-  chatHistory?: Array<{ role: string; content: string }>
-): Promise<{ content: string, sources: Array<{ title: string, url: string }> }> {
-  // Delegiere an LangChain Web Search Agent
-  return performLangChainWebSearch(query, chatHistory);
-}
 
 /**
  * ============================================================================
@@ -372,10 +362,10 @@ export function setupChatApi(server: ViteDevServer) {
 
           // Extract last 10 messages from history for context
           // Use safe text extraction to avoid JSON strings and URL length issues
-          const chatHistory = initialMessages.slice(-10).map((msg) => ({
+          const chatHistory = initialMessages.slice(-10).map((msg: any) => ({
             role: msg.role,
             content: extractTextContent(msg.content, 500) // Safe text extraction, max 500 chars per message
-          })).filter((msg) => msg.content.length > 0); // Filter out empty messages
+          })).filter((msg: any) => msg.content.length > 0); // Filter out empty messages
           
           // Websuche ist obligatorisch wenn aktiviert - Fehler werden propagiert
           try {
@@ -649,7 +639,7 @@ export function setupChatApi(server: ViteDevServer) {
         }
 
         // Get the response data
-        const responseData = await cogneeResponse.json();
+        const responseData: any = await cogneeResponse.json();
         
         // Extract token from response (Cognee might return it in different formats)
         const token = responseData.access_token || responseData.token || responseData;
@@ -690,13 +680,13 @@ export function setupChatApi(server: ViteDevServer) {
                   const updatedData = await updateResponse.json();
                   userData = updatedData;
                 } else {
-                  const errorText = await updateResponse.text();
+                  await updateResponse.text();
                 }
               } catch (error) {
               }
             }
           } else {
-            const errorText = await userResponse.text();
+            await userResponse.text();
           }
         } catch (error) {
         }
@@ -707,8 +697,8 @@ export function setupChatApi(server: ViteDevServer) {
           token,
           user: userData || {
             email,
-            id: responseData.user_id,
-            tenant_id: responseData.tenant_id,
+            id: (responseData as any).user_id,
+            tenant_id: (responseData as any).tenant_id,
             is_active: true,
             is_superuser: false,
             is_verified: false
@@ -754,7 +744,7 @@ export function setupChatApi(server: ViteDevServer) {
 
     req.on('end', async () => {
       try {
-        const { email, password, name } = JSON.parse(body);
+        const { email, password } = JSON.parse(body) as { email: string; password: string; name?: string };
 
         if (!email || !password) {
           res.statusCode = 400;
@@ -785,7 +775,7 @@ export function setupChatApi(server: ViteDevServer) {
           return;
         }
 
-        const responseData = await cogneeResponse.json();
+        const responseData: any = await cogneeResponse.json();
         
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ 
@@ -1327,12 +1317,12 @@ export function setupChatApi(server: ViteDevServer) {
         res.end(JSON.stringify({ 
           valid: true,
           user: {
-            id: userData.id,
-            email: userData.email,
-            is_active: userData.is_active,
-            is_superuser: userData.is_superuser,
-            is_verified: userData.is_verified,
-            tenant_id: userData.tenant_id
+            id: (userData as any).id,
+            email: (userData as any).email,
+            is_active: (userData as any).is_active,
+            is_superuser: (userData as any).is_superuser,
+            is_verified: (userData as any).is_verified,
+            tenant_id: (userData as any).tenant_id
           }
         }));
       } else {
@@ -2361,9 +2351,8 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
           return;
         }
 
-        const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
-
         // TODO: Implement proper role removal via Cognee API
+        // const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
         // For now, return success
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');

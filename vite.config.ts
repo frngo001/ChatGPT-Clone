@@ -39,6 +39,53 @@ export default defineConfig({
     },
   },
 
+  // ✅ Optimized: Build-Konfiguration für besseres Code-Splitting
+  build: {
+    rollupOptions: {
+      output: {
+        // Optimiere Chunk-Größen durch manuelle Chunks
+        manualChunks: (id) => {
+          // Icon chunks - Group custom icons together for better loading
+          if (id.includes('assets/custom/icon-') || id.includes('assets/brand-icons/icon-')) {
+            return 'icons'
+          }
+          
+          // Vendor chunks - Group by library type
+          if (id.includes('node_modules')) {
+            // React core
+            if (id.includes('react') && (id.includes('/react/') || id.includes('/react-dom/'))) {
+              return 'react-vendor'
+            }
+            // TanStack libraries
+            if (id.includes('@tanstack')) {
+              return 'tanstack-vendor'
+            }
+            // Radix UI components
+            if (id.includes('@radix-ui')) {
+              return 'ui-vendor'
+            }
+            // PDF Viewer - Heavy library
+            if (id.includes('@react-pdf-viewer')) {
+              return 'pdf-viewer'
+            }
+            // Markdown libraries - Heavy
+            if (id.includes('react-markdown') || id.includes('remark-') || id.includes('rehype-') || id.includes('katex')) {
+              return 'markdown'
+            }
+            // Other vendor code
+            return 'vendor'
+          }
+        },
+        // Optimiere Chunk-Namen für besseres Caching
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
+      },
+    },
+    // Erhöhe Chunk-Warnung-Limit (wenn Chunks zu groß werden)
+    chunkSizeWarningLimit: 1000,
+  },
+
   // Development server configuration
   server: {
     proxy: {

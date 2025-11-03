@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { formatDate } from '@/lib/utils'
 
 export function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -35,13 +36,6 @@ export function DocumentsPage() {
     doc.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('de-DE', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(new Date(date))
-  }
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'
@@ -52,7 +46,7 @@ export function DocumentsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4">
+    <div className="flex flex-1 flex-col gap-4 md:gap-3 p-4 md:p-3 lg:p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -187,7 +181,7 @@ export function DocumentsPage() {
                   {/* Stats */}
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>{document.type}</span>
-                    <span>{formatDate(document.uploadDate)}</span>
+                    <span>{formatDate(document.uploadDate, { includeTime: false })}</span>
                   </div>
                 </div>
               </CardContent>

@@ -3,6 +3,9 @@ import { persist } from 'zustand/middleware'
 import { datasetsApi, convertApiResponseToDataset, convertDatasetToApiRequest, convertDatasetToUpdateRequest, AddDataResponse, DataType } from '@/lib/api/datasets-api'
 import { cogneeApi } from '@/lib/api/cognee-api-client'
 import type { DatasetPermission } from '@/types/permissions'
+import { retry, CRITICAL_API_RETRY_CONFIG, FILE_UPLOAD_RETRY_CONFIG } from '@/lib/utils/retry'
+import { getFileExtension, getMimeTypeFromExtension } from '@/lib/utils/file-utils'
+import { v4 as uuidv4 } from 'uuid'
 
 export interface DatasetFile {
   id: string
@@ -43,6 +46,8 @@ interface DatasetStore {
   isLoading: boolean
   error: string | null
   statusPollingInterval: NodeJS.Timeout | null
+  currentPollInterval: number // Für Exponential Backoff
+  pendingFetchDatasets: Promise<void> | null // Request-Deduplizierung
   
   // Cache fields
   documentsCacheTimestamp: Record<string, number>
@@ -88,7 +93,7 @@ interface DatasetStore {
   // Processing actions
   processDatasets: (datasetIds: string[]) => Promise<void>
   checkDatasetStatus: (datasetId: string) => Promise<void>
-  checkAllDatasetStatuses: () => Promise<void>
+  checkAllDatasetStatuses: () => Promise<boolean> // Gibt zurück ob sich Status geändert hat
   startStatusPolling: () => void
   stopStatusPolling: () => void
   getUnprocessedDatasets: () => Dataset[]
@@ -100,6 +105,7 @@ interface DatasetStore {
   
   // Permissions actions
   shareDatasetWithTenant: (datasetId: string, tenantId: string) => Promise<void>
+  shareDatasetWithUser: (datasetId: string, userId: string) => Promise<void>
   fetchDatasetPermissions: (datasetId: string) => Promise<DatasetPermission[]>
   
   // Filter actions
@@ -117,6 +123,8 @@ export const useDatasetStore = create<DatasetStore>()(
       isLoading: false,
       error: null,
       statusPollingInterval: null,
+      currentPollInterval: 5000, // Start mit 5s für Exponential Backoff
+      pendingFetchDatasets: null as Promise<void> | null,
       
       // Cache initialization
       documentsCacheTimestamp: {},
@@ -136,20 +144,47 @@ export const useDatasetStore = create<DatasetStore>()(
 
       createDataset: async (name, description, tags = []) => {
         set({ isLoading: true, error: null })
+        
+        // Optimistic Update: Füge Dataset sofort hinzu mit temporärer ID
+        const tempId = uuidv4()
+        // Optimistic Dataset erstellt direkt (nicht über API-Format)
+        const optimisticDataset: Dataset = {
+          id: tempId,
+          name,
+          description,
+          tags: tags || [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          ownerId: undefined, // Wird vom Backend gesetzt
+          processingStatus: undefined,
+          files: [],
+        }
+        
+        set((state) => ({
+          datasets: [...state.datasets, optimisticDataset],
+        }))
+        
         try {
           const apiRequest = convertDatasetToApiRequest({ name, description, tags })
-          const apiResponse = await datasetsApi.createDataset(apiRequest)
+          // ✅ Added: Retry-Logik für kritische Dataset-Erstellung
+          const apiResponse = await retry(
+            () => datasetsApi.createDataset(apiRequest),
+            CRITICAL_API_RETRY_CONFIG
+          )
           const newDataset = convertApiResponseToDataset(apiResponse)
           
+          // Ersetze optimistic Dataset mit echten Daten
           set((state) => ({
-            datasets: [...state.datasets, newDataset],
+            datasets: state.datasets.map(d => d.id === tempId ? newDataset : d),
             isLoading: false,
           }))
         } catch (error) {
-          set({ 
+          // Rollback: Entferne optimistic Dataset bei Fehler
+          set((state) => ({
+            datasets: state.datasets.filter(d => d.id !== tempId),
             error: error instanceof Error ? error.message : 'Failed to create dataset',
             isLoading: false 
-          })
+          }))
           throw error
         }
       },
@@ -158,7 +193,11 @@ export const useDatasetStore = create<DatasetStore>()(
         set({ isLoading: true, error: null })
         try {
           const apiRequest = convertDatasetToUpdateRequest(updates)
-          const apiResponse = await datasetsApi.updateDataset(id, apiRequest)
+          // ✅ Added: Retry-Logik für Dataset-Updates
+          const apiResponse = await retry(
+            () => datasetsApi.updateDataset(id, apiRequest),
+            CRITICAL_API_RETRY_CONFIG
+          )
           const updatedDataset = convertApiResponseToDataset(apiResponse)
           
           set((state) => ({
@@ -168,6 +207,9 @@ export const useDatasetStore = create<DatasetStore>()(
             currentDataset: state.currentDataset?.id === id ? updatedDataset : state.currentDataset,
             isLoading: false,
           }))
+          
+          // ✅ Improved: Invalidate cache after dataset update
+          get().invalidateDatasetCache(id)
         } catch (error) {
           set({ 
             error: error instanceof Error ? error.message : 'Failed to update dataset',
@@ -180,12 +222,19 @@ export const useDatasetStore = create<DatasetStore>()(
       deleteDataset: async (id) => {
         set({ isLoading: true, error: null })
         try {
-          await datasetsApi.deleteDataset(id)
+          // ✅ Added: Retry-Logik für Dataset-Löschung
+          await retry(
+            () => datasetsApi.deleteDataset(id),
+            CRITICAL_API_RETRY_CONFIG
+          )
           set((state) => ({
             datasets: state.datasets.filter((dataset) => dataset.id !== id),
             currentDataset: state.currentDataset?.id === id ? null : state.currentDataset,
             isLoading: false,
           }))
+          
+          // ✅ Improved: Invalidate cache after dataset deletion
+          get().invalidateDatasetCache(id)
         } catch (error) {
           set({ 
             error: error instanceof Error ? error.message : 'Failed to delete dataset',
@@ -208,7 +257,7 @@ export const useDatasetStore = create<DatasetStore>()(
           // For now, we'll add files locally as before
           const newFile: DatasetFile = {
             ...file,
-            id: crypto.randomUUID(),
+            id: uuidv4(),
             uploadDate: new Date(),
           }
 
@@ -242,13 +291,48 @@ export const useDatasetStore = create<DatasetStore>()(
 
       uploadFileToDataset: async (datasetId, file, metadata) => {
         set({ isLoading: true, error: null })
+        
+        // Optimistic Update: Füge Datei sofort hinzu mit temporärer ID
+        const tempFileId = uuidv4()
+        const optimisticFile: DatasetFile = {
+          id: tempFileId,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          uploadDate: new Date(),
+          extension: file.name.split('.').pop() || 'unknown',
+        }
+        
+        set((state) => ({
+          datasets: state.datasets.map((dataset) =>
+            dataset.id === datasetId
+              ? {
+                  ...dataset,
+                  files: [...dataset.files, optimisticFile],
+                  updatedAt: new Date(),
+                }
+              : dataset
+          ),
+          currentDataset: state.currentDataset?.id === datasetId
+            ? {
+                ...state.currentDataset,
+                files: [...state.currentDataset.files, optimisticFile],
+                updatedAt: new Date(),
+              }
+            : state.currentDataset,
+        }))
+        
         try {
           // Upload file to API using dataset ID only
-          const apiResponse: AddDataResponse = await datasetsApi.addDataToDataset({
-            data: file,
-            datasetId,
-            metadata
-          })
+          // ✅ Added: Retry-Logik für File-Uploads (längere Retries wegen großer Dateien)
+          const apiResponse: AddDataResponse = await retry(
+            () => datasetsApi.addDataToDataset({
+              data: file,
+              datasetId,
+              metadata
+            }),
+            FILE_UPLOAD_RETRY_CONFIG
+          )
 
           // Check if upload was successful
           if (apiResponse.status !== 'PipelineRunCompleted') {
@@ -265,12 +349,13 @@ export const useDatasetStore = create<DatasetStore>()(
             extension: file.name.split('.').pop() || 'unknown',
           }))
 
+          // Ersetze optimistic File mit echten Daten
           set((state) => ({
             datasets: state.datasets.map((dataset) =>
               dataset.id === datasetId
                 ? {
                     ...dataset,
-                    files: [...dataset.files, ...newFiles],
+                    files: [...dataset.files.filter(f => f.id !== tempFileId), ...newFiles],
                     updatedAt: new Date(),
                     processingStatus: 'DATASET_PROCESSING_INITIATED', // Mark as needs processing
                   }
@@ -279,9 +364,9 @@ export const useDatasetStore = create<DatasetStore>()(
             currentDataset: state.currentDataset?.id === datasetId
               ? {
                   ...state.currentDataset,
-                  files: [...state.currentDataset.files, ...newFiles],
+                  files: [...state.currentDataset.files.filter(f => f.id !== tempFileId), ...newFiles],
                   updatedAt: new Date(),
-                  processingStatus: 'DATASET_PROCESSING_INITIATED', // Mark as needs processing
+                  processingStatus: 'DATASET_PROCESSING_INITIATED',
                 }
               : state.currentDataset,
             isLoading: false,
@@ -289,12 +374,26 @@ export const useDatasetStore = create<DatasetStore>()(
           
           // Invalidate cache after successful upload
           get().invalidateDatasetCache(datasetId)
-          
         } catch (error) {
-          set({ 
-            error: error instanceof Error ? error.message : 'Failed to upload file to dataset',
+          // Rollback: Entferne optimistic File bei Fehler
+          set((state) => ({
+            datasets: state.datasets.map((dataset) =>
+              dataset.id === datasetId
+                ? {
+                    ...dataset,
+                    files: dataset.files.filter(f => f.id !== tempFileId),
+                  }
+                : dataset
+            ),
+            currentDataset: state.currentDataset?.id === datasetId
+              ? {
+                  ...state.currentDataset,
+                  files: state.currentDataset.files.filter(f => f.id !== tempFileId),
+                }
+              : state.currentDataset,
+            error: error instanceof Error ? error.message : 'Failed to upload file',
             isLoading: false 
-          })
+          }))
           throw error
         }
       },
@@ -640,6 +739,9 @@ export const useDatasetStore = create<DatasetStore>()(
               : state.currentDataset,
             isLoading: false,
           }))
+          
+          // ✅ Improved: Invalidate cache after file update
+          get().invalidateDatasetCache(datasetId)
         } catch (error) {
           set({ 
             error: error instanceof Error ? error.message : 'Failed to update file in dataset',
@@ -702,8 +804,29 @@ export const useDatasetStore = create<DatasetStore>()(
 
       // API actions
       fetchDatasets: async () => {
+        const state = get()
+        
+        // Request-Deduplizierung: Wenn bereits ein Fetch läuft, warte darauf
+        if (state.pendingFetchDatasets) {
+          return state.pendingFetchDatasets
+        }
+        
+        // Prüfe ob Datasets vollständig geladen sind (haben processingStatus)
+        // Nach einem Reload können Datasets aus dem persistierten Zustand kommen,
+        // aber ohne processingStatus (wird nicht persistiert)
+        const hasDatasetsWithoutStatus = state.datasets.length > 0 && 
+          state.datasets.some(d => !d.processingStatus)
+        
+        // Wenn Datasets bereits vorhanden, vollständig geladen (haben Status) und nicht im Loading-State, skip Fetch
+        if (state.datasets.length > 0 && !hasDatasetsWithoutStatus && !state.isLoading) {
+          return Promise.resolve()
+        }
+        
+        // Setze isLoading und erstelle Promise für Deduplizierung
         set({ isLoading: true, error: null })
-        try {
+        
+        const fetchPromise = (async () => {
+          try {
           const apiResponse = await datasetsApi.getDatasets()
           const datasets = apiResponse.map(convertApiResponseToDataset)
           
@@ -783,13 +906,23 @@ export const useDatasetStore = create<DatasetStore>()(
               isLoading: false
             }))
           }
-        } catch (error) {
-          set({ 
-            error: error instanceof Error ? error.message : 'Failed to fetch datasets',
-            isLoading: false 
-          })
-          throw error
-        }
+          } catch (error) {
+            set({ 
+              error: error instanceof Error ? error.message : 'Failed to fetch datasets',
+              isLoading: false,
+              pendingFetchDatasets: null // Clear pending promise on error
+            })
+            throw error
+          } finally {
+            // Clear pending promise after completion
+            set({ pendingFetchDatasets: null })
+          }
+        })()
+        
+        // Speichere Promise für Deduplizierung
+        set({ pendingFetchDatasets: fetchPromise })
+        
+        return fetchPromise
       },
 
       fetchDatasetData: async (datasetId) => {
@@ -797,10 +930,14 @@ export const useDatasetStore = create<DatasetStore>()(
         try {
           
           // Fetch both dataset data and status
-          const [apiResponse, statusResponse] = await Promise.all([
-            datasetsApi.getDatasetData(datasetId),
-            datasetsApi.getDatasetProcessingStatus([datasetId])
-          ])
+          // ✅ Added: Retry-Logik für kritische Daten-Abfragen
+          const [apiResponse, statusResponse] = await retry(
+            () => Promise.all([
+              datasetsApi.getDatasetData(datasetId),
+              datasetsApi.getDatasetProcessingStatus([datasetId])
+            ]),
+            CRITICAL_API_RETRY_CONFIG
+          )
           
           const files = apiResponse.map(file => {
             // Safe date parsing
@@ -816,14 +953,18 @@ export const useDatasetStore = create<DatasetStore>()(
               uploadDate = new Date()
             }
             
+            // Extract extension and MIME type from filename instead of using API values
+            const extension = getFileExtension(file.name)
+            const mimeType = getMimeTypeFromExtension(extension)
+            
             return {
               id: file.id,
               name: file.name,
-              type: file.originalMimeType,
+              type: mimeType,
               size: 0, // Size not provided in new API format
               uploadDate,
               content: undefined, // Content not provided in new API format
-              extension: file.originalExtension,
+              extension: extension.startsWith('.') ? extension.substring(1) : extension,
             }
           })
 
@@ -1039,21 +1180,33 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
         try {
           const { datasets } = get()
           
-          if (datasets.length === 0) return
+          if (datasets.length === 0) return false
+
+          // Speichere Status vor dem Check für Vergleich
+          const previousStatuses = new Map(
+            datasets.map(d => [d.id, d.processingStatus])
+          )
 
           // Check status for all datasets to ensure consistency
           const datasetIds = datasets.map(dataset => dataset.id)
           const statusResponse = await datasetsApi.getDatasetProcessingStatus(datasetIds)
 
-          set((state) => ({
-            datasets: state.datasets.map((dataset) => {
-              const apiStatus = statusResponse[dataset.id]
-              if (apiStatus) {
-                // Use the exact API status value
-                return { ...dataset, processingStatus: apiStatus, updatedAt: new Date() }
+          // Prüfe ob sich Status geändert haben
+          let hasStatusChanged = false
+          const updatedDatasets = datasets.map((dataset) => {
+            const apiStatus = statusResponse[dataset.id]
+            if (apiStatus) {
+              const previousStatus = previousStatuses.get(dataset.id)
+              if (previousStatus !== apiStatus) {
+                hasStatusChanged = true
               }
-              return dataset
-            }),
+              return { ...dataset, processingStatus: apiStatus, updatedAt: new Date() }
+            }
+            return dataset
+          })
+
+          set((state) => ({
+            datasets: updatedDatasets,
             currentDataset: state.currentDataset && statusResponse[state.currentDataset.id]
               ? {
                   ...state.currentDataset,
@@ -1061,33 +1214,73 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
                   updatedAt: new Date(),
                 }
               : state.currentDataset,
+            // Exponential Backoff: Wenn Status sich geändert hat, Intervall zurücksetzen
+            // Sonst Intervall erhöhen (bis max 30s)
+            currentPollInterval: hasStatusChanged 
+              ? 5000 // Zurücksetzen auf 5s bei Änderung
+              : Math.min(Math.floor(state.currentPollInterval * 1.5), 30000) // Max 30s
           }))
+
+          return hasStatusChanged
         } catch (error) {
           console.error('Failed to check all dataset statuses:', error)
+          return false
         }
       },
 
       startStatusPolling: () => {
-        const { statusPollingInterval } = get()
+        const state = get()
         
-        // Clear existing interval if any
-        if (statusPollingInterval) {
-          clearInterval(statusPollingInterval)
+        // Singleton-Pattern: Wenn Polling bereits aktiv ist, nicht erneut starten
+        if (state.statusPollingInterval) {
+          return // Polling läuft bereits
+        }
+        
+        // Clear existing timeout if any (setTimeout statt setInterval)
+        if (state.statusPollingInterval) {
+          clearTimeout(state.statusPollingInterval)
         }
 
-        // Start new polling interval (every 5 seconds)
-        const interval = setInterval(() => {
-          get().checkAllDatasetStatuses()
-        }, 5000)
+        // Exponential Backoff: Verwende rekursives setTimeout statt setInterval
+        // um dynamische Intervalle zu unterstützen
+        const scheduleNextPoll = async () => {
+          const state = get()
+          
+          // Prüfe nur ob es Datasets gibt die verarbeitet werden
+          const hasProcessingDatasets = state.datasets.some(dataset => 
+            dataset.processingStatus === 'DATASET_PROCESSING_STARTED'
+          )
+          
+          if (!hasProcessingDatasets) {
+            // Keine verarbeitenden Datasets: Polling stoppen
+            set({ statusPollingInterval: null, currentPollInterval: 5000 })
+            return
+          }
 
-        set({ statusPollingInterval: interval })
+          // Status prüfen (gibt zurück ob sich Status geändert hat)
+          await state.checkAllDatasetStatuses()
+          
+          // Hole aktualisiertes Intervall nach dem Check
+          const currentState = get()
+          const nextInterval = currentState.currentPollInterval
+          
+          // Schedule nächsten Poll mit aktuellem Intervall
+          const timeout = setTimeout(() => {
+            scheduleNextPoll()
+          }, nextInterval)
+          
+          set({ statusPollingInterval: timeout })
+        }
+
+        // Starte ersten Poll sofort
+        scheduleNextPoll()
       },
 
       stopStatusPolling: () => {
         const { statusPollingInterval } = get()
         if (statusPollingInterval) {
-          clearInterval(statusPollingInterval)
-          set({ statusPollingInterval: null })
+          clearTimeout(statusPollingInterval) // Verwende clearTimeout statt clearInterval
+          set({ statusPollingInterval: null, currentPollInterval: 5000 }) // Reset Intervall
         }
       },
 
@@ -1116,6 +1309,23 @@ Dein Ziel ist es, eine vollständige, strukturierte und durchsuchbare Wissensbas
         } catch (error) {
           set({ 
             error: error instanceof Error ? error.message : 'Failed to share dataset',
+            isLoading: false 
+          })
+          throw error
+        }
+      },
+
+      shareDatasetWithUser: async (datasetId, userId) => {
+        set({ isLoading: true, error: null })
+        try {
+          await cogneeApi.permissions.shareDatasetWithUser(datasetId, userId)
+          
+          // Reload datasets to get updated permissions
+          await get().fetchDatasets()
+          set({ isLoading: false })
+        } catch (error) {
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to share dataset with user',
             isLoading: false 
           })
           throw error

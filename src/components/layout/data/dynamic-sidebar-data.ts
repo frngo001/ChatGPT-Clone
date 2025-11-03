@@ -10,7 +10,9 @@ import { FoldersIcon } from '@/components/ui/folders-icon'
 import { SquarePenIcon } from '@/components/ui/square-pen-icon'
 
 export function useDynamicSidebarData(): SidebarData {
-  const { datasets } = useDatasetStore()
+  // Selektiver Store-Selektor: Nur datasets abonnieren
+  // Verhindert, dass Sidebar-Daten bei jedem Store-Update neu berechnet werden
+  const datasets = useDatasetStore((state) => state.datasets)
 
   // Generate dynamic dataset items
   const datasetItems = datasets.map((dataset) => ({

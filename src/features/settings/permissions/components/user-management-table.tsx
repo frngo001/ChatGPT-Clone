@@ -241,7 +241,7 @@ export function UserManagementTable() {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" sideOffset={2} className="w-56 animate-in fade-in-0 zoom-in-95 duration-100">
+                    <DropdownMenuContent align="end" sideOffset={2} className="w-56 animate-in fade-in-0 zoom-in-95 duration-50">
                       {!isCurrentUser && (
                         <>
                           <DropdownMenuItem 
@@ -326,7 +326,7 @@ export function UserManagementTable() {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Status</p>
                     <Badge 
-                      variant={user.is_active ? 'default' : 'secondary'}
+                      variant="secondary"
                       className="text-xs"
                     >
                       {user.is_active ? (
@@ -445,7 +445,7 @@ export function UserManagementTable() {
                 </TableCell>
                     <TableCell className="py-4">
                   <Badge 
-                    variant={user.is_active ? 'default' : 'secondary'}
+                    variant="secondary"
                     className="text-xs"
                   >
                     {user.is_active ? (
@@ -489,7 +489,7 @@ export function UserManagementTable() {
                     </TableCell>
                     <TableCell className="py-4 hidden lg:table-cell">
                   <Badge 
-                    variant={user.is_verified ? 'default' : 'secondary'}
+                    variant="secondary"
                     className="text-xs"
                   >
                     {user.is_verified ? (
@@ -519,7 +519,7 @@ export function UserManagementTable() {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" sideOffset={2} className="w-56 animate-in fade-in-0 zoom-in-95 duration-100">
+                  <DropdownMenuContent align="end" sideOffset={2} className="w-56 animate-in fade-in-0 zoom-in-95 duration-50">
                     {!isCurrentUser && (
                       <>
                         <DropdownMenuItem 

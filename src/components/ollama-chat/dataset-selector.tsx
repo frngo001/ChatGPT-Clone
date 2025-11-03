@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   Popover,
   PopoverContent,
@@ -39,10 +39,32 @@ export function DatasetSelector({ isLoading = false }: DatasetSelectorProps) {
   const selectedDataset = useOllamaChatStore((state) => state.selectedDataset);
   const setSelectedDataset = useOllamaChatStore((state) => state.setSelectedDataset);
 
-  // Lade Datasets aus dem Dataset-Store
-  const { datasets, isLoading: datasetsLoading, error, invalidateDatasetCache } =
-    useDatasetStore();
+  // Selektive Store-Selektoren: Nur die benötigten Properties abonnieren
+  // Verhindert unnötige Re-renders bei Store-Updates
+  const datasets = useDatasetStore((state) => state.datasets)
+  const datasetsLoading = useDatasetStore((state) => state.isLoading)
+  const error = useDatasetStore((state) => state.error)
+  const fetchDatasets = useDatasetStore((state) => state.fetchDatasets)
+  const invalidateDatasetCache = useDatasetStore((state) => state.invalidateDatasetCache)
   
+  /**
+   * Stelle sicher, dass Datasets vollständig geladen sind
+   */
+  React.useEffect(() => {
+    // Prüfe ob Datasets vollständig geladen sind (haben processingStatus)
+    // Nach einem Reload können Datasets aus dem persistierten Zustand kommen,
+    // aber ohne processingStatus (wird nicht persistiert)
+    const hasDatasetsWithoutStatus = datasets.length > 0 && 
+      datasets.some(d => !d.processingStatus)
+    
+    // Lade Datasets wenn keine vorhanden oder unvollständig
+    if ((datasets.length === 0 || hasDatasetsWithoutStatus) && !datasetsLoading && !error) {
+      fetchDatasets().catch(err => {
+        console.error('Failed to fetch datasets:', err)
+      })
+    }
+  }, [datasets, datasetsLoading, error, fetchDatasets]);
+
   /**
    * Reset das ausgewählte Dataset, wenn es nicht mehr verfügbar oder nicht verarbeitet ist
    */
@@ -59,7 +81,14 @@ export function DatasetSelector({ isLoading = false }: DatasetSelectorProps) {
    * Setze Standard-Dataset auf das erste verfügbare verarbeitete Dataset
    */
   React.useEffect(() => {
-    if (!datasetsLoading && !error && datasets.length > 0) {
+    // Prüfe ob Datasets vollständig geladen sind (haben processingStatus)
+    // Nach einem Reload können Datasets aus dem persistierten Zustand kommen,
+    // aber ohne processingStatus (wird nicht persistiert)
+    const hasDatasetsWithoutStatus = datasets.length > 0 && 
+      datasets.some(d => !d.processingStatus)
+    
+    // Warte auf vollständiges Laden der Datasets
+    if (!datasetsLoading && !error && datasets.length > 0 && !hasDatasetsWithoutStatus) {
       // Filtere Datasets, die mindestens eine Datei haben und verarbeitet sind
       const availableDatasets = datasets.filter(
         (dataset) =>
@@ -93,34 +122,36 @@ export function DatasetSelector({ isLoading = false }: DatasetSelectorProps) {
   const isSelectedDatasetProcessed =
     selectedDatasetData?.processingStatus === "DATASET_PROCESSING_COMPLETED";
 
-  // Filtere Datasets, die mindestens eine Datei haben und verarbeitet sind
-  const availableDatasets = datasets.filter(
+  // Zeige ALLE Datasets aus dem Store (Cache)
+  const allDatasets = datasets;
+
+  // Verarbeitete Datasets mit Dateien (auswählbar)
+  const availableDatasets = allDatasets.filter(
     (dataset) =>
       dataset.files &&
       dataset.files.length > 0 &&
       dataset.processingStatus === "DATASET_PROCESSING_COMPLETED"
   );
 
-  // Hole Datasets, die noch verarbeitet werden
-  const processingDatasets = datasets.filter(
+  // Alle anderen Datasets (nicht verarbeitet, ohne Dateien, etc.) - nicht auswählbar
+  const unavailableDatasets = allDatasets.filter(
     (dataset) =>
-      dataset.files &&
-      dataset.files.length > 0 &&
-      dataset.processingStatus &&
-      dataset.processingStatus !== "DATASET_PROCESSING_COMPLETED" &&
-      dataset.processingStatus !== "DATASET_PROCESSING_ERRORED"
+      !dataset.files ||
+      dataset.files.length === 0 ||
+      !dataset.processingStatus ||
+      dataset.processingStatus !== "DATASET_PROCESSING_COMPLETED"
   );
 
   /**
    * Handler für Dataset-Änderung
    * Invalidiert den Cache vor der Änderung, um frischen Daten zu gewährleisten
    */
-  const handleDatasetChange = (datasetId: string) => {
+  const handleDatasetChange = useCallback((datasetId: string) => {
     // Invalidiere Cache vor Dataset-Änderung für frische Daten
     invalidateDatasetCache(datasetId);
     setSelectedDataset(datasetId);
     setOpen(false);
-  };
+  }, [invalidateDatasetCache, setSelectedDataset]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -153,8 +184,8 @@ export function DatasetSelector({ isLoading = false }: DatasetSelectorProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[220px] p-1">
-            {/* Lade-Zustand */}
-            {datasetsLoading ? (
+            {/* Lade-Zustand - nur anzeigen wenn keine Datasets vorhanden sind */}
+            {datasetsLoading && allDatasets.length === 0 ? (
               <Button variant="ghost" disabled className="w-full">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Lade Datasets...
@@ -164,9 +195,9 @@ export function DatasetSelector({ isLoading = false }: DatasetSelectorProps) {
               <Button variant="ghost" disabled className="w-full">
                 Fehler beim Laden
               </Button>
-            ) : availableDatasets.length > 0 || processingDatasets.length > 0 ? (
+            ) : allDatasets.length > 0 ? (
               <>
-                {/* Zeige verarbeitete Datasets */}
+                {/* Zeige verarbeitete Datasets (auswählbar) */}
                 {availableDatasets.map((dataset) => (
                   <Button
                     key={dataset.id}
@@ -186,25 +217,44 @@ export function DatasetSelector({ isLoading = false }: DatasetSelectorProps) {
                   </Button>
                 ))}
 
-                {/* Zeige Datasets in Verarbeitung */}
-                {processingDatasets.map((dataset) => (
-                  <Button
-                    key={dataset.id}
-                    variant="ghost"
-                    disabled
-                    className="w-full justify-start"
-                  >
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium text-muted-foreground">
-                        {dataset.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {dataset.files.length} Datei{dataset.files.length !== 1 ? "en" : ""} -
-                        Verarbeitung läuft...
-                      </span>
-                    </div>
-                  </Button>
-                ))}
+                {/* Zeige nicht verarbeitete Datasets oder ohne Dateien (nicht auswählbar) */}
+                {unavailableDatasets.map((dataset) => {
+                  // Bestimme Status-Text basierend auf Dataset-Zustand
+                  let statusText = "";
+                  if (!dataset.files || dataset.files.length === 0) {
+                    statusText = "Keine Dateien";
+                  } else if (!dataset.processingStatus) {
+                    statusText = "Bitte verarbeiten";
+                  } else if (dataset.processingStatus === "DATASET_PROCESSING_STARTED") {
+                    statusText = "Verarbeitung läuft...";
+                  } else if (dataset.processingStatus === "DATASET_PROCESSING_ERRORED") {
+                    statusText = "Fehler bei Verarbeitung";
+                  } else {
+                    statusText = "Wird verarbeitet...";
+                  }
+                  
+                  const fileCount = dataset.files?.length || 0;
+                  
+                  return (
+                    <Button
+                      key={dataset.id}
+                      variant="ghost"
+                      disabled
+                      className="w-full justify-start opacity-60"
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium text-muted-foreground">
+                          {dataset.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {fileCount > 0 
+                            ? `${fileCount} Datei${fileCount !== 1 ? "en" : ""} - ${statusText}`
+                            : statusText}
+                        </span>
+                      </div>
+                    </Button>
+                  );
+                })}
               </>
             ) : (
               /* Keine Datasets verfügbar */

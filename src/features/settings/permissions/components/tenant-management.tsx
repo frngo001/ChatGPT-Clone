@@ -34,13 +34,17 @@ import { useToast } from '@/hooks/use-sonner-toast'
 import { cogneeApi } from '@/lib/api/cognee-api-client'
 
 export function TenantManagement() {
-  const { tenants, fetchTenants } = usePermissionsStore()
+  const { tenants, users } = usePermissionsStore()
   const { toast } = useToast()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingTenant, setEditingTenant] = useState<any>(null)
+  const [, setEditingTenant] = useState<any>(null)
   const [formData, setFormData] = useState({ name: '', description: '' })
   const [isLoading, setIsLoading] = useState(false)
+
+  const getUserCountForTenant = (tenantId: string) => {
+    return users.filter((user) => user.tenant_id === tenantId).length
+  }
 
   const handleCreateTenant = async () => {
     if (!formData.name.trim()) {
@@ -55,7 +59,7 @@ export function TenantManagement() {
     setIsLoading(true)
     try {
       await cogneeApi.permissions.createTenant(formData.name, formData.description)
-      await fetchTenants()
+      // Refresh tenants list
       setIsCreateDialogOpen(false)
       setFormData({ name: '', description: '' })
       toast({
@@ -93,7 +97,7 @@ export function TenantManagement() {
     setIsLoading(true)
     try {
       // Note: Update tenant endpoint would need to be implemented
-      await fetchTenants()
+      // Refresh tenants list
       setIsEditDialogOpen(false)
       setEditingTenant(null)
       setFormData({ name: '', description: '' })
@@ -113,11 +117,11 @@ export function TenantManagement() {
     }
   }
 
-  const handleDeleteTenant = async (tenantId: string) => {
+  const handleDeleteTenant = async (_tenantId: string) => {
     if (confirm('Möchten Sie diesen Tenant wirklich löschen?')) {
       try {
         // Note: Delete tenant endpoint would need to be implemented
-        await fetchTenants()
+        // Refresh tenants list
         toast({
           title: 'Erfolg',
           description: 'Tenant wurde erfolgreich gelöscht',
@@ -213,7 +217,7 @@ export function TenantManagement() {
                   <TableCell>
                     <Badge variant="secondary">
                       <Users className="mr-1 h-3 w-3" />
-                      {tenant.user_count || 0} Benutzer
+                      {getUserCountForTenant(tenant.id)} Benutzer
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">

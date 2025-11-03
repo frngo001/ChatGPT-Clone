@@ -1,16 +1,65 @@
 "use client"
 
-import React from "react"
+import React, { Suspense } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import remarkMath from "remark-math"
 import remarkEmoji from "remark-emoji"
 import rehypeHighlight from "rehype-highlight"
 import rehypeRaw from "rehype-raw"
 import rehypeSlug from "rehype-slug"
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism"
+// SyntaxHighlighter wird dynamisch in LazySyntaxHighlighter geladen
 import { cn } from "@/lib/utils"
+
+// Wrapper-Komponente für lazy-loaded SyntaxHighlighter
+const LazySyntaxHighlighter: React.FC<{
+  language: string
+  showLineNumbers: boolean
+  children: string
+}> = ({ language, showLineNumbers, children }) => {
+  const [Highlighter, setHighlighter] = React.useState<any>(null)
+  const [Theme, setTheme] = React.useState<any>(null)
+
+  React.useEffect(() => {
+    let isMounted = true
+
+    Promise.all([
+      import("react-syntax-highlighter").then(module => module.Prism),
+      import("react-syntax-highlighter/dist/esm/styles/prism").then(module => module.vscDarkPlus)
+    ]).then(([HighlighterComp, theme]) => {
+      if (isMounted) {
+        setHighlighter(() => HighlighterComp)
+        setTheme(theme)
+      }
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  if (!Highlighter || !Theme) {
+    return (
+      <pre className="bg-muted p-4 rounded text-sm font-mono overflow-x-auto">
+        <code>{children}</code>
+      </pre>
+    )
+  }
+
+  return (
+    <Highlighter
+      style={Theme as any}
+      language={language}
+      showLineNumbers={showLineNumbers}
+      customStyle={{
+        margin: 0,
+        borderRadius: "0.375rem",
+        fontSize: "0.875rem",
+      }}
+    >
+      {children}
+    </Highlighter>
+  )
+}
 
 interface MarkdownRendererProps {
   content: string
@@ -40,10 +89,74 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   className,
 }) => {
   const {
-
+    
     linkTarget = "_blank",
     showLineNumbers = false,
   } = config
+
+  // ✅ Optimized: Lazy-load remarkMath und rehypeKatex nur wenn enableMath aktiviert ist
+  const [remarkMathPlugin, setRemarkMathPlugin] = React.useState<any>(null)
+  const [rehypeKatexPlugin, setRehypeKatexPlugin] = React.useState<any>(null)
+  const [isLoadingMath, setIsLoadingMath] = React.useState(false)
+
+  // ✅ Lazy-load KaTeX CSS wenn Math aktiviert ist
+  React.useEffect(() => {
+    if (enableMath && !document.querySelector('link[href*="katex"]')) {
+      // Lade KaTeX CSS dynamisch nur wenn Math aktiviert ist
+      import("katex/dist/katex.min.css").catch(() => {
+        // Fallback: Versuche CDN wenn lokales CSS nicht verfügbar
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css'
+        link.crossOrigin = 'anonymous'
+        document.head.appendChild(link)
+      })
+    }
+  }, [enableMath])
+
+  React.useEffect(() => {
+    if (enableMath && (!remarkMathPlugin || !rehypeKatexPlugin) && !isLoadingMath) {
+      setIsLoadingMath(true)
+      Promise.all([
+        import("remark-math"),
+        import("rehype-katex")
+      ])
+        .then(([remarkMathModule, rehypeKatexModule]) => {
+          setRemarkMathPlugin(remarkMathModule.default || remarkMathModule)
+          setRehypeKatexPlugin(rehypeKatexModule.default || rehypeKatexModule)
+          setIsLoadingMath(false)
+        })
+        .catch(error => {
+          console.error("Failed to load math plugins:", error)
+          setIsLoadingMath(false)
+        })
+    }
+  }, [enableMath, remarkMathPlugin, rehypeKatexPlugin, isLoadingMath])
+
+  // Erstelle remarkPlugins Array mit lazy-loaded remarkMath
+  const remarkPlugins = React.useMemo(() => {
+    const plugins: any[] = [remarkGfm]
+    if (enableMath && remarkMathPlugin) {
+      plugins.push(remarkMathPlugin)
+    }
+    if (enableEmoji) {
+      plugins.push(remarkEmoji)
+    }
+    return plugins
+  }, [enableMath, remarkMathPlugin, enableEmoji])
+
+  // Erstelle rehypePlugins Array mit lazy-loaded rehypeKatex
+  const rehypePlugins = React.useMemo(() => {
+    const plugins: any[] = [
+      rehypeRaw,
+      rehypeSlug,
+      rehypeHighlight,
+    ]
+    if (enableMath && rehypeKatexPlugin) {
+      plugins.push(rehypeKatexPlugin)
+    }
+    return plugins
+  }, [enableMath, rehypeKatexPlugin])
 
   const handleLinkClick = (url: string, event: React.MouseEvent) => {
     if (onLinkClick) {
@@ -73,16 +186,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       style={{ maxWidth }}
     >
       <ReactMarkdown
-        remarkPlugins={[
-          remarkGfm,
-          ...(enableMath ? [remarkMath] : []),
-          ...(enableEmoji ? [remarkEmoji] : []),
-        ]}
-        rehypePlugins={[
-          rehypeRaw,
-          rehypeSlug,
-          rehypeHighlight,
-        ]}
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
         components={{
           // Code blocks with syntax highlighting
           code({ className, children, ...props }) {
@@ -92,18 +197,18 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             if (language) {
               return (
                 <div className="relative">
-                  <SyntaxHighlighter
-                    style={vscDarkPlus as any}
-                    language={language}
-                    showLineNumbers={showLineNumbers}
-                    customStyle={{
-                      margin: 0,
-                      borderRadius: "0.375rem",
-                      fontSize: "0.875rem",
-                    }}
-                  >
-                    {String(children).replace(/\n$/, "")}
-                  </SyntaxHighlighter>
+                  <Suspense fallback={
+                    <pre className="bg-muted p-4 rounded text-sm font-mono overflow-x-auto">
+                      <code>{String(children).replace(/\n$/, "")}</code>
+                    </pre>
+                  }>
+                    <LazySyntaxHighlighter
+                      language={language}
+                      showLineNumbers={showLineNumbers}
+                    >
+                      {String(children).replace(/\n$/, "")}
+                    </LazySyntaxHighlighter>
+                  </Suspense>
                   <button
                     className="absolute top-2 right-2 px-2 py-1 text-xs bg-gray-700 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={async () => {

@@ -1,4 +1,4 @@
-import { type ReactNode, useRef } from 'react'
+import { type ReactNode, useRef, useCallback } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
 import { useDatasetStore } from '@/stores/dataset-store'
@@ -66,21 +66,23 @@ function NavBadge({ children }: { children: ReactNode }) {
 function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
   const { setOpenMobile } = useSidebar()
   const squarePenIconRef = useRef<SquarePenIconHandle>(null)
-  const { fetchDatasetDataWithCache } = useDatasetStore()
+  // Selektiver Store-Selektor: Nur die Funktion abonnieren, nicht den ganzen Store
+  const fetchDatasetDataWithCache = useDatasetStore((state) => state.fetchDatasetDataWithCache)
   
-  const handleMouseEnter = () => {
+  // ✅ Optimized: useCallback für Event-Handler um unnötige Re-Renders zu vermeiden
+  const handleMouseEnter = useCallback(() => {
     if (item.icon === SquarePenIcon) {
       squarePenIconRef.current?.startAnimation()
     }
-  }
+  }, [item.icon])
   
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     if (item.icon === SquarePenIcon) {
       squarePenIconRef.current?.stopAnimation()
     }
-  }
+  }, [item.icon])
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     setOpenMobile(false)
     
     // Check if this is a dataset link
@@ -92,7 +94,7 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
         console.error('Failed to fetch dataset data:', error)
       })
     }
-  }
+  }, [href, fetchDatasetDataWithCache, setOpenMobile])
 
   return (
     <SidebarMenuItem>
@@ -127,17 +129,18 @@ function SidebarMenuCollapsibleExtended({
   const { setOpenMobile } = useSidebar()
   const foldersIconRef = useRef<FoldersIconHandle>(null)
   
-  const handleMouseEnter = () => {
+  // ✅ Optimized: useCallback für Event-Handler um unnötige Re-Renders zu vermeiden
+  const handleMouseEnter = useCallback(() => {
     if (item.icon === FoldersIcon) {
       foldersIconRef.current?.startAnimation()
     }
-  }
+  }, [item.icon])
   
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     if (item.icon === FoldersIcon) {
       foldersIconRef.current?.stopAnimation()
     }
-  }
+  }, [item.icon])
   
   return (
     <Collapsible
@@ -231,17 +234,18 @@ function SidebarMenuCollapsedDropdown({
 }) {
   const foldersIconRef = useRef<FoldersIconHandle>(null)
   
-  const handleMouseEnter = () => {
+  // ✅ Optimized: useCallback für Event-Handler um unnötige Re-Renders zu vermeiden
+  const handleMouseEnter = useCallback(() => {
     if (item.icon === FoldersIcon) {
       foldersIconRef.current?.startAnimation()
     }
-  }
+  }, [item.icon])
   
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     if (item.icon === FoldersIcon) {
       foldersIconRef.current?.stopAnimation()
     }
-  }
+  }, [item.icon])
   
   return (
     <SidebarMenuItem>

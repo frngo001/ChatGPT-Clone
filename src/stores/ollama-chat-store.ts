@@ -81,6 +81,8 @@ interface ExtendedMessage extends Message {
 interface ChatSession {
   messages: ExtendedMessage[];
   createdAt: string;
+  /** Das zum Zeitpunkt der letzten Speicherung gewählte Dataset für diese Conversation */
+  datasetId?: string | null;
 }
 
 interface State {
@@ -177,6 +179,7 @@ const useOllamaChatStore = create<State & Actions>()(
       saveMessages: (chatId, messages) => {
         set((state) => {
           const existingChat = state.chats[chatId];
+          const selectedDataset = state.selectedDataset ?? null;
 
           return {
             chats: {
@@ -184,6 +187,7 @@ const useOllamaChatStore = create<State & Actions>()(
               [chatId]: {
                 messages: [...messages],
                 createdAt: existingChat?.createdAt || new Date().toISOString(),
+                datasetId: selectedDataset,
               },
             },
           };
@@ -253,7 +257,22 @@ const useOllamaChatStore = create<State & Actions>()(
       setSystemPrompt: (systemPrompt) => set({ systemPrompt }),
       // Cognee settings actions
       setChatMode: (chatMode) => set({ chatMode }),
-      setSelectedDataset: (selectedDataset) => set({ selectedDataset }),
+      setSelectedDataset: (selectedDataset) => set((state) => {
+        const currentChatId = state.currentChatId;
+        if (currentChatId && state.chats[currentChatId]) {
+          return {
+            selectedDataset,
+            chats: {
+              ...state.chats,
+              [currentChatId]: {
+                ...state.chats[currentChatId],
+                datasetId: selectedDataset ?? null,
+              },
+            },
+          };
+        }
+        return { selectedDataset };
+      }),
       // Web search settings actions
       setWebSearchEnabled: (enabled) => set({ webSearchEnabled: enabled }),
     }),

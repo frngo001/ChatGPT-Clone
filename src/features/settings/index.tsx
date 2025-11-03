@@ -39,12 +39,12 @@ export function Settings() {
     : sidebarNavItems
     
   return (
-    <Main fixed>
+    <Main fixed fluid>
       <div className='flex flex-1 flex-col space-y-2 overflow-hidden md:space-y-2 lg:flex-row lg:space-y-0 lg:space-x-12'>
-        <aside className='top-0 lg:sticky lg:w-1/5'>
+        <aside className='lg:sticky lg:top-0 lg:self-start lg:h-fit md:w-1/2 lg:w-1/6'>
           <SidebarNav items={navItems} />
         </aside>
-        <div className='flex w-full overflow-y-hidden p-1'>
+        <div className='flex w-full overflow-y-auto p-1 md:p-1'>
           <Outlet />
         </div>
       </div>

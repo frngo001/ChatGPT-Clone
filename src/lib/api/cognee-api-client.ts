@@ -307,7 +307,7 @@ export const cogneeApi = {
     // Body: array of dataset UUIDs
     // Query: permission_name
     giveDatasetPermission: (payload: {
-      dataset_id: string
+      dataset_ids: string[]
       principal_id: string
       principal_type: PrincipalType
       permission_type: PermissionType
@@ -318,7 +318,7 @@ export const cogneeApi = {
       // Body ist ein Array von Dataset-UUIDs
       return cogneeApiClient.post(
         `/v1/permissions/datasets/${payload.principal_id}?${params.toString()}`,
-        [payload.dataset_id]
+        payload.dataset_ids
       )
     },
 
@@ -327,9 +327,21 @@ export const cogneeApi = {
       // Cognee API: POST /v1/permissions/datasets/{principal_id}?permission_name=read
       // Body: [dataset_id]
       return cogneeApi.permissions.giveDatasetPermission({
-        dataset_id: datasetId,
+        dataset_ids: [datasetId],
         principal_id: tenantId,
         principal_type: 'tenant',
+        permission_type: 'read'
+      })
+    },
+
+    // Helper: Share dataset with a specific user
+    shareDatasetWithUser: async (datasetId: string, userId: string) => {
+      // Cognee API: POST /v1/permissions/datasets/{principal_id}?permission_name=read
+      // Body: [dataset_id]
+      return cogneeApi.permissions.giveDatasetPermission({
+        dataset_ids: [datasetId],
+        principal_id: userId,
+        principal_type: 'user',
         permission_type: 'read'
       })
     },

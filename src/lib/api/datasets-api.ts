@@ -16,6 +16,7 @@
  */
 
 import { useAuthStore } from '@/stores/auth-store'
+import { getFileExtension, getMimeTypeFromExtension } from '@/lib/utils/file-utils'
 
 /**
  * Basis URL für alle API-Requests
@@ -217,8 +218,17 @@ export class DatasetsApiService {
    */
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`API Error: ${response.status} - ${errorText}`)
+      let errorText = ''
+      try {
+        const errorJson = await response.json()
+        errorText = errorJson.detail || errorJson.message || errorJson.error || JSON.stringify(errorJson)
+      } catch {
+        errorText = await response.text()
+      }
+      const error = new Error(`API Error: ${response.status} - ${errorText}`)
+      ;(error as any).status = response.status
+      ;(error as any).response = errorText
+      throw error
     }
     return response.json()
   }
@@ -280,9 +290,19 @@ export class DatasetsApiService {
    */
   async createDataset(data: CreateDatasetRequest): Promise<DatasetResponse> {
     // Sanitize dataset name before creating to prevent backend validation errors
-    const sanitizedData = {
-      ...data,
+    // Remove empty description and tags to match API expectations
+    const sanitizedData: any = {
       name: this.sanitizeDatasetName(data.name)
+    }
+    
+    // Only include description if it's not empty
+    if (data.description && data.description.trim()) {
+      sanitizedData.description = data.description.trim()
+    }
+    
+    // Only include tags if array is not empty
+    if (data.tags && Array.isArray(data.tags) && data.tags.length > 0) {
+      sanitizedData.tags = data.tags
     }
     
     const response = await fetch(`${this.baseUrl}/datasets`, {
@@ -608,24 +628,36 @@ function safeParseDate(dateString: string | undefined): Date {
 }
 
 // Helper function to convert API response to local Dataset format
-export function convertApiResponseToDataset(apiResponse: DatasetResponse): any {
+// Supports both camelCase (DatasetDTO) and snake_case (legacy) formats
+export function convertApiResponseToDataset(apiResponse: any): any {
+  // Handle both camelCase and snake_case field names
+  const createdAt = apiResponse.createdAt || apiResponse.created_at
+  const updatedAt = apiResponse.updatedAt || apiResponse.updated_at
+  const ownerId = apiResponse.ownerId || apiResponse.owner_id
+  
   return {
     id: apiResponse.id,
     name: apiResponse.name,
     description: apiResponse.description || '',
-    createdAt: safeParseDate(apiResponse.createdAt),
-    updatedAt: safeParseDate(apiResponse.updatedAt),
-    ownerId: apiResponse.ownerId,
+    createdAt: safeParseDate(createdAt),
+    updatedAt: safeParseDate(updatedAt),
+    ownerId: ownerId,
     tags: apiResponse.tags || [],
-    files: apiResponse.files?.map(file => ({
-      id: file.id,
-      name: file.name,
-      type: file.originalMimeType,
-      size: 0, // Size not provided in new API format
-      uploadDate: safeParseDate(file.createdAt),
-      content: undefined, // Content not provided in new API format
-      extension: file.originalExtension,
-    })) || [],
+    files: apiResponse.files?.map((file: any) => {
+      // Extract extension and MIME type from filename instead of using API values
+      const extension = getFileExtension(file.name)
+      const mimeType = getMimeTypeFromExtension(extension)
+      
+      return {
+        id: file.id,
+        name: file.name,
+        type: mimeType,
+        size: 0, // Size not provided in new API format
+        uploadDate: safeParseDate(file.createdAt || file.created_at),
+        content: undefined, // Content not provided in new API format
+        extension: extension.startsWith('.') ? extension.substring(1) : extension,
+      }
+    }) || [],
   }
 }
 

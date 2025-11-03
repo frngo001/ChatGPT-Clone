@@ -5,7 +5,7 @@ import type { Role } from '@/types/permissions'
 const ACCESS_TOKEN = 'thisisjustarandomstring'
 const LAST_VERIFIED = 'lastVerified'
 
-interface AuthUser {
+export interface AuthUser {
   accountNo: string
   email: string
   role: string[]

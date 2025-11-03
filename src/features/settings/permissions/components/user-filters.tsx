@@ -1,4 +1,4 @@
-import { Search, Filter, X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -34,23 +34,23 @@ export function UserFilters() {
   }
   
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-3">
+    <div className="space-y-3 md:space-y-2">
+      <div className="flex flex-col gap-3 md:gap-2">
         {/* Search Bar - Full width on all screens */}
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground md:h-3 md:w-3" />
           <Input
             placeholder="User nach E-Mail durchsuchen..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 md:h-9 md:text-sm"
           />
         </div>
         
         {/* Filters - Responsive layout */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-2 w-full">
           <Select value={roleFilter || 'all'} onValueChange={(v) => setRoleFilter(v === 'all' ? null : v)}>
-            <SelectTrigger className="w-full sm:w-[140px]">
+            <SelectTrigger className="w-full sm:w-[140px] md:h-8 md:text-xs md:px-2">
               <SelectValue placeholder="Rolle" />
             </SelectTrigger>
             <SelectContent>
@@ -60,8 +60,8 @@ export function UserFilters() {
             </SelectContent>
           </Select>
           
-          <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? null : v)}>
-            <SelectTrigger className="w-full sm:w-[140px]">
+          <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? 'all' : v as 'active' | 'inactive')}>
+            <SelectTrigger className="w-full sm:w-[140px] md:h-8 md:text-xs md:px-2">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -72,7 +72,7 @@ export function UserFilters() {
           </Select>
 
           <Select value={tenantFilter || 'all'} onValueChange={(v) => setTenantFilter(v === 'all' ? null : v)}>
-            <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px] md:h-8 md:text-xs md:px-2">
               <SelectValue placeholder="Tenant" />
             </SelectTrigger>
             <SelectContent>
@@ -91,7 +91,7 @@ export function UserFilters() {
               variant="ghost" 
               size="sm" 
               onClick={clearFilters}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto md:h-8 md:px-3 md:text-xs"
             >
               <X className="h-4 w-4 mr-1" />
               Zurücksetzen

@@ -60,7 +60,7 @@ export function UserAuthForm({
       exp: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
     }
 
-    toast.promise(sleep(2000), {
+    toast.promise(sleep(1000), {
       loading: 'Signing in...',
       success: () => {
         setIsLoading(false)

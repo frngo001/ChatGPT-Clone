@@ -3,7 +3,7 @@ import OllamaChatList from "./ollama-chat-list";
 import OllamaChatBottombar from "./ollama-chat-bottombar";
 import type { Message, ChatRequestOptions } from "ai";
 import { useChat } from "ai/react";
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import useOllamaChatStore from "@/stores/ollama-chat-store";
@@ -218,10 +218,39 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       }
 
       setApiError(errorMessage);
-      toast.error("Chat-Fehler", {
-        description: errorMessage,
-        duration: 8000,
-      });
+      
+      // ✅ Verbesserte Error-Toast mit Retry-Button für wiederholbare Fehler
+      const isRetryable = 
+        error.message.includes("Failed to fetch") ||
+        error.message.includes("NetworkError") ||
+        error.message.includes("Connection refused") ||
+        error.message.includes("ECONNREFUSED") ||
+        error.message.includes("Internal Server Error") ||
+        error.message.includes("500") ||
+        error.message.includes("timeout") ||
+        error.message.includes("TIMEOUT") ||
+        error.message.includes("llama runner process has terminated");
+
+      if (isRetryable) {
+        toast.error("Chat-Fehler", {
+          description: errorMessage,
+          duration: 10000,
+          action: {
+            label: "Erneut versuchen",
+            onClick: () => {
+              // Retry last message if available
+              if (messages.length > 0) {
+                reload();
+              }
+            },
+          },
+        });
+      } else {
+        toast.error("Chat-Fehler", {
+          description: errorMessage,
+          duration: 8000,
+        });
+      }
     },
   });
 
@@ -240,7 +269,8 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     }
   }, [chatMode, selectedDataset, setSelectedDataset]);
 
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  // useCallback für onSubmit um Referenz-Stabilität zu gewährleisten
+  const onSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     window.history.replaceState({}, "", `/chat/${id}`);
 
@@ -326,20 +356,95 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     handleSubmit(e, requestOptions);
     saveMessages(id, [...messages as ExtendedMessage[], userMessage as ExtendedMessage]);
     setBase64Images(null);
-  };
+  }, [
+    id,
+    chatMode,
+    selectedModel,
+    selectedDataset,
+    input,
+    base64Images,
+    messages,
+    systemPrompt,
+    selectedProvider,
+    webSearchEnabled,
+    temperature,
+    topP,
+    maxTokens,
+    batchSize,
+    throttleDelay,
+    handleSubmit,
+    saveMessages,
+    setBase64Images,
+  ]);
 
-  const removeLatestMessage = () => {
+  // useCallback für removeLatestMessage um Referenz-Stabilität zu gewährleisten
+  const removeLatestMessage = useCallback(() => {
     const updatedMessages = messages.slice(0, -1);
     setMessages(updatedMessages);
     saveMessages(id, updatedMessages as ExtendedMessage[]);
     return updatedMessages;
-  };
+  }, [messages, setMessages, saveMessages, id]);
 
-  const handleStop = () => {
+  // useCallback für handleStop um Referenz-Stabilität zu gewährleisten
+  const handleStop = useCallback(() => {
     stop();
     saveMessages(id, [...messages as ExtendedMessage[]]);
     setLoadingSubmit(false);
-  };
+  }, [stop, saveMessages, id, messages]);
+
+  // useCallback für reload callback um Referenz-Stabilität zu gewährleisten
+  const reloadCallback = useCallback(async (chatRequestOptions?: ChatRequestOptions) => {
+    removeLatestMessage();
+
+    // Preventive check for Cognee mode - check if dataset has data
+    if (chatMode === 'cognee' && selectedDataset) {
+      try {
+        const hasData = await cogneeApi.checkDatasetHasData(selectedDataset);
+        if (!hasData) {
+          toast.error("Dataset-Fehler", {
+            description: "Das ausgewählte Dataset enthält keine verarbeiteten Daten. Bitte fügen Sie Dokumente hinzu und verarbeiten Sie diese zuerst.",
+            duration: 8000,
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking dataset data:', error);
+        // Continue with the request - the error will be handled by the onError callback
+      }
+    }
+
+    const requestOptions: ChatRequestOptions = chatRequestOptions || (chatMode === 'cognee' ? {
+      body: {
+        query: messages[messages.length - 1]?.content || '',
+        datasetIds: [selectedDataset],
+        systemPrompt: systemPrompt,
+      },
+    } : {
+      body: {
+        selectedModel: selectedModel,
+        streamingConfig: {
+          temperature: 0.7,
+          topP: 0.9,
+          maxTokens: 1000000,
+          batchSize: 80,
+          throttleDelay: 80,
+        },
+        ...(chatMode === 'general' && { webSearchEnabled }),
+      },
+    });
+
+    setLoadingSubmit(true);
+    return reload(requestOptions);
+  }, [
+    removeLatestMessage,
+    chatMode,
+    selectedDataset,
+    messages,
+    systemPrompt,
+    selectedModel,
+    webSearchEnabled,
+    reload,
+  ]);
 
   return (
     <div className="flex flex-col w-full max-w-5xl h-full chat-container">
@@ -387,49 +492,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
             isLoading={isLoading}
             loadingSubmit={loadingSubmit}
             isCogneeMode={chatMode === 'cognee'}
-            reload={async () => {
-              removeLatestMessage();
-
-              // Preventive check for Cognee mode - check if dataset has data
-              if (chatMode === 'cognee' && selectedDataset) {
-                try {
-                  const hasData = await cogneeApi.checkDatasetHasData(selectedDataset);
-                  if (!hasData) {
-                    toast.error("Dataset-Fehler", {
-                      description: "Das ausgewählte Dataset enthält keine verarbeiteten Daten. Bitte fügen Sie Dokumente hinzu und verarbeiten Sie diese zuerst.",
-                      duration: 8000,
-                    });
-                    return;
-                  }
-                } catch (error) {
-                  console.error('Error checking dataset data:', error);
-                  // Continue with the request - the error will be handled by the onError callback
-                }
-              }
-
-              const requestOptions: ChatRequestOptions = chatMode === 'cognee' ? {
-                body: {
-                  query: messages[messages.length - 1]?.content || '',
-                  datasetIds: [selectedDataset],
-                  systemPrompt: systemPrompt,
-                },
-              } : {
-                body: {
-                  selectedModel: selectedModel,
-                  streamingConfig: {
-                    temperature: 0.7,
-                    topP: 0.9,
-                    maxTokens: 1000000,
-                    batchSize: 80,
-                    throttleDelay: 80,
-                  },
-                  ...(chatMode === 'general' && { webSearchEnabled }),
-                },
-              };
-
-              setLoadingSubmit(true);
-              return reload(requestOptions);
-            }}
+            reload={reloadCallback}
           />
           <OllamaChatBottombar
             input={input}

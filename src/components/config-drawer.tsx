@@ -1,16 +1,19 @@
 import { type SVGProps, useRef } from 'react'
 import { Root as Radio, Item } from '@radix-ui/react-radio-group'
 import { CircleCheck, RotateCcw } from 'lucide-react'
-import { IconDir } from '@/assets/custom/icon-dir'
-import { IconLayoutCompact } from '@/assets/custom/icon-layout-compact'
-import { IconLayoutDefault } from '@/assets/custom/icon-layout-default'
-import { IconLayoutFull } from '@/assets/custom/icon-layout-full'
-import { IconSidebarFloating } from '@/assets/custom/icon-sidebar-floating'
-import { IconSidebarInset } from '@/assets/custom/icon-sidebar-inset'
-import { IconSidebarSidebar } from '@/assets/custom/icon-sidebar-sidebar'
-import { IconThemeDark } from '@/assets/custom/icon-theme-dark'
-import { IconThemeLight } from '@/assets/custom/icon-theme-light'
-import { IconThemeSystem } from '@/assets/custom/icon-theme-system'
+// ✅ Optimized: Import from barrel export for better tree-shaking
+import {
+  IconDir,
+  IconLayoutCompact,
+  IconLayoutDefault,
+  IconLayoutFull,
+  IconSidebarFloating,
+  IconSidebarInset,
+  IconSidebarSidebar,
+  IconThemeDark,
+  IconThemeLight,
+  IconThemeSystem,
+} from '@/assets/custom/icons'
 import { cn } from '@/lib/utils'
 import { useDirection } from '@/context/direction-provider'
 import { type Collapsible, useLayout } from '@/context/layout-provider'

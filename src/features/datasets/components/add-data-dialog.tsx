@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
+import { useDropzone } from 'react-dropzone'
 import { Upload, X, AlertCircle, Loader2, Clock, CheckCircle2, Link, Type, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -52,27 +53,55 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
   const [isUploading, setIsUploading] = useState(false)
   const [newText, setNewText] = useState('')
   const [newUrl, setNewUrl] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(event.target.files || [])
-    const maxSize = 50 * 1024 * 1024 // 50MB in bytes
-    const allowedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
-      'application/vnd.ms-powerpoint',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/gif',
-      'image/webp'
-    ]
+  const maxSize = 50 * 1024 * 1024 // 50MB in bytes
+  const allowedTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'text/markdown',
+    'text/csv',
+    'application/json',
+    'text/xml',
+    'text/html',
+    'text/css',
+    'application/javascript',
+    'application/typescript',
+    'text/x-typescript'
+  ]
 
+  // Allowed file extensions as fallback when MIME type is not detected
+  const allowedExtensions = [
+    '.pdf', '.doc', '.docx', '.txt', '.ppt', '.pptx', '.xls', '.xlsx',
+    '.jpg', '.jpeg', '.png', '.gif', '.webp',
+    '.md', '.csv', '.json', '.jsonl', '.xml', '.html', '.css',
+    '.js', '.jsx', '.ts', '.tsx'
+  ]
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const getFileExtension = (filename: string): string => {
+    const lastDot = filename.lastIndexOf('.')
+    return lastDot !== -1 ? filename.substring(lastDot).toLowerCase() : ''
+  }
+
+  const handleFiles = useCallback((selectedFiles: File[]) => {
     const validFiles: FileWithProgress[] = []
     const invalidFiles: string[] = []
 
@@ -82,8 +111,14 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
         return
       }
 
-      if (!allowedTypes.includes(file.type)) {
-        invalidFiles.push(`${file.name} (nicht unterstützt: ${file.type})`)
+      // Check MIME type or file extension as fallback
+      const fileExtension = getFileExtension(file.name)
+      const isValidType = allowedTypes.includes(file.type) || 
+                         (file.type === '' && allowedExtensions.includes(fileExtension)) ||
+                         allowedExtensions.includes(fileExtension)
+
+      if (!isValidType) {
+        invalidFiles.push(`${file.name} (nicht unterstützt: ${file.type || 'unbekannter Typ'})`)
         return
       }
 
@@ -101,7 +136,43 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
     if (invalidFiles.length > 0) {
       toast.error(`${invalidFiles.length} Datei(en) konnten nicht hinzugefügt werden:\n${invalidFiles.join('\n')}`)
     }
-  }
+  }, [])
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: handleFiles,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'text/plain': ['.txt'],
+      'application/vnd.ms-powerpoint': ['.ppt'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/gif': ['.gif'],
+      'image/webp': ['.webp'],
+      'text/markdown': ['.md'],
+      'text/csv': ['.csv'],
+      'application/json': ['.json', '.jsonl'],
+      'text/xml': ['.xml'],
+      'text/html': ['.html'],
+      'text/css': ['.css'],
+      'application/javascript': ['.js', '.jsx'],
+      'application/typescript': ['.ts', '.tsx'],
+      'text/x-typescript': ['.tsx']
+    },
+    multiple: true,
+    maxSize: maxSize,
+    onDropRejected: (fileRejections) => {
+      const rejectedMessages = fileRejections.map(({ file, errors }) => {
+        const errorMessages = errors.map(e => e.message).join(', ')
+        return `${file.name}: ${errorMessages}`
+      })
+      toast.error(`Datei(en) abgelehnt:\n${rejectedMessages.join('\n')}`)
+    }
+  })
 
   const addText = () => {
     if (newText.trim()) {
@@ -231,28 +302,52 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
 
       setIsUploading(false)
 
-      // Show error toast with specific error message
+      // ✅ Verbesserte kontextspezifische Error-Messages mit Retry-Buttons
+      const isRetryable = 
+        errorMessage.includes('Network') || 
+        errorMessage.includes('fetch') ||
+        errorMessage.includes('500') ||
+        errorMessage.includes('503') ||
+        errorMessage.includes('504') ||
+        errorMessage.includes('timeout')
+
       if (errorMessage.includes('400')) {
-        toast.error('Ungültige Daten - Bitte überprüfen Sie die Eingaben')
+        toast.error('Ungültige Daten', {
+          description: 'Bitte überprüfen Sie die Eingaben und versuchen Sie es erneut.',
+        })
       } else if (errorMessage.includes('403')) {
-        toast.error('Keine Berechtigung für dieses Dataset')
+        toast.error('Keine Berechtigung', {
+          description: 'Sie haben keine Berechtigung für dieses Dataset.',
+        })
       } else if (errorMessage.includes('409')) {
-        toast.error('Fehler während der Verarbeitung')
-      } else if (errorMessage.includes('Network') || errorMessage.includes('fetch')) {
-        toast.error('Verbindung zum Server fehlgeschlagen')
+        toast.error('Konflikt', {
+          description: 'Fehler während der Verarbeitung. Bitte versuchen Sie es später erneut.',
+          action: {
+            label: 'Erneut versuchen',
+            onClick: () => handleUpload(),
+          },
+        })
+      } else if (errorMessage.includes('413')) {
+        toast.error('Datei zu groß', {
+          description: 'Die Datei überschreitet das maximale Größenlimit. Bitte wählen Sie eine kleinere Datei.',
+        })
+      } else if (isRetryable) {
+        toast.error('Upload fehlgeschlagen', {
+          description: 'Verbindung zum Server fehlgeschlagen. Bitte überprüfen Sie Ihre Internetverbindung.',
+          duration: 10000,
+          action: {
+            label: 'Erneut versuchen',
+            onClick: () => handleUpload(),
+          },
+        })
       } else {
-        toast.error(errorMessage)
+        toast.error('Upload fehlgeschlagen', {
+          description: errorMessage,
+          duration: 8000,
+        })
       }
     }
   }, [files, texts, urls, datasetId, addBulkDataToDataset, onOpenChange])
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
 
   const truncateText = (text: string, maxLength: number = 50) => {
     if (text.length <= maxLength) return text
@@ -320,26 +415,25 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
 
           <TabsContent value="files" className="space-y-4">
             <Card 
-              className="border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
+              {...getRootProps()}
+              className={`border-2 border-dashed transition-colors cursor-pointer ${
+                isDragActive 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+              }`}
             >
               <CardContent className="p-6 text-center">
+                <input {...getInputProps()} />
                 <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Dateien hochladen</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Klicken Sie, um Dateien auszuwählen oder ziehen Sie sie hierher
+                  {isDragActive 
+                    ? 'Dateien hier ablegen...' 
+                    : 'Klicken Sie, um Dateien auszuwählen oder ziehen Sie sie hierher'}
                 </p>
                 <div className="text-xs text-muted-foreground">
-                  Unterstützte Formate: PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX, JPG, PNG, GIF, WEBP (max. 50MB)
+                  Unterstützte Formate: PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX, JPG, PNG, GIF, WEBP, MD, CSV, JSON, XML, HTML, CSS, JS, TS, TSX, JSX, JSONL (max. 50MB)
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
               </CardContent>
             </Card>
 

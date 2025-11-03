@@ -17,7 +17,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
   const [roleName, setRoleName] = useState('')
   const [description, setDescription] = useState('')
   const [isCreating, setIsCreating] = useState(false)
-  const { createRole } = usePermissionsStore()
+  const createRole = usePermissionsStore((state) => state.createRole)
   const { toast } = useToast()
 
   const handleCreate = async () => {
@@ -49,6 +49,8 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
       setIsCreating(false)
     }
   }
+
+  if (!open) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

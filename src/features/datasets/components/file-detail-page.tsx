@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useDatasetStore } from '@/stores/dataset-store'
 import { DeleteFileDialog } from './delete-file-dialog'
+import { formatDate } from '@/lib/utils'
 
 export function FileDetailPage() {
   const { datasetId, fileId } = useParams({ 
@@ -36,15 +37,6 @@ export function FileDetailPage() {
     )
   }
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('de-DE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(date))
-  }
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'
@@ -69,7 +61,7 @@ export function FileDetailPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4">
+    <div className="flex flex-1 flex-col gap-4 md:gap-3 p-4 md:p-3 lg:p-4">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button
@@ -144,7 +136,7 @@ export function FileDetailPage() {
               </div>
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">Upload Date</h4>
-                <p className="text-sm">{formatDate(file.uploadDate)}</p>
+                <p className="text-sm">{formatDate(file.uploadDate, { includeTime: true, longMonth: true })}</p>
               </div>
             </div>
 

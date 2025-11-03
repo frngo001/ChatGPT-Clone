@@ -19,13 +19,11 @@ export async function setupInitialPermissions() {
     // 2. Create roles
     const adminRoleResponse = await cogneeApi.permissions.createRole(
       'admin',
-      tenantId,
       'Administrator mit vollen Rechten'
     )
     
     const userRoleResponse = await cogneeApi.permissions.createRole(
       'user',
-      tenantId,
       'Standard-Nutzer mit eingeschränkten Rechten'
     )
     

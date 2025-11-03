@@ -5,6 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Re-export format utilities for convenience
+export { formatDate, truncateFileName } from './utils/format'
+export type { FormatDateOptions, TruncateFileNameOptions } from './utils/format'
+
 export function sleep(ms: number = 1000) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }

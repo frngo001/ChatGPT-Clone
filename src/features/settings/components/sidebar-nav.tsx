@@ -52,11 +52,11 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
       <ScrollArea
         orientation='horizontal'
         type='always'
-        className='bg-background hidden w-full min-w-40 px-1 py-2 md:block'
+        className='bg-background hidden w-full min-w-40 px-1 py-2 md:block overflow-x-hidden'
       >
         <nav
           className={cn(
-            'flex space-x-2 py-1 lg:flex-col lg:space-y-1 lg:space-x-0',
+            'flex py-1 space-x-2 md:space-x-2 whitespace-nowrap md:flex-nowrap lg:flex-col lg:space-y-1 lg:space-x-0',
             className
           )}
           {...props}
@@ -70,10 +70,10 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
                 pathname === item.href
                   ? 'bg-muted hover:bg-accent'
                   : 'hover:bg-accent hover:underline',
-                'justify-start'
+                'justify-start md:h-8 md:px-3 md:text-xs'
               )}
             >
-              <span className='me-2'>{item.icon}</span>
+              <span className='me-2 hidden lg:inline'>{item.icon}</span>
               {item.title}
             </Link>
           ))}

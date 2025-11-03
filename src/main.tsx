@@ -83,11 +83,13 @@ const queryClient = new QueryClient({
 })
 
 // Router configuration
+// ✅ Optimized: Route Preloading auf 'viewport' reduziert initiale Requests
+// 'viewport' lädt nur Routes im sichtbaren Bereich, statt alle beim Hovern
 const router = createRouter({
   routeTree,
   context: { queryClient },
-  defaultPreload: 'intent',
-  defaultPreloadStaleTime: 0,
+  defaultPreload: 'viewport', // Changed from 'intent' to reduce initial requests
+  defaultPreloadStaleTime: 5 * 60 * 1000, // 5 minutes - Cached routes stay cached longer
 })
 
 // Type safety declaration for router

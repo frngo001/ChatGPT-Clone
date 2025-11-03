@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 
 // Store and state management
@@ -47,21 +46,18 @@ type ChatFormValues = z.infer<typeof chatFormSchema>
  * All settings are persisted in the Zustand store and applied to chat requests.
  */
 export function ChatForm() {
-  // Extract current values and setter functions from the Zustand store
-  const {
-    // Current values
-    selectedProvider,
-    temperature,
-    topP,
-    maxTokens,
-    systemPrompt,
-    // Setter functions
-    setSelectedProvider,
-    setTemperature,
-    setTopP,
-    setMaxTokens,
-    setSystemPrompt,
-  } = useOllamaChatStore()
+  // Extract current values and setter functions from the Zustand store using specific selectors
+  // ✅ Optimized: Using specific selectors instead of subscribing to entire store
+  const selectedProvider = useOllamaChatStore((state) => state.selectedProvider)
+  const temperature = useOllamaChatStore((state) => state.temperature)
+  const topP = useOllamaChatStore((state) => state.topP)
+  const maxTokens = useOllamaChatStore((state) => state.maxTokens)
+  const systemPrompt = useOllamaChatStore((state) => state.systemPrompt)
+  const setSelectedProvider = useOllamaChatStore((state) => state.setSelectedProvider)
+  const setTemperature = useOllamaChatStore((state) => state.setTemperature)
+  const setTopP = useOllamaChatStore((state) => state.setTopP)
+  const setMaxTokens = useOllamaChatStore((state) => state.setMaxTokens)
+  const setSystemPrompt = useOllamaChatStore((state) => state.setSystemPrompt)
 
   // Initialize React Hook Form with validation and default values from store
   const form = useForm<ChatFormValues>({
@@ -97,178 +93,145 @@ export function ChatForm() {
   }
 
   return (
-    <div className="bg-background">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          {/* System Prompt Section */}
-          {/* Defines the AI's behavior and personality */}
-          <div className="p-4">
-            <FormField
-              control={form.control}
-              name="systemPrompt"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between mb-2">
-                    <FormLabel className="text-sm font-medium">System-Prompt</FormLabel>
-                  </div>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 lg:w-[80%] lg:max-w-2xl">
+        {/* System Prompt Section */}
+        <FormField
+          control={form.control}
+          name="systemPrompt"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center justify-between mb-2">
+                <FormLabel className="text-sm font-medium">System-Prompt</FormLabel>
+              </div>
+              <FormControl>
+                <Textarea
+                  placeholder="Du bist ein hilfreicher KI-Assistent..."
+                  className="min-h-[80px] text-sm"
+                  {...field}
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground mt-1">
+                Definiert KI-Verhalten und Persönlichkeit
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* AI Provider Selection */}
+        <FormField
+          control={form.control}
+          name="selectedProvider"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-sm font-medium">KI-Anbieter</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <Textarea
-                      placeholder="Du bist ein hilfreicher KI-Assistent..."
-                      className="min-h-[80px] text-sm"
-                      {...field}
-                    />
+                    <SelectTrigger className="w-48 h-8">
+                      <SelectValue placeholder="KI-Anbieter auswählen" />
+                    </SelectTrigger>
                   </FormControl>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Definiert KI-Verhalten und Persönlichkeit
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+                  <SelectContent>
+                    <SelectItem value="ollama">Ollama (Lokal)</SelectItem>
+                    <SelectItem value="deepseek">DeepSeek (Cloud)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Ollama: lokal & kostenlos | DeepSeek: Cloud & API-Schlüssel
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <Separator />
+        {/* Temperature Control */}
+        <FormField
+          control={form.control}
+          name="temperature"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-sm font-medium">Temperatur</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={2}
+                    step={0.1}
+                    value={field.value}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    className="w-24 h-8"
+                  />
+                </FormControl>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Kreativität: 0.0 (deterministisch) bis 2.0 (kreativ)
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          {/* AI Provider Selection */}
-          {/* Choose between local Ollama or cloud-based DeepSeek */}
-          <div className="p-4">
-            <FormField
-              control={form.control}
-              name="selectedProvider"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel className="text-sm font-medium">KI-Anbieter</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-48 h-8">
-                          <SelectValue placeholder="KI-Anbieter auswählen" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="ollama">Ollama (Lokal)</SelectItem>
-                        <SelectItem value="deepseek">DeepSeek (Cloud)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Ollama: lokal & kostenlos | DeepSeek: Cloud & API-Schlüssel
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+        {/* Top-P Control */}
+        <FormField
+          control={form.control}
+          name="topP"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-sm font-medium">Top-P</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={field.value}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    className="w-24 h-8"
+                  />
+                </FormControl>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Token-Vielfalt: 0.0 (fokussiert) bis 1.0 (vielfältig)
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <Separator />
+        {/* Max Tokens Control */}
+        <FormField
+          control={form.control}
+          name="maxTokens"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-sm font-medium">Max. Tokens</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10000000}
+                    value={field.value}
+                    onChange={(e) => field.onChange(parseInt(e.target.value))}
+                    className="w-32 h-8"
+                  />
+                </FormControl>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Maximale Antwortlänge in Tokens
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          {/* Temperature Control */}
-          {/* Controls response creativity: 0.0 (deterministic) to 2.0 (very creative) */}
-          <div className="p-4">
-            <FormField
-              control={form.control}
-              name="temperature"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel className="text-sm font-medium">Temperatur</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={2}
-                        step={0.1}
-                        value={field.value}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                        className="w-24 h-8"
-                      />
-                    </FormControl>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Kreativität: 0.0 (deterministisch) bis 2.0 (kreativ)
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <Separator />
-
-          {/* Top-P Control */}
-          {/* Controls token diversity: 0.0 (most likely tokens) to 1.0 (all tokens) */}
-          <div className="p-4">
-            <FormField
-              control={form.control}
-              name="topP"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel className="text-sm font-medium">Top-P</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        value={field.value}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                        className="w-24 h-8"
-                      />
-                    </FormControl>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Token-Vielfalt: 0.0 (fokussiert) bis 1.0 (vielfältig)
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <Separator />
-
-          {/* Max Tokens Control */}
-          {/* Maximum number of tokens in AI responses */}
-          <div className="p-4">
-            <FormField
-              control={form.control}
-              name="maxTokens"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel className="text-sm font-medium">Max. Tokens</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={10000000}
-                        value={field.value}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        className="w-32 h-8"
-                      />
-                    </FormControl>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Maximale Antwortlänge in Tokens
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <Separator />
-
-          {/* Submit Button */}
-          {/* Saves all settings to the Zustand store */}
-          <div className="p-4">
-            <Button type="submit" className="w-full h-9">
-              Einstellungen speichern
-            </Button>
-          </div>
-        </form>
-      </Form>
-    </div>
+        <Button type="submit">Einstellungen speichern</Button>
+      </form>
+    </Form>
   )
 }
