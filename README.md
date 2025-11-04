@@ -1,6 +1,5 @@
 # Agent AI
 
-Ein moderner ChatGPT-Klon mit React, TypeScript und TanStack Query.
 
 ## Chat-Funktionalität
 
