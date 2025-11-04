@@ -13,12 +13,8 @@ import { AddDataDialog } from './components/add-data-dialog'
 import { ProcessingStatusBadge } from './components/processing-status-badge'
 import { DeleteFileDialog } from './components/delete-file-dialog'
 import { EditDatasetDialog } from './components/edit-dataset-dialog'
-// Lazy load PDF Preview Sheet (sehr schwer: ~500KB) - nur laden wenn nötig
-const PdfPreviewSheet = lazy(() => import('./components/pdf-preview-sheet').then(module => ({ default: module.PdfPreviewSheet })))
-// Lazy load Text/Markdown Preview Sheet
-const TextMarkdownPreviewSheet = lazy(() => import('./components/text-markdown-preview-sheet').then(module => ({ default: module.TextMarkdownPreviewSheet })))
-// Lazy load Image Preview Sheet
-const ImagePreviewSheet = lazy(() => import('./components/image-preview-sheet').then(module => ({ default: module.ImagePreviewSheet })))
+// Lazy load File Preview Sheet - unterstützt alle Dateitypen (PDFs, Bilder, Code, Text, Markdown, etc.)
+const FilePreviewSheet = lazy(() => import('./components/file-preview-sheet').then(module => ({ default: module.FilePreviewSheet })))
 import { FileCard } from './components/file-card'
 import { 
   getFaviconUrl as getCachedFaviconUrl, 
@@ -573,76 +569,25 @@ export function DatasetDetailPage() {
         }}
       />
 
-      {/* Lazy load Preview Sheets nur wenn geöffnet */}
-      {previewFile && (() => {
-        const isPdf = previewFile.fileType === 'application/pdf' || previewFile.fileExtension?.toLowerCase() === 'pdf'
-        
-        const ext = previewFile.fileExtension?.toLowerCase() || previewFile.fileName.split('.').pop()?.toLowerCase() || ''
-        const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp', 'image/tiff']
-        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico']
-        const isImage = imageTypes.includes(previewFile.fileType || '') || imageExtensions.includes(ext)
-        
-        if (isPdf) {
-          return (
-            <Suspense fallback={
-              <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">PDF-Viewer wird geladen...</p>
-                </div>
-              </div>
-            }>
-              <PdfPreviewSheet
-                open={!!previewFile}
-                onOpenChange={(open) => !open && setPreviewFile(null)}
-                fileId={previewFile?.fileId ?? ''}
-                fileName={previewFile?.fileName ?? ''}
-                datasetId={datasetId}
-              />
-            </Suspense>
-          )
-        } else if (isImage) {
-          return (
-            <Suspense fallback={
-              <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">Bild-Vorschau wird geladen...</p>
-                </div>
-              </div>
-            }>
-              <ImagePreviewSheet
-                open={!!previewFile}
-                onOpenChange={(open) => !open && setPreviewFile(null)}
-                fileId={previewFile?.fileId ?? ''}
-                fileName={previewFile?.fileName ?? ''}
-                datasetId={datasetId}
-              />
-            </Suspense>
-          )
-        } else {
-          return (
-            <Suspense fallback={
-              <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">Vorschau wird geladen...</p>
-                </div>
-              </div>
-            }>
-              <TextMarkdownPreviewSheet
-                open={!!previewFile}
-                onOpenChange={(open) => !open && setPreviewFile(null)}
-                fileId={previewFile?.fileId ?? ''}
-                fileName={previewFile?.fileName ?? ''}
-                datasetId={datasetId}
-                fileType={previewFile?.fileType}
-                fileExtension={previewFile?.fileExtension}
-              />
-            </Suspense>
-          )
-        }
-      })()}
+      {/* Lazy load File Preview Sheet - unterstützt alle Dateitypen (PDFs, Bilder, Code, Text, Markdown, etc.) */}
+      {previewFile && (
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Datei-Vorschau wird geladen...</p>
+            </div>
+          </div>
+        }>
+          <FilePreviewSheet
+            open={!!previewFile}
+            onOpenChange={(open) => !open && setPreviewFile(null)}
+            fileId={previewFile?.fileId ?? ''}
+            fileName={previewFile?.fileName ?? ''}
+            datasetId={datasetId}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

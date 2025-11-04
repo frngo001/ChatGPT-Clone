@@ -7,7 +7,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
-import { BookIcon, ChevronDownIcon } from 'lucide-react'
+import { BookIcon, ChevronDownIcon, FileText, FileCode, FileImage, FileSpreadsheet, File } from 'lucide-react'
 import type { ComponentProps } from 'react'
 import { getFaviconUrl as getCachedFaviconUrl } from '@/lib/url-cache'
 
@@ -147,8 +147,63 @@ const isUrl = (str: string) => {
   return str?.startsWith('http://') || str?.startsWith('https://')
 }
 
-const isPdf = (str: string) => {
-  return str?.toLowerCase().endsWith('.pdf')
+const isFile = (str: string) => {
+  // Check if string has a file extension (common dataset file types)
+  const fileExtensions = [
+    '.pdf', '.doc', '.docx', '.txt', '.md', '.markdown',
+    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp',
+    '.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.cpp', '.c', '.cs',
+    '.html', '.css', '.json', '.xml', '.yaml', '.yml', '.csv'
+  ]
+  return fileExtensions.some(ext => str?.toLowerCase().endsWith(ext))
+}
+
+// Get file icon based on file extension
+const getFileIcon = (fileName: string) => {
+  const ext = fileName.split('.').pop()?.toLowerCase() || ''
+  
+  // PDF - use image.png icon
+  if (ext === 'pdf') {
+    return (
+      <img
+        src="/icons/image.png"
+        alt="PDF"
+        className="h-4 w-4 flex-shrink-0"
+      />
+    )
+  }
+  
+  // Images
+  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'tif', 'heic', 'heif']
+  if (imageExts.includes(ext)) {
+    return <FileImage className="h-4 w-4 flex-shrink-0 text-blue-500" />
+  }
+  
+  // Code files
+  const codeExts = [
+    'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'cpp', 'c', 'h', 'hpp', 'cs',
+    'php', 'rb', 'go', 'rs', 'swift', 'kt', 'scala', 'clj', 'sql', 'sh',
+    'bash', 'zsh', 'fish', 'ps1', 'bat', 'cmd', 'html', 'htm', 'css',
+    'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'conf'
+  ]
+  if (codeExts.includes(ext)) {
+    return <FileCode className="h-4 w-4 flex-shrink-0 text-green-500" />
+  }
+  
+  // Spreadsheet files
+  const spreadsheetExts = ['csv', 'xls', 'xlsx', 'ods']
+  if (spreadsheetExts.includes(ext)) {
+    return <FileSpreadsheet className="h-4 w-4 flex-shrink-0 text-green-600" />
+  }
+  
+  // Text/Markdown files
+  const textExts = ['txt', 'md', 'markdown', 'rtf']
+  if (textExts.includes(ext)) {
+    return <FileText className="h-4 w-4 flex-shrink-0 text-blue-600" />
+  }
+  
+  // Default file icon
+  return <File className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
 }
 
 // Extract and shorten URL from DuckDuckGo redirect links
@@ -168,7 +223,7 @@ const extractAndShortenUrl = (url: string): string => {
     // If URL is less than 40 characters, show full URL
     if (actualUrl.length < 60) {
       try {
-        const urlObj = new URL(actualUrl)
+        new URL(actualUrl)
         // Remove protocol for display if URL is short enough
         return actualUrl.replace(/^https?:\/\//, '')
       } catch {
@@ -217,13 +272,13 @@ export const Source = ({ href, title, children, datasetId, onSourceClick, ...pro
   // Show shortened display name
   const displayName = sourceUrl ? displayUrl : (title || href || '')
   
-  // Check if this is a PDF from a dataset
+  // Check if this is a file from a dataset (PDF, image, code, text, etc.)
   const sourceName = title || href || ''
-  const isPdfSource = isPdf(sourceName)
-  const isDatasetPdf = isPdfSource && datasetId && onSourceClick
+  const isFileSource = isFile(sourceName)
+  const isDatasetFile = isFileSource && datasetId && onSourceClick
   
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (isDatasetPdf) {
+    if (isDatasetFile) {
       e.preventDefault()
       onSourceClick!(sourceName)
     }
@@ -241,12 +296,8 @@ export const Source = ({ href, title, children, datasetId, onSourceClick, ...pro
     >
       {children ?? (
         <>
-          {isPdfSource ? (
-            <img
-              src="/icons/image.png"
-              alt="PDF"
-              className="h-4 w-4 flex-shrink-0"
-            />
+          {isFileSource ? (
+            getFileIcon(sourceName)
           ) : (
             <>
               {faviconUrl && (

@@ -1394,7 +1394,30 @@ export function setupChatApi(server: ViteDevServer) {
           datasets: [],
           datasetIds: datasetIds,
           query: query,
-          systemPrompt: systemPrompt || "Du bist ein hilfreicher KI-Assistent mit Zugriff auf eine umfassende Wissensdatenbank.",
+          systemPrompt: systemPrompt || `Du bist ein hilfreicher KI-Assistent mit Zugriff auf eine umfassende Wissensdatenbank.
+
+WICHTIG: Wenn du Informationen aus der Wissensdatenbank verwendest, MUSST du die Quellen zitieren.
+
+## Quellenangabe-Format:
+
+### Für alle Dateitypen (PDFs, Bilder, Markdown, Code-Dateien, etc.):
+- Zitiere den exakten Dateinamen inklusive Dateiendung
+- Beispiele:
+  - "Laut 'manual_2024.pdf' beträgt die maximale Geschwindigkeit..."
+  - "Wie in 'architecture_diagram.png' dargestellt..."
+  - "Der Code in 'api_config.py' zeigt..."
+  - "Die Dokumentation in 'README.md' erklärt..."
+
+### Sources-Sektion:
+Am Ende deiner Antwort MUSST du eine Sektion "### Sources" hinzufügen mit allen verwendeten Dateien:
+
+### Sources
+- manual_2024.pdf
+- architecture_diagram.png
+- api_config.py
+- README.md
+
+Die Benutzer können auf diese Dateinamen klicken, um eine Vorschau der Dateien zu sehen (funktioniert für PDFs, Bilder, Code, Markdown, Text und viele andere Dateitypen).`,
           nodeName: [],
           topK: 10,
           onlyContext: false, // Get full response to extract chunks

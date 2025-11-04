@@ -3,7 +3,6 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  FolderOpen,
   FileText,
   User,
   Calendar,
@@ -59,15 +58,6 @@ const DatasetCardComponent = ({
           isListVariant && 'flex-1 min-w-0'
         )}>
           <div className="flex items-start gap-2 flex-1 min-w-0">
-            {/* Icon Container */}
-            <div className={cn(
-              'h-8 w-8 rounded-md',
-              'bg-primary/10',
-              'flex items-center justify-center shrink-0'
-            )}>
-              <FolderOpen className="h-4 w-4 text-primary" />
-            </div>
-
             {/* Title */}
             <div className={cn(
               'flex-1 min-w-0'

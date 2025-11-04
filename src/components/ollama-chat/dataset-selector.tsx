@@ -36,6 +36,7 @@ export function DatasetSelector({ isLoading = false }: DatasetSelectorProps) {
   const [open, setOpen] = React.useState(false);
 
   // Zustand aus dem Chat-Store holen
+  const chatMode = useOllamaChatStore((state) => state.chatMode);
   const selectedDataset = useOllamaChatStore((state) => state.selectedDataset);
   const setSelectedDataset = useOllamaChatStore((state) => state.setSelectedDataset);
 
@@ -67,20 +68,25 @@ export function DatasetSelector({ isLoading = false }: DatasetSelectorProps) {
 
   /**
    * Reset das ausgewählte Dataset, wenn es nicht mehr verfügbar oder nicht verarbeitet ist
+   * Nur im cognee mode aktiv
    */
   React.useEffect(() => {
-    if (selectedDataset && datasets.length > 0) {
+    if (chatMode === 'cognee' && selectedDataset && datasets.length > 0) {
       const dataset = datasets.find((d) => d.id === selectedDataset);
       if (!dataset || dataset.processingStatus !== "DATASET_PROCESSING_COMPLETED") {
         setSelectedDataset(null);
       }
     }
-  }, [selectedDataset, datasets, setSelectedDataset]);
+  }, [chatMode, selectedDataset, datasets]);
 
   /**
    * Setze Standard-Dataset auf das erste verfügbare verarbeitete Dataset
+   * Nur im cognee mode aktiv
    */
   React.useEffect(() => {
+    // Nur im cognee mode ein Default-Dataset setzen
+    if (chatMode !== 'cognee') return;
+    
     // Prüfe ob Datasets vollständig geladen sind (haben processingStatus)
     // Nach einem Reload können Datasets aus dem persistierten Zustand kommen,
     // aber ohne processingStatus (wird nicht persistiert)
@@ -108,7 +114,7 @@ export function DatasetSelector({ isLoading = false }: DatasetSelectorProps) {
         }
       }
     }
-  }, [datasetsLoading, error, datasets, selectedDataset, setSelectedDataset]);
+  }, [chatMode, datasetsLoading, error, datasets, selectedDataset]);
   
   // Hole den Namen des ausgewählten Datasets für die Anzeige
   const selectedDatasetName = selectedDataset

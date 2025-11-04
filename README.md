@@ -1,6 +1,5 @@
 # Agent AI
 
-
 ## Chat-Funktionalität
 
 Die Anwendung bietet eine vollständige Chat-Oberfläche unter `/chat` mit folgenden Features:

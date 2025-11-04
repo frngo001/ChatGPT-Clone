@@ -2,6 +2,7 @@ import { type ReactNode, useRef, useCallback } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronRight, Folder, FolderOpen, FolderSearch, FolderSearch2 } from 'lucide-react'
 import { useDatasetStore } from '@/stores/dataset-store'
+import useOllamaChatStore from '@/stores/ollama-chat-store'
 import {
   Collapsible,
   CollapsibleContent,
@@ -17,7 +18,6 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { Badge } from '../ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,42 +59,115 @@ export function NavGroupExtended({ items }: NavGroupProps) {
   )
 }
 
-function NavBadge({ children }: { children: ReactNode }) {
-  return <Badge className='rounded-full px-1 py-0 text-[10px] leading-none'>{children}</Badge>
-}
-
 function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
   const { setOpenMobile } = useSidebar()
   const squarePenIconRef = useRef<SquarePenIconHandle>(null)
+  const isNavigatingRef = useRef(false)
   // Selektiver Store-Selektor: Nur die Funktion abonnieren, nicht den ganzen Store
   const fetchDatasetDataWithCache = useDatasetStore((state) => state.fetchDatasetDataWithCache)
+  const getMessagesById = useOllamaChatStore((state) => state.getMessagesById)
+  
+  // Prüfe ob "Neuer Chat" Button und ob er deaktiviert werden soll
+  const isNewChatButton = item.url === '/chat'
+  const currentPath = href.split('?')[0]
+  
+  // Button-Logik:
+  // 1. Wenn auf /chat (Index) -> deaktiviert (neuer Chat ohne Nachrichten)
+  // 2. Wenn auf /chat/{chatId} -> nur aktiv wenn Chat mindestens 1 Nachricht hat
+  let isDisabled = false
+  if (isNewChatButton) {
+    if (currentPath === '/chat') {
+      // Bereits auf neuem Chat ohne ID
+      isDisabled = true
+    } else if (currentPath.startsWith('/chat/')) {
+      // Auf einem bestehenden Chat - prüfe ob Nachrichten vorhanden
+      const chatIdMatch = currentPath.match(/^\/chat\/(.+)$/)
+      if (chatIdMatch) {
+        const chatId = chatIdMatch[1]
+        const messages = getMessagesById(chatId)
+        // Deaktiviere Button wenn keine Nachrichten vorhanden
+        isDisabled = !messages || messages.length === 0
+      }
+    }
+  }
   
   // ✅ Optimized: useCallback für Event-Handler um unnötige Re-Renders zu vermeiden
+  // Handler direkt auf dem Link platzieren, nicht auf dem Button, um Ref-Konflikte zu vermeiden
   const handleMouseEnter = useCallback(() => {
+    // Verhindere Animation während Navigation, um Ref-Konflikte zu vermeiden
+    if (isNavigatingRef.current) return
     if (item.icon === SquarePenIcon) {
       squarePenIconRef.current?.startAnimation()
     }
   }, [item.icon])
   
   const handleMouseLeave = useCallback(() => {
+    // Verhindere Animation während Navigation, um Ref-Konflikte zu vermeiden
+    if (isNavigatingRef.current) return
     if (item.icon === SquarePenIcon) {
       squarePenIconRef.current?.stopAnimation()
     }
   }, [item.icon])
 
-  const handleClick = useCallback(() => {
-    setOpenMobile(false)
-    
-    // Check if this is a dataset link
-    const datasetMatch = href.match(/^\/library\/datasets\/(.+)$/)
-    if (datasetMatch) {
-      const datasetId = datasetMatch[1]
-      // Trigger cache-fetch before navigation
-      fetchDatasetDataWithCache(datasetId).catch((error) => {
-        console.error('Failed to fetch dataset data:', error)
-      })
+  const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    // Prüfe ob "Neuer Chat" Button und ob Navigation erlaubt ist
+    if (item.url === '/chat') {
+      const currentPath = href.split('?')[0]
+      
+      // Nur verhindern wenn bereits auf /chat (ohne ID)
+      if (currentPath === '/chat') {
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
+      
+      // Wenn auf /chat/{chatId}, prüfe ob Nachrichten vorhanden
+      if (currentPath.startsWith('/chat/')) {
+        const chatIdMatch = currentPath.match(/^\/chat\/(.+)$/)
+        if (chatIdMatch) {
+          const chatId = chatIdMatch[1]
+          const messages = getMessagesById(chatId)
+          // Verhindere Navigation wenn keine Nachrichten vorhanden
+          if (!messages || messages.length === 0) {
+            e.preventDefault()
+            e.stopPropagation()
+            return
+          }
+        }
+      }
     }
-  }, [href, fetchDatasetDataWithCache, setOpenMobile])
+    
+    // Markiere Navigation als aktiv, um State-Updates während der Navigation zu verhindern
+    isNavigatingRef.current = true
+    
+    // Check if this is a dataset link (nur für Dataset-Links, nicht für Chat-Links)
+    // Dies verhindert unnötige API-Calls für Chat-Navigation
+    if (item.url?.startsWith('/library/datasets/')) {
+      const datasetMatch = href.match(/^\/library\/datasets\/(.+)$/)
+      if (datasetMatch) {
+        const datasetId = datasetMatch[1]
+        // Trigger cache-fetch before navigation (nicht-blockierend)
+        fetchDatasetDataWithCache(datasetId).catch((error) => {
+          console.error('Failed to fetch dataset data:', error)
+        })
+      }
+    }
+    
+    // Verzögere State-Updates, um Ref-Konflikte während der Navigation zu vermeiden
+    // Verwende setTimeout mit größerer Verzögerung, um sicherzustellen,
+    // dass State-Updates nach der Navigation stattfinden, nicht während des Render-Zyklus
+    setTimeout(() => {
+      setOpenMobile(false)
+      // Reset navigation flag nach Navigation
+      isNavigatingRef.current = false
+    }, 200)
+  }, [item.url, href, fetchDatasetDataWithCache, setOpenMobile, getMessagesById])
+
+  // Für "Neuer Chat" Button: Mouse-Handler deaktivieren, um Ref-Konflikte zu vermeiden
+  const mouseHandlers = isNewChatButton ? {} : {
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave,
+  }
 
   return (
     <SidebarMenuItem>
@@ -102,17 +175,19 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
         asChild
         isActive={checkIsActive(href, item)}
         tooltip={item.title}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        disabled={isDisabled}
       >
-        <Link to={item.url} onClick={handleClick}>
+        <Link 
+          to={item.url} 
+          onClick={handleClick}
+          {...mouseHandlers}
+        >
           {item.icon === SquarePenIcon ? (
-            <SquarePenIcon ref={squarePenIconRef} />
+            <SquarePenIcon ref={isNewChatButton ? undefined : squarePenIconRef} />
           ) : (
             item.icon && <item.icon />
           )}
           <span>{item.title}</span>
-          {item.badge && <NavBadge>{item.badge}</NavBadge>}
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -129,7 +204,7 @@ function SidebarMenuCollapsibleExtended({
   const { setOpenMobile } = useSidebar()
   const foldersIconRef = useRef<FoldersIconHandle>(null)
   
-  // ✅ Optimized: useCallback für Event-Handler um unnötige Re-Renders zu vermeiden
+  //  Optimized: useCallback für Event-Handler um unnötige Re-Renders zu vermeiden
   const handleMouseEnter = useCallback(() => {
     if (item.icon === FoldersIcon) {
       foldersIconRef.current?.startAnimation()
@@ -161,7 +236,6 @@ function SidebarMenuCollapsibleExtended({
               item.icon && <item.icon />
             )}
             <span>{item.title}</span>
-            {item.badge && <NavBadge>{item.badge}</NavBadge>}
             <ChevronRight className='ms-auto transition-transform duration-[50ms] group-data-[state=open]/collapsible:rotate-90' />
           </SidebarMenuButton>
         </CollapsibleTrigger>
@@ -177,7 +251,6 @@ function SidebarMenuCollapsibleExtended({
                         <SidebarMenuSubButton>
                           {subItem.icon && <subItem.icon />}
                           <span>{subItem.title}</span>
-                          {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
                           <ChevronRight className='ms-auto transition-transform duration-[50ms] group-data-[state=open]/sub-collapsible:rotate-90' />
                         </SidebarMenuSubButton>
                       </CollapsibleTrigger>
@@ -216,7 +289,6 @@ function SidebarMenuCollapsibleExtended({
                                   nestedItem.icon && <nestedItem.icon className="h-4 w-4" />
                                 )}
                                 <span className="truncate">{nestedItem.title}</span>
-                                {nestedItem.badge && <NavBadge>{nestedItem.badge}</NavBadge>}
                               </Link>
                             )
                           }) : null}
@@ -276,7 +348,6 @@ function SidebarMenuCollapsibleExtended({
                         subItem.icon && <subItem.icon />
                       )}
                       <span>{subItem.title}</span>
-                      {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
                     </Link>
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
@@ -327,13 +398,12 @@ function SidebarMenuCollapsedDropdown({
               item.icon && <item.icon />
             )}
             <span>{item.title}</span>
-            {item.badge && <NavBadge>{item.badge}</NavBadge>}
             <ChevronRight className='ms-auto transition-transform duration-[50ms] group-data-[state=open]/collapsible:rotate-90' />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent side='right' align='start' sideOffset={4}>
           <DropdownMenuLabel>
-            {item.title} {item.badge ? `(${item.badge})` : ''}
+            {item.title}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {item.items.map((sub) => {
@@ -384,9 +454,6 @@ function SidebarMenuCollapsedDropdown({
                     sub.icon && <sub.icon />
                   )}
                   <span className='max-w-52 text-wrap'>{sub.title}</span>
-                  {sub.badge && (
-                    <span className='ms-auto text-xs'>{sub.badge}</span>
-                  )}
                 </Link>
               </DropdownMenuItem>
             )

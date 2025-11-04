@@ -19,7 +19,7 @@ import {
   SourcesContent,
   Source,
 } from "@/components/ui/ai/sources";
-import { PdfPreviewSheet } from "@/features/datasets/components/pdf-preview-sheet";
+import { FilePreviewSheet } from "@/features/datasets/components/file-preview-sheet";
 import { useDatasetStore } from "@/stores/dataset-store";
 import useOllamaChatStore from "@/stores/ollama-chat-store";
 import { toast } from "sonner";
@@ -75,7 +75,7 @@ const MOTION_CONFIG = {
  * - Bild-Anhänge mit Vorschau
  * - Thinking-Process für DeepSeek R1 Modelle
  * - Copy/Regenerate-Buttons
- * - Sources-Anzeige für Cognee-Modus mit PDF-Vorschau
+ * - Sources-Anzeige für Cognee-Modus mit Datei-Vorschau (PDFs, Bilder, Code, Text, etc.)
  * 
  * @param {ChatMessageProps} props - Props für die Nachricht
  * @returns {JSX.Element} Renderte Chat-Nachricht mit allen Features
@@ -90,8 +90,8 @@ function OllamaChatMessage({
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [isThinkCollapsed, setIsThinkCollapsed] = useState<boolean>(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [pdfPreviewOpen, setPdfPreviewOpen] = useState<boolean>(false);
-  const [selectedPdfFile, setSelectedPdfFile] = useState<{
+  const [filePreviewOpen, setFilePreviewOpen] = useState<boolean>(false);
+  const [selectedFile, setSelectedFile] = useState<{
     id: string;
     name: string;
   } | null>(null);
@@ -390,7 +390,7 @@ function OllamaChatMessage({
 
   const sources = getSourcesFromMessage()
 
-  // Handler for source click (PDF files)
+  // Handler for source click (alle Dateitypen: PDFs, Bilder, Code, Markdown, Text, etc.)
   const handleSourceClick = (sourceName: string) => {
     if (!selectedDataset) {
       toast.error("Kein Dataset ausgewählt");
@@ -406,13 +406,13 @@ function OllamaChatMessage({
     // Find file by name (first match)
     const file = dataset.files.find((f) => f.name === sourceName);
     if (!file) {
-      toast.error("PDF-Datei nicht im Dataset gefunden");
+      toast.error("Datei nicht im Dataset gefunden");
       return;
     }
 
-    // Open PDF preview
-    setSelectedPdfFile({ id: file.id, name: file.name });
-    setPdfPreviewOpen(true);
+    // Open file preview (unterstützt PDFs, Bilder, Code, Markdown, Text, etc.)
+    setSelectedFile({ id: file.id, name: file.name });
+    setFilePreviewOpen(true);
   };
 
   const renderActionButtons = () => (
@@ -502,13 +502,13 @@ function OllamaChatMessage({
         </DialogContent>
       </Dialog>
 
-      {/* PDF Preview Sheet */}
-      {selectedPdfFile && selectedDataset && (
-        <PdfPreviewSheet
-          open={pdfPreviewOpen}
-          onOpenChange={setPdfPreviewOpen}
-          fileId={selectedPdfFile.id}
-          fileName={selectedPdfFile.name}
+      {/* File Preview Sheet (unterstützt PDFs, Bilder, Code, Markdown, Text, etc.) */}
+      {selectedFile && selectedDataset && (
+        <FilePreviewSheet
+          open={filePreviewOpen}
+          onOpenChange={setFilePreviewOpen}
+          fileId={selectedFile.id}
+          fileName={selectedFile.name}
           datasetId={selectedDataset}
         />
       )}

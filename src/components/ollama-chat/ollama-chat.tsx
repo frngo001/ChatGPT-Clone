@@ -3,7 +3,7 @@ import OllamaChatList from "./ollama-chat-list";
 import OllamaChatBottombar from "./ollama-chat-bottombar";
 import type { Message, ChatRequestOptions } from "ai";
 import { useChat } from "ai/react";
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import useOllamaChatStore from "@/stores/ollama-chat-store";
@@ -260,14 +260,23 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   // Update messages when initialMessages or id changes
   useEffect(() => {
     setMessages(initialMessages);
-  }, [id, initialMessages, setMessages]);
+  }, [id, initialMessages]);
 
-  // Reset selected dataset when switching to general mode
+  // Track previous chatMode to detect mode changes
+  const prevChatModeRef = useRef(chatMode);
+  
+  // Reset selected dataset when switching FROM cognee TO general mode
   useEffect(() => {
-    if (chatMode === 'general' && selectedDataset) {
+    const prevMode = prevChatModeRef.current;
+    
+    // Only reset if we're switching from 'cognee' to 'general'
+    if (prevMode === 'cognee' && chatMode === 'general' && selectedDataset) {
       setSelectedDataset(null);
     }
-  }, [chatMode, selectedDataset, setSelectedDataset]);
+    
+    // Update ref for next render
+    prevChatModeRef.current = chatMode;
+  }, [chatMode]);
 
   // useCallback für onSubmit um Referenz-Stabilität zu gewährleisten
   const onSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {

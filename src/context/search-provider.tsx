@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useLocation } from '@tanstack/react-router'
 import { CommandMenu } from '@/components/command-menu'
 import { useAuthStore } from '@/stores/auth-store'
+import useOllamaChatStore from '@/stores/ollama-chat-store'
 
 type SearchContextType = {
   open: boolean
@@ -17,7 +18,9 @@ type SearchProviderProps = {
 export function SearchProvider({ children }: SearchProviderProps) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { auth } = useAuthStore()
+  const getMessagesById = useOllamaChatStore((state) => state.getMessagesById)
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -36,6 +39,28 @@ export function SearchProvider({ children }: SearchProviderProps) {
           if (e.shiftKey) {
             // Shift+Cmd+N: New chat
             e.preventDefault()
+            
+            // Prüfe ob Navigation erlaubt ist
+            const currentPath = location.pathname
+            
+            // Nur navigieren wenn nicht bereits auf /chat (ohne ID)
+            if (currentPath === '/chat') {
+              return // Bereits auf neuem Chat
+            }
+            
+            // Wenn auf /chat/{chatId}, prüfe ob Nachrichten vorhanden
+            if (currentPath.startsWith('/chat/')) {
+              const chatIdMatch = currentPath.match(/^\/chat\/(.+)$/)
+              if (chatIdMatch) {
+                const chatId = chatIdMatch[1]
+                const messages = getMessagesById(chatId)
+                // Nur navigieren wenn Nachrichten vorhanden
+                if (!messages || messages.length === 0) {
+                  return // Keine Nachrichten im aktuellen Chat
+                }
+              }
+            }
+            
             navigate({ to: '/chat' })
           }
           break
@@ -72,7 +97,7 @@ export function SearchProvider({ children }: SearchProviderProps) {
     }
     document.addEventListener('keydown', down)
     return () => document.removeEventListener('keydown', down)
-  }, [navigate, auth])
+  }, [navigate, auth, location, getMessagesById])
 
   return (
     <SearchContext value={{ open, setOpen }}>

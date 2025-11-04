@@ -18,7 +18,6 @@ export function useDynamicSidebarData(): SidebarData {
     title: dataset.name,
     url: `/library/datasets/${dataset.id}` as const,
     icon: Folder,
-    badge: dataset.files.length > 0 ? dataset.files.length.toString() : '...',
   }))
 
 
