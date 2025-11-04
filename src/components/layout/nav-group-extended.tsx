@@ -1,4 +1,4 @@
-import { type ReactNode, useRef, useCallback } from 'react'
+import { useRef, useCallback } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronRight, Folder, FolderOpen, FolderSearch, FolderSearch2 } from 'lucide-react'
 import { useDatasetStore } from '@/stores/dataset-store'
@@ -65,10 +65,11 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
   const isNavigatingRef = useRef(false)
   // Selektiver Store-Selektor: Nur die Funktion abonnieren, nicht den ganzen Store
   const fetchDatasetDataWithCache = useDatasetStore((state) => state.fetchDatasetDataWithCache)
-  const getMessagesById = useOllamaChatStore((state) => state.getMessagesById)
+
+  const isNewChatButton = item.url === '/chat'
+  const chats = useOllamaChatStore((state) => isNewChatButton ? state.chats : null)
   
   // Prüfe ob "Neuer Chat" Button und ob er deaktiviert werden soll
-  const isNewChatButton = item.url === '/chat'
   const currentPath = href.split('?')[0]
   
   // Button-Logik:
@@ -84,7 +85,7 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
       const chatIdMatch = currentPath.match(/^\/chat\/(.+)$/)
       if (chatIdMatch) {
         const chatId = chatIdMatch[1]
-        const messages = getMessagesById(chatId)
+        const messages = chats?.[chatId]?.messages || []
         // Deaktiviere Button wenn keine Nachrichten vorhanden
         isDisabled = !messages || messages.length === 0
       }
@@ -126,7 +127,7 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
         const chatIdMatch = currentPath.match(/^\/chat\/(.+)$/)
         if (chatIdMatch) {
           const chatId = chatIdMatch[1]
-          const messages = getMessagesById(chatId)
+          const messages = chats?.[chatId]?.messages || []
           // Verhindere Navigation wenn keine Nachrichten vorhanden
           if (!messages || messages.length === 0) {
             e.preventDefault()
@@ -161,7 +162,7 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
       // Reset navigation flag nach Navigation
       isNavigatingRef.current = false
     }, 200)
-  }, [item.url, href, fetchDatasetDataWithCache, setOpenMobile, getMessagesById])
+  }, [item.url, href, fetchDatasetDataWithCache, setOpenMobile, chats])
 
   // Für "Neuer Chat" Button: Mouse-Handler deaktivieren, um Ref-Konflikte zu vermeiden
   const mouseHandlers = isNewChatButton ? {} : {

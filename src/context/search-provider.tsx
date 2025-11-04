@@ -20,7 +20,8 @@ export function SearchProvider({ children }: SearchProviderProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { auth } = useAuthStore()
-  const getMessagesById = useOllamaChatStore((state) => state.getMessagesById)
+  // ✅ Direkt auf chats abonnieren, um auf Updates zu reagieren
+  const chats = useOllamaChatStore((state) => state.chats)
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -53,7 +54,8 @@ export function SearchProvider({ children }: SearchProviderProps) {
               const chatIdMatch = currentPath.match(/^\/chat\/(.+)$/)
               if (chatIdMatch) {
                 const chatId = chatIdMatch[1]
-                const messages = getMessagesById(chatId)
+                // Verwende chats direkt für konsistente Daten
+                const messages = chats[chatId]?.messages || []
                 // Nur navigieren wenn Nachrichten vorhanden
                 if (!messages || messages.length === 0) {
                   return // Keine Nachrichten im aktuellen Chat
@@ -97,7 +99,7 @@ export function SearchProvider({ children }: SearchProviderProps) {
     }
     document.addEventListener('keydown', down)
     return () => document.removeEventListener('keydown', down)
-  }, [navigate, auth, location, getMessagesById])
+  }, [navigate, auth, location, chats])
 
   return (
     <SearchContext value={{ open, setOpen }}>

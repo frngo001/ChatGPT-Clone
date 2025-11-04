@@ -10,6 +10,7 @@ interface PermissionsStore {
   isLoading: boolean
   error: string | null
   pendingFetchAllUsers: Promise<void> | null // Request-Deduplizierung
+  pendingFetchRoles: Promise<void> | null // Request-Deduplizierung für Rollen
   
   // New: User Management
   searchQuery: string
@@ -56,6 +57,7 @@ export const usePermissionsStore = create<PermissionsStore>()((set, get) => ({
   isLoading: false,
   error: null,
   pendingFetchAllUsers: null, // Request-Deduplizierung
+  pendingFetchRoles: null, // Request-Deduplizierung für Rollen
   
   // New: User Management State
   searchQuery: '',
@@ -137,17 +139,42 @@ export const usePermissionsStore = create<PermissionsStore>()((set, get) => ({
   },
   
   fetchRoles: async () => {
-    set({ isLoading: true, error: null })
-    try {
-      const response = await cogneeApi.permissions.getRoles()
-      const roles = response.data
-      set({ roles, isLoading: false })
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to fetch roles',
-        isLoading: false 
-      })
+    const state = get()
+    
+    // Request-Deduplizierung: Wenn bereits ein Fetch läuft, warte darauf
+    if (state.pendingFetchRoles) {
+      return state.pendingFetchRoles
     }
+    
+    // Wenn Rollen bereits vorhanden und nicht im Loading-State, skip Fetch
+    if (state.roles.length > 0 && !state.isLoading) {
+      return Promise.resolve()
+    }
+    
+    set({ isLoading: true, error: null })
+    
+    const fetchPromise = (async () => {
+      try {
+        const response = await cogneeApi.permissions.getRoles()
+        const roles = response.data
+        set({ roles, isLoading: false })
+      } catch (error) {
+        set({ 
+          error: error instanceof Error ? error.message : 'Failed to fetch roles',
+          isLoading: false,
+          pendingFetchRoles: null // Clear pending promise on error
+        })
+        throw error
+      } finally {
+        // Clear pending promise after completion
+        set({ pendingFetchRoles: null })
+      }
+    })()
+    
+    // Speichere Promise für Deduplizierung
+    set({ pendingFetchRoles: fetchPromise })
+    
+    return fetchPromise
   },
   
   assignRoleToUser: async (userId: string, roleId: string) => {

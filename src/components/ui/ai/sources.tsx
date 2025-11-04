@@ -264,7 +264,14 @@ export const Source = ({ href, title, children, datasetId, onSourceClick, ...pro
   // Extract and shorten URL for web search sources  
   const displayUrl = sourceUrl ? extractAndShortenUrl(sourceUrl) : ''
   const rawHref = sourceUrl || href || title || ''
-  const actualHref = ensureUrlHasProtocol(rawHref)
+  
+  // Check if this is a file from a dataset (PDF, image, code, text, etc.)
+  const sourceName = title || href || ''
+  const isFileSource = isFile(sourceName)
+  const isDatasetFile = isFileSource && datasetId && onSourceClick
+  
+  // For dataset files, don't create a URL - use "#" to prevent navigation
+  const actualHref = isDatasetFile ? "#" : ensureUrlHasProtocol(rawHref)
   
   // Get favicon for the actual URL (not the DDG redirect)
   const faviconUrl = getFaviconUrl(rawHref)
@@ -272,14 +279,10 @@ export const Source = ({ href, title, children, datasetId, onSourceClick, ...pro
   // Show shortened display name
   const displayName = sourceUrl ? displayUrl : (title || href || '')
   
-  // Check if this is a file from a dataset (PDF, image, code, text, etc.)
-  const sourceName = title || href || ''
-  const isFileSource = isFile(sourceName)
-  const isDatasetFile = isFileSource && datasetId && onSourceClick
-  
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (isDatasetFile) {
       e.preventDefault()
+      e.stopPropagation()
       onSourceClick!(sourceName)
     }
   }
@@ -289,8 +292,8 @@ export const Source = ({ href, title, children, datasetId, onSourceClick, ...pro
       className="flex items-center gap-2 align-middle hover:underline max-w-full"
       href={actualHref || "#"}
       rel="noreferrer"
-      target={actualHref && actualHref !== "#" ? "_blank" : undefined}
-      title={actualHref}  // Show full URL in tooltip
+      target={actualHref && actualHref !== "#" && !isDatasetFile ? "_blank" : undefined}
+      title={isDatasetFile ? sourceName : actualHref}  // Show filename for files, URL for web sources
       onClick={handleClick}
       {...props}
     >

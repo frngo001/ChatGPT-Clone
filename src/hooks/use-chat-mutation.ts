@@ -81,8 +81,8 @@ export function useChatMutation() {
             temperature: 0.7,
             topP: 0.9,
             maxTokens: 1000000,
-            batchSize: 80,
-            throttleDelay: 80,
+            batchSize: 400,
+            throttleDelay: 17,
           },
         }),
       })

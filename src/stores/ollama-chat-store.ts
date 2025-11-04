@@ -153,8 +153,8 @@ const useOllamaChatStore = create<State & Actions>()(
       temperature: 1.0,
       topP: 0.9,
       maxTokens: 1000000,
-      batchSize: 80,
-      throttleDelay: 80,
+      batchSize: 400,
+      throttleDelay: 17,
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
       // Cognee settings defaults
       chatMode: 'general',

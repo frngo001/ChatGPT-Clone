@@ -17,6 +17,7 @@ export function PermissionsSettings() {
   const isAdmin = useAuthStore((state) => state.auth.isAdmin)
   // Selektive Store-Selektoren: Nur benötigte Properties abonnieren
   const users = usePermissionsStore((state) => state.users)
+  const roles = usePermissionsStore((state) => state.roles)
   const isLoading = usePermissionsStore((state) => state.isLoading)
   const fetchAllUsers = usePermissionsStore((state) => state.fetchAllUsers)
   const fetchRoles = usePermissionsStore((state) => state.fetchRoles)
@@ -25,7 +26,7 @@ export function PermissionsSettings() {
   const [datasetPermissionsDialogOpen, setDatasetPermissionsDialogOpen] = useState(false)
   const [createTenantDialogOpen, setCreateTenantDialogOpen] = useState(false)
   
-  // Request-Deduplizierung: Nur fetchen wenn noch keine Users vorhanden sind
+  // Request-Deduplizierung: Nur fetchen wenn noch keine Daten vorhanden sind
   useEffect(() => {
     if (isAdmin()) {
       // Skip Fetch wenn bereits Users vorhanden (verhindert duplizierte Calls)
@@ -34,11 +35,14 @@ export function PermissionsSettings() {
           console.error('Failed to fetch users:', error)
         })
       }
-      fetchRoles().catch(error => {
-        console.error('Failed to fetch roles:', error)
-      })
+      // Skip Fetch wenn bereits Rollen vorhanden (verhindert duplizierte Calls)
+      if (roles.length === 0 && !isLoading) {
+        fetchRoles().catch(error => {
+          console.error('Failed to fetch roles:', error)
+        })
+      }
     }
-  }, [isAdmin, users.length, isLoading, fetchAllUsers, fetchRoles])
+  }, [isAdmin, users.length, roles.length, isLoading, fetchAllUsers, fetchRoles])
   
   if (!isAdmin()) {
     return (

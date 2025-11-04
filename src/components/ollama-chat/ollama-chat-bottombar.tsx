@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Cross2Icon, StopIcon } from "@radix-ui/react-icons";
-import { Mic, CircleArrowUp, X, ChevronDown } from "lucide-react";
+import { Mic, CircleArrowUp, X, ChevronDown, Loader2 } from "lucide-react";
 import { GlobeAmericasSolidIcon } from "@/components/ui/icons/heroicons-globe-americas-solid";
 import useSpeechToText from "@/hooks/useSpeechRecognition";
 import MultiImagePicker from "@/components/image-embedder";
@@ -181,7 +181,7 @@ export default function OllamaChatBottombar({
               /* Loading state */
               <div className="flex w-full justify-between">
                 <MultiImagePicker disabled onImagesPick={setBase64Images} />
-                <div>
+                <div className="flex items-center gap-2">
                   <Button
                     className="shrink-0 rounded-full"
                     variant="ghost"
@@ -191,18 +191,57 @@ export default function OllamaChatBottombar({
                   >
                     <Mic className="w-5 h-5" />
                   </Button>
+                  <ButtonWithTooltip toolTipText="Generierung stoppen" side="top">
+                    <motion.div
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      transition={{ 
+                        duration: 0.5,
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                        ease: "easeInOut"
+                      }}
+                      className="relative"
+                    >
                   <Button
-                    className="shrink-0 rounded-full"
-                    variant="ghost"
+                        className="shrink-0 rounded-full bg-secondary hover:bg-secondary/80 dark:bg-secondary/60 dark:hover:bg-secondary/70 text-foreground dark:text-foreground shadow-lg relative overflow-hidden border-2 border-primary/40 dark:border-primary/50"
                     size="icon"
-                    type="submit"
+                        type="button"
                     onClick={(e) => {
                       e.preventDefault();
                       stop();
                     }}
                   >
-                    <StopIcon className="w-5 h-5" />
+                        {/* Pulsierender Hintergrund-Effekt */}
+                        <motion.div
+                          className="absolute inset-0 bg-primary/20 dark:bg-primary/30 rounded-full"
+                          animate={{
+                            scale: [1, 1.3, 1],
+                            opacity: [0.4, 0, 0.4],
+                          }}
+                          transition={{
+                            duration: 1.5,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                          }}
+                        />
+                        {/* Spinner Animation */}
+                        <motion.div
+                          className="absolute inset-0 flex items-center justify-center"
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                        >
+                          <Loader2 className="w-4 h-4 absolute opacity-40 dark:opacity-50 text-primary dark:text-primary" />
+                        </motion.div>
+                        {/* Stop Icon */}
+                        <StopIcon className="w-5 h-5 relative z-10 text-foreground dark:text-foreground" />
                   </Button>
+                    </motion.div>
+                  </ButtonWithTooltip>
                 </div>
               </div>
             ) : (

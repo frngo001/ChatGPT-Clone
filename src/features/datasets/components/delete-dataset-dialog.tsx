@@ -9,6 +9,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useDatasetStore } from '@/stores/dataset-store'
+import { useAuthStore } from '@/stores/auth-store'
+import { canDeleteDataset } from '@/lib/permissions-helper'
 import { toast } from 'sonner'
 
 interface DeleteDatasetDialogProps {
@@ -28,10 +30,23 @@ export function DeleteDatasetDialog({
   dataset, 
   onSuccess 
 }: DeleteDatasetDialogProps) {
-  const { deleteDataset, error } = useDatasetStore()
+  const { deleteDataset, error, getDatasetById } = useDatasetStore()
+  const { auth } = useAuthStore()
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
+    // Prüfe Berechtigung
+    const fullDataset = getDatasetById(dataset.id)
+    if (!fullDataset) {
+      toast.error('Dataset nicht gefunden')
+      return
+    }
+
+    if (!canDeleteDataset(auth.user, fullDataset)) {
+      toast.error('Sie haben keine Berechtigung, dieses Dataset zu löschen.')
+      return
+    }
+
     setIsDeleting(true)
     try {
       await deleteDataset(dataset.id)

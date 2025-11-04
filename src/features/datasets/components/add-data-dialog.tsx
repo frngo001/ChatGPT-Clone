@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { useDatasetStore } from '@/stores/dataset-store'
+import { useAuthStore } from '@/stores/auth-store'
+import { canWriteDataset } from '@/lib/permissions-helper'
 
 interface AddDataDialogProps {
   open: boolean
@@ -46,7 +48,8 @@ interface UrlWithProgress {
 }
 
 export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogProps) {
-  const { addBulkDataToDataset } = useDatasetStore()
+  const { addBulkDataToDataset, getDatasetById } = useDatasetStore()
+  const { auth } = useAuthStore()
   const [files, setFiles] = useState<FileWithProgress[]>([])
   const [texts, setTexts] = useState<TextWithProgress[]>([])
   const [urls, setUrls] = useState<UrlWithProgress[]>([])
@@ -248,6 +251,18 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
     const totalItems = files.length + texts.length + urls.length
     if (totalItems === 0) return
 
+    // Prüfe Berechtigung
+    const dataset = getDatasetById(datasetId)
+    if (!dataset) {
+      toast.error('Dataset nicht gefunden')
+      return
+    }
+
+    if (!canWriteDataset(auth.user, dataset)) {
+      toast.error('Sie haben keine Berechtigung, Daten zu diesem Dataset hinzuzufügen.')
+      return
+    }
+
     setIsUploading(true)
     
     // Mark all items as uploading
@@ -316,9 +331,7 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
           description: 'Bitte überprüfen Sie die Eingaben und versuchen Sie es erneut.',
         })
       } else if (errorMessage.includes('403')) {
-        toast.error('Keine Berechtigung', {
-          description: 'Sie haben keine Berechtigung für dieses Dataset.',
-        })
+        toast.error('Sie haben keine Berechtigung für dieses Dataset.')
       } else if (errorMessage.includes('409')) {
         toast.error('Konflikt', {
           description: 'Fehler während der Verarbeitung. Bitte versuchen Sie es später erneut.',
@@ -347,7 +360,7 @@ export function AddDataDialog({ open, onOpenChange, datasetId }: AddDataDialogPr
         })
       }
     }
-  }, [files, texts, urls, datasetId, addBulkDataToDataset, onOpenChange])
+  }, [files, texts, urls, datasetId, addBulkDataToDataset, onOpenChange, getDatasetById, auth.user])
 
   const truncateText = (text: string, maxLength: number = 50) => {
     if (text.length <= maxLength) return text

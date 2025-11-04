@@ -236,7 +236,7 @@ export function setupChatApi(server: ViteDevServer) {
         if (stream.body) {
           const reader = stream.body.getReader();
           let buffer = '';
-          let batchSize = streamingConfig?.batchSize ?? 80; // Increased batch size for better performance
+          let batchSize = streamingConfig?.batchSize ?? 15; // Small batch size for ChatGPT-like fast streaming
           let tokenCount = 0;
           
           const pump = async () => {
@@ -261,7 +261,7 @@ export function setupChatApi(server: ViteDevServer) {
               tokenCount = 0;
               
               // Add throttling delay (configurable delay between batches)
-              const delay = streamingConfig?.throttleDelay ?? 80; // Increased delay for better performance
+              const delay = streamingConfig?.throttleDelay ?? 20; // Optimal delay for ChatGPT-like speed
               await new Promise(resolve => setTimeout(resolve, delay));
             }
             
@@ -437,7 +437,7 @@ export function setupChatApi(server: ViteDevServer) {
         }
 
         let buffer = '';
-        let batchSize = streamingConfig?.batchSize ?? 80; // Increased batch size for better performance
+        let batchSize = streamingConfig?.batchSize ?? 15; // Small batch size for ChatGPT-like fast streaming
         let tokenCount = 0;
 
         const pump = async () => {
@@ -497,7 +497,7 @@ export function setupChatApi(server: ViteDevServer) {
                     tokenCount = 0;
                     
                     // Add throttling delay (configurable delay between batches)
-                    const delay = streamingConfig?.throttleDelay ?? 80; // Increased delay for better performance
+                    const delay = streamingConfig?.throttleDelay ?? 5; // Minimal delay for ChatGPT-like speed
                     await new Promise(resolve => setTimeout(resolve, delay));
                   }
                 }

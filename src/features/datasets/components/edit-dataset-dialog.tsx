@@ -15,6 +15,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { useDatasetStore } from '@/stores/dataset-store'
 import { useToast } from '@/hooks/use-sonner-toast'
+import { useAuthStore } from '@/stores/auth-store'
+import { canWriteDataset } from '@/lib/permissions-helper'
 
 interface EditDatasetDialogProps {
   open: boolean
@@ -24,8 +26,9 @@ interface EditDatasetDialogProps {
 }
 
 export function EditDatasetDialog({ open, onOpenChange, datasetId, onSuccess }: EditDatasetDialogProps) {
-  const { updateDataset, getDatasetById, isLoading, error } = useDatasetStore()
+  const { updateDataset, getDatasetById, isLoading, error, fetchDatasetDataWithCache } = useDatasetStore()
   const { toast } = useToast()
+  const { auth } = useAuthStore()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [tagInput, setTagInput] = useState('')
@@ -46,12 +49,34 @@ export function EditDatasetDialog({ open, onOpenChange, datasetId, onSuccess }: 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    const dataset = getDatasetById(datasetId)
+    if (!dataset) {
+      toast({
+        title: "Fehler",
+        description: "Dataset nicht gefunden.",
+        variant: "error",
+      })
+      return
+    }
+
+    // Prüfe Berechtigung
+    if (!canWriteDataset(auth.user, dataset)) {
+      toast({
+        title: "Sie haben keine Berechtigung, dieses Dataset zu bearbeiten.",
+        variant: "error",
+      })
+      return
+    }
+
     try {
       await updateDataset(datasetId, {
-        name: name.trim(),
         description: description.trim(),
         tags: tags,
       })
+      
+      // Modal sofort schließen
+      onOpenChange(false)
+      onSuccess?.()
       
       // Show success toast
       toast({
@@ -60,11 +85,10 @@ export function EditDatasetDialog({ open, onOpenChange, datasetId, onSuccess }: 
         variant: "success",
       })
       
-      // Close modal after short delay to show toast
-      setTimeout(() => {
-        onOpenChange(false)
-        onSuccess?.()
-      }, 500)
+      // Dateien im Hintergrund neu laden (nicht blockierend)
+      fetchDatasetDataWithCache(datasetId).catch((fetchError) => {
+        console.error('Failed to refresh dataset files:', fetchError)
+      })
     } catch (error) {
       // Error is handled by the store
       console.error('Failed to update dataset:', error)
@@ -111,9 +135,10 @@ export function EditDatasetDialog({ open, onOpenChange, datasetId, onSuccess }: 
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              disabled
+              readOnly
+              className="bg-muted cursor-not-allowed"
               placeholder="Dataset-Name eingeben"
-              required
             />
           </div>
 
@@ -169,7 +194,7 @@ export function EditDatasetDialog({ open, onOpenChange, datasetId, onSuccess }: 
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Abbrechen
             </Button>
-            <Button type="submit" disabled={!name.trim() || isLoading}>
+            <Button type="submit" disabled={isLoading}>
               {isLoading ? 'Aktualisiere...' : 'Änderungen speichern'}
             </Button>
           </DialogFooter>

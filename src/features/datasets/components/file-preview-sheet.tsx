@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import React, { useState, useEffect, lazy, Suspense, useRef } from 'react'
 import { Download, Loader2, FileText, FileCode, File as FileIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -6,10 +6,13 @@ import { toast } from 'sonner'
 import { useDatasetStore } from '@/stores/dataset-store'
 import { datasetsApi } from '@/lib/api/datasets-api'
 import { getFileInfo } from '@/lib/utils/file-utils'
-import { Response } from '@/components/ui/response'
 import { useTheme } from '@/context/theme-provider'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeSlug from 'rehype-slug'
+import { cn } from '@/lib/utils'
 
 // Lazy load preview components
 const PdfPreviewSheet = lazy(() => import('./pdf-preview-sheet').then(module => ({ default: module.PdfPreviewSheet })))
@@ -42,6 +45,7 @@ export function FilePreviewSheet({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [fileType, setFileType] = useState<string>('')
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   
   const { downloadDatasetFile } = useDatasetStore()
   const { resolvedTheme } = useTheme()
@@ -318,7 +322,23 @@ export function FilePreviewSheet({
         </SheetHeader>
 
         {/* File Content */}
-        <div className="flex-1 overflow-auto relative">
+        <div 
+          ref={scrollContainerRef} 
+          className={cn(
+            "flex-1 overflow-auto relative",
+            "[&::-webkit-scrollbar]:w-2",
+            "[&::-webkit-scrollbar-track]:bg-transparent",
+            "[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30",
+            "[&::-webkit-scrollbar-thumb]:rounded-full",
+            "[&::-webkit-scrollbar-thumb]:hover:bg-muted-foreground/50",
+            "dark:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40",
+            "dark:[&::-webkit-scrollbar-thumb]:hover:bg-muted-foreground/60"
+          )}
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(156, 163, 175, 0.5) transparent'
+          }}
+        >
           {isLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background z-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -357,11 +377,117 @@ export function FilePreviewSheet({
                 fileName.toLowerCase().endsWith('.markdown') ||
                 fileContent.trim().match(/^#+\s|^\*\s|^-\s|^\d+\.\s/m)
               ) ? (
-                // Markdown rendering
+                // Markdown rendering with blue links and anchor navigation
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <Response className="text-sm leading-relaxed">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeSlug]}
+                    components={{
+                      a({ href, children, ...props }) {
+                        if (!href) return <a {...props}>{children}</a>
+                        
+                        const isExternal = href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')
+                        const isAnchor = href.startsWith('#')
+                        
+                        const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+                          if (isAnchor && scrollContainerRef.current) {
+                            e.preventDefault()
+                            const id = href.substring(1) // Remove the #
+                            // Try different ID formats that rehypeSlug might generate
+                            const selectors = [
+                              `#${id}`,
+                              `[id="${id}"]`,
+                              `#${id.toLowerCase().replace(/\s+/g, '-')}`,
+                              `#${id.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`
+                            ]
+                            
+                            for (const selector of selectors) {
+                              const element = scrollContainerRef.current.querySelector(selector)
+                              if (element) {
+                                // Add some offset for header
+                                const yOffset = -20
+                                const y = element.getBoundingClientRect().top + scrollContainerRef.current.scrollTop + yOffset
+                                scrollContainerRef.current.scrollTo({ top: y, behavior: 'smooth' })
+                                return
+                              }
+                            }
+                          }
+                        }
+                        
+                        return (
+                          <a
+                            href={href}
+                            target={isExternal ? '_blank' : undefined}
+                            rel={isExternal ? 'noopener noreferrer' : undefined}
+                            onClick={handleClick}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                            {...props}
+                          >
+                            {children}
+                          </a>
+                        )
+                      },
+                      h1({ children, ...props }) {
+                        return <h1 className="scroll-m-20 text-3xl font-extrabold tracking-tight lg:text-3xl mt-5" {...props}>{children}</h1>
+                      },
+                      h2({ children, ...props }) {
+                        return <h2 className="scroll-m-20 border-b pb-2 text-lg font-semibold tracking-tight mt-3" {...props}>{children}</h2>
+                      },
+                      h3({ children, ...props }) {
+                        return <h3 className="scroll-m-20 text-base font-semibold tracking-tight mt-3" {...props}>{children}</h3>
+                      },
+                      h4({ children, ...props }) {
+                        return <h4 className="scroll-m-20 text-sm font-semibold tracking-tight mt-3" {...props}>{children}</h4>
+                      },
+                      h5({ children, ...props }) {
+                        return <h5 className="scroll-m-20 text-xs font-semibold tracking-tight mt-2" {...props}>{children}</h5>
+                      },
+                      h6({ children, ...props }) {
+                        return <h6 className="scroll-m-20 text-xs font-semibold tracking-tight mt-2" {...props}>{children}</h6>
+                      },
+                      p({ children, ...props }) {
+                        return <p className="leading-7 [&:not(:first-child)]:mt-6 text-sm" {...props}>{children}</p>
+                      },
+                      ul({ children, ...props }) {
+                        return <ul className="my-6 ml-6 list-disc [&>li]:mt-2" {...props}>{children}</ul>
+                      },
+                      ol({ children, ...props }) {
+                        return <ol className="my-6 ml-6 list-decimal [&>li]:mt-2" {...props}>{children}</ol>
+                      },
+                      li({ children, ...props }) {
+                        return <li className="marker:text-muted-foreground" {...props}>{children}</li>
+                      },
+                      blockquote({ children, ...props }) {
+                        return <blockquote className="mt-6 border-l-4 pl-6" {...props}>{children}</blockquote>
+                      },
+                      strong({ children, ...props }) {
+                        return <strong className="font-semibold" {...props}>{children}</strong>
+                      },
+                      em({ children, ...props }) {
+                        return <em className="italic" {...props}>{children}</em>
+                      },
+                      code({ children, className, ...props }) {
+                        const match = /language-(\w+)/.exec(className || '')
+                        if (match) {
+                          return (
+                            <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+                              {children}
+                            </code>
+                          )
+                        }
+                        return (
+                          <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+                            {children}
+                          </code>
+                        )
+                      },
+                      pre({ children, ...props }) {
+                        return <pre className="bg-muted p-4 rounded text-sm font-mono overflow-x-auto my-4" {...props}>{children}</pre>
+                      },
+                    }}
+                  >
                     {fileContent}
-                  </Response>
+                  </ReactMarkdown>
                 </div>
               ) : fileType === 'code' || fileType === 'csv' ? (
                 // Code with syntax highlighting

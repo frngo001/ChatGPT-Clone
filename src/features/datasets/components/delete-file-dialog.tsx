@@ -10,6 +10,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useDatasetStore } from '@/stores/dataset-store'
+import { useAuthStore } from '@/stores/auth-store'
+import { canWriteDataset } from '@/lib/permissions-helper'
 import { toast } from 'sonner'
 
 interface DeleteFileDialogProps {
@@ -29,10 +31,23 @@ export function DeleteFileDialog({
   fileName,
   onSuccess 
 }: DeleteFileDialogProps) {
-  const { removeFileFromDataset, error } = useDatasetStore()
+  const { removeFileFromDataset, error, getDatasetById } = useDatasetStore()
+  const { auth } = useAuthStore()
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
+    // Prüfe Berechtigung
+    const dataset = getDatasetById(datasetId)
+    if (!dataset) {
+      toast.error('Dataset nicht gefunden')
+      return
+    }
+
+    if (!canWriteDataset(auth.user, dataset)) {
+      toast.error('Sie haben keine Berechtigung, Dateien aus diesem Dataset zu entfernen.')
+      return
+    }
+
     setIsDeleting(true)
     try {
       await removeFileFromDataset(datasetId, fileId)
