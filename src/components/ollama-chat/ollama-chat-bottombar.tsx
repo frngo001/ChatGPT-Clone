@@ -133,6 +133,19 @@ export default function OllamaChatBottombar({
     }
   }, [inputRef]);
 
+  /**
+   * Handler für Bild-Upload: Fügt neue Bilder zu den bestehenden hinzu
+   */
+  const handleImagesPick = React.useCallback((newImages: string[]) => {
+    if (base64Images && base64Images.length > 0) {
+      // Füge neue Bilder zu den bestehenden hinzu
+      setBase64Images([...base64Images, ...newImages]);
+    } else {
+      // Setze neue Bilder, wenn keine vorhanden sind
+      setBase64Images(newImages);
+    }
+  }, [base64Images, setBase64Images]);
+
   return (
     <div className="px-4 pb-7 flex justify-between w-full items-center relative">
       {/* Error banner with animation */}
@@ -252,7 +265,7 @@ export default function OllamaChatBottombar({
                   {/* Image upload */}
                   <MultiImagePicker
                     disabled={isLoading}
-                    onImagesPick={setBase64Images}
+                    onImagesPick={handleImagesPick}
                   />
                   {/* Chat mode dropdown */}
                   <DropdownMenu>
@@ -370,38 +383,46 @@ export default function OllamaChatBottombar({
           </div>
 
           {/* Image preview with remove button */}
-          {base64Images && (
-            <div className="w-full flex px-2 pb-2 gap-2">
-              {base64Images.map((image, index) => {
-                return (
-                  <div
-                    key={index}
-                    className="relative bg-muted-foreground/20 flex w-fit flex-col gap-2 p-1 border-t border-x rounded-md"
-                  >
-                    <div className="flex text-sm">
-                      <img
-                        src={image}
-                        width={40}
-                        height={40}
-                        className="h-auto rounded-md w-auto max-w-[200px] max-h-[200px]"
-                        alt=""
-                      />
-                    </div>
-                    {/* Remove button */}
-                    <Button
-                      onClick={() => {
-                        const updatedImages = (prevImages: string[]) =>
-                          prevImages.filter((_, i) => i !== index);
-                        setBase64Images(updatedImages(base64Images));
-                      }}
-                      size="icon"
-                      className="absolute -top-1.5 -right-1.5 text-white cursor-pointer bg-red-500 hover:bg-red-600 w-4 h-4 rounded-full flex items-center justify-center"
+          {base64Images && base64Images.length > 0 && (
+            <div className="w-full px-2 pb-2">
+              <div 
+                className="flex gap-2 overflow-x-auto pb-1"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(156, 163, 175, 0.3) transparent'
+                }}
+              >
+                {base64Images.map((image, index) => {
+                  // Use a combination of index and a portion of the base64 string as key for better uniqueness
+                  const imageKey = `${index}-${image.substring(0, 20)}`;
+                  return (
+                    <div
+                      key={imageKey}
+                      className="relative bg-muted-foreground/20 flex-shrink-0 rounded-md border border-border overflow-hidden group"
                     >
-                      <Cross2Icon className="w-3 h-3" />
-                    </Button>
-                  </div>
-                );
-              })}
+                      <div className="relative w-32 h-32">
+                        <img
+                          src={image}
+                          alt={`Uploaded image ${index + 1}`}
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                        {/* Remove button */}
+                        <Button
+                          onClick={() => {
+                            const updatedImages = base64Images.filter((_, i) => i !== index);
+                            setBase64Images(updatedImages.length > 0 ? updatedImages : null);
+                          }}
+                          size="icon"
+                          className="absolute top-1 right-1 text-white cursor-pointer bg-gray-600 hover:bg-gray-700 w-5 h-5 rounded-full flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity shadow-md"
+                          aria-label={`Bild ${index + 1} entfernen`}
+                        >
+                          <Cross2Icon className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </form>
