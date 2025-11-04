@@ -155,30 +155,30 @@ export function DatasetsPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:gap-5 md:p-4 lg:p-8">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between md:gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl md:text-xl lg:text-4xl font-bold tracking-tight">
+      <div className="flex-none mb-4 md:mb-5">
+        <div className="flex items-center justify-between mb-1.5">
+          <h1 className="text-base md:text-lg font-semibold">
             Datasets
           </h1>
-          <p className="text-sm sm:text-base md:text-sm text-muted-foreground">
-            Verwalten Sie Ihre Datasets und Dateien
-          </p>
-          {datasets.length > 0 && (
-            <p className="text-xs sm:text-sm md:text-xs text-muted-foreground pt-1">
-              {filteredDatasets.length} von {datasets.length} {datasets.length === 1 ? 'Dataset' : 'Datasets'}
-              {hasActiveFilters && ' gefunden'}
-            </p>
-          )}
+          <Button 
+            onClick={() => setCreateDialogOpen(true)} 
+            className="shrink-0 md:h-8 md:px-3 md:text-xs"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2 md:h-3 md:w-3 md:mr-1" />
+            <span className="hidden sm:inline">Neues Dataset</span>
+            <span className="sm:hidden">Dataset erstellen</span>
+          </Button>
         </div>
-        <Button 
-          onClick={() => setCreateDialogOpen(true)} 
-          className="w-full sm:w-auto shrink-0 md:h-8 md:px-3 md:text-xs"
-          size="default"
-        >
-          <Plus className="h-4 w-4 mr-2 md:h-3 md:w-3 md:mr-1" />
-          <span className="hidden sm:inline">Neues Dataset</span>
-          <span className="sm:hidden">Dataset erstellen</span>
-        </Button>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Verwalten Sie Ihre Datasets und Dateien
+        </p>
+        {datasets.length > 0 && (
+          <p className="text-xs text-muted-foreground pt-1">
+            {filteredDatasets.length} von {datasets.length} {datasets.length === 1 ? 'Dataset' : 'Datasets'}
+            {hasActiveFilters && ' gefunden'}
+          </p>
+        )}
       </div>
 
       {/* Suchleiste und Filter */}

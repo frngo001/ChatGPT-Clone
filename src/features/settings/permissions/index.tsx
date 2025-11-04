@@ -63,36 +63,41 @@ export function PermissionsSettings() {
   }
   
   return (
-    <div className="space-y-6 md:space-y-5 w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between md:items-start w-full">
-        <div>
-          <h3 className="text-lg md:text-base font-medium">Berechtigungen</h3>
-          <p className="text-sm md:text-xs text-muted-foreground">
-            Verwalten Sie Benutzer, Rollen und Zugriffsrechte
-          </p>
-        </div>
-        <div className="flex gap-2 md:gap-1.5">
-          <Button variant="outline" size="sm" onClick={() => setRoleManagementDialogOpen(true)} className="md:h-8 md:px-3 md:text-xs">
-            Rollen verwalten
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setCreateTenantDialogOpen(true)} className="md:h-8 md:px-3 md:text-xs">
-            Tenant erstellen
-          </Button>
-          <Button size="sm" onClick={() => setDatasetPermissionsDialogOpen(true)} className="md:h-8 md:px-3 md:text-xs">
-            Berechtigung vergeben
-          </Button>
-        </div>
-      </div>
-
-      {/* User Management */}
-      <div className="space-y-4 md:space-y-3 w-full">
-        <UserFilters />
-        <ScrollArea className="w-full h-[600px] md:h-[calc(100svh-220px)]">
-          <div className="w-full">
-            <UserManagementTable />
+    <div className="flex flex-1 flex-col w-full h-full">
+      <div className="flex-none mb-4 md:mb-5">
+        <div className="flex items-center justify-between mb-1.5">
+          <h3 className="text-base md:text-lg font-semibold">Berechtigungen</h3>
+          <div className="flex gap-2 md:gap-1.5">
+            <Button variant="outline" size="sm" onClick={() => setRoleManagementDialogOpen(true)} className="md:h-8 md:px-3 md:text-xs">
+              Rollen verwalten
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setCreateTenantDialogOpen(true)} className="md:h-8 md:px-3 md:text-xs">
+              Tenant erstellen
+            </Button>
+            <Button size="sm" onClick={() => setDatasetPermissionsDialogOpen(true)} className="md:h-8 md:px-3 md:text-xs">
+              Berechtigung vergeben
+            </Button>
           </div>
-        </ScrollArea>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Verwalten Sie Benutzer, Rollen und Zugriffsrechte
+        </p>
+      </div>
+      <div className="flex-1 w-full overflow-hidden">
+        <div className="h-full w-full overflow-y-auto scroll-smooth pe-2 md:pe-4 pb-4 md:pb-6">
+          <div className="w-full max-w-none space-y-6 md:space-y-5">
+
+            {/* User Management */}
+            <div className="space-y-4 md:space-y-3 w-full">
+              <UserFilters />
+              <ScrollArea className="w-full h-[600px] md:h-[calc(100svh-220px)]">
+                <div className="w-full">
+                  <UserManagementTable />
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Dialogs */}

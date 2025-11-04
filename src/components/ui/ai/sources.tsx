@@ -154,22 +154,37 @@ const isPdf = (str: string) => {
 // Extract and shorten URL from DuckDuckGo redirect links
 const extractAndShortenUrl = (url: string): string => {
   try {
+    let actualUrl = url
+    
     // Check if it's a DuckDuckGo redirect
     if (url.includes('duckduckgo.com') && url.includes('uddg=')) {
       const decodedUrl = decodeURIComponent(url)
       const match = decodedUrl.match(/uddg=([^&]+)/)
       if (match) {
-        const actualUrl = match[1]
-        const urlObj = new URL(actualUrl)
-        return urlObj.hostname.replace('www.', '')
+        actualUrl = match[1]
       }
     }
     
-    // Regular URL - show just domain
-    const urlObj = new URL(url)
+    // If URL is less than 40 characters, show full URL
+    if (actualUrl.length < 60) {
+      try {
+        const urlObj = new URL(actualUrl)
+        // Remove protocol for display if URL is short enough
+        return actualUrl.replace(/^https?:\/\//, '')
+      } catch {
+        return actualUrl
+      }
+    }
+    
+    // If URL is 40+ characters, show shortened version (domain only)
+    const urlObj = new URL(actualUrl)
     return urlObj.hostname.replace('www.', '')
   } catch (e) {
-    // If parsing fails, try to extract domain from string
+    // If parsing fails, check length and return accordingly
+    if (url.length < 40) {
+      return url.replace(/^https?:\/\//, '')
+    }
+    // Try to extract domain from string
     const match = url.match(/https?:\/\/([^/]+)/)
     if (match) {
       return match[1].replace('www.', '')

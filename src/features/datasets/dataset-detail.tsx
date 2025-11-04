@@ -366,8 +366,8 @@ export function DatasetDetailPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-3 p-4 md:p-3 lg:p-4">
       {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex-none mb-4 md:mb-5">
+        <div className="flex items-center gap-4 mb-1.5">
           <Button
             variant="ghost"
             size="sm"
@@ -378,7 +378,7 @@ export function DatasetDetailPage() {
           </Button>
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <div className="flex flex-col gap-2 flex-1 min-w-0 sm:flex-row sm:items-center sm:gap-3">
-            <h1 className="text-lg sm:text-xl font-bold truncate">{dataset.name}</h1>
+            <h1 className="text-base md:text-lg font-semibold truncate">{dataset.name}</h1>
             <div className="flex items-center gap-2">
               <ProcessingStatusBadge status={dataset.processingStatus} />
               {isBackgroundFetching && (
@@ -417,19 +417,23 @@ export function DatasetDetailPage() {
           </div>
         </div>
         
-        <div className="flex-1 min-w-0 sm:ml-[calc(2rem+1px)]">
-          <p className="text-sm text-muted-foreground mt-1">{dataset.description}</p>
-          {/* Tags */}
-          {dataset.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {dataset.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0.5">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
+        {(dataset.description || dataset.tags.length > 0) && (
+          <div className="flex-1 min-w-0 sm:ml-[calc(2rem+1px)]">
+            {dataset.description && (
+              <p className="text-sm text-muted-foreground leading-relaxed">{dataset.description}</p>
+            )}
+            {/* Tags */}
+            {dataset.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {dataset.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0.5">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
 
