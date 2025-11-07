@@ -373,7 +373,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     const apiMessage = contextText
       ? {
           ...userMessage,
-          content: `Mark Message Context: ${contextText}\n\n User Message: ${input}`,
+          content: `Context: ${contextText}\n\n User Message: ${input}`,
         }
       : userMessage;
 
