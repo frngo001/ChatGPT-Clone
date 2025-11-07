@@ -1,8 +1,9 @@
-import { Outlet } from '@tanstack/react-router'
+import { Outlet, useLocation } from '@tanstack/react-router'
 import { Palette, UserCog, Bot, Users } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { SidebarNav } from './components/sidebar-nav'
 import { useAuthStore } from '@/stores/auth-store'
+import { cn } from '@/lib/utils'
 
 // All titles translated to German
 const sidebarNavItems = [
@@ -25,6 +26,10 @@ const sidebarNavItems = [
 
 export function Settings() {
   const { isAdmin } = useAuthStore().auth
+  const { pathname } = useLocation()
+  
+  // Check if we're on the permissions page
+  const isPermissionsPage = pathname === '/settings/permissions'
   
   // Add permissions menu item for admins
   const navItems = isAdmin() 
@@ -41,13 +46,18 @@ export function Settings() {
   return (
     <Main fixed fluid>
       <div className='flex flex-1 flex-col space-y-2 overflow-hidden md:space-y-2 lg:flex-row lg:space-y-0 lg:space-x-12'>
-        <aside className='lg:sticky lg:top-0 lg:self-start lg:h-fit md:w-1/2 lg:w-1/6'>
-          <SidebarNav items={navItems} />
-        </aside>
-        <div className='flex w-full overflow-y-auto p-1 md:p-1'>
-          <Outlet />
+        <aside className='lg:sticky lg:top-0 lg:self-start lg:h-fit md:w-1/2 lg:w-1/9  max-w-[1/9]'>
+            <SidebarNav items={navItems} />
+          </aside>
+          <div className={cn(
+            'flex w-full overflow-y-auto p-1 md:p-1',
+            isPermissionsPage 
+              ? 'lg:max-w-[90%] md:max-w-[90%]' 
+              : 'lg:max-w-[50%] md:max-w-[50%]'
+          )}>
+            <Outlet />
+          </div>
         </div>
-      </div>
-    </Main>
-  )
-}
+      </Main>
+    )
+  }

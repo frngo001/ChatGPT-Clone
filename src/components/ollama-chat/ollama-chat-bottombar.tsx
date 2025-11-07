@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ButtonWithTooltip from "@/components/button-with-tooltip";
+import { ContextMessage } from "@/components/ui/context-message";
 
 /**
  * Props for the OllamaChatBottombar component
@@ -30,6 +31,8 @@ interface ChatBottombarProps {
   stop: () => void;
   setInput?: React.Dispatch<React.SetStateAction<string>>;
   input: string;
+  contextText?: string | null;
+  onRemoveContext?: () => void;
 }
 
 /**
@@ -54,6 +57,8 @@ export default function OllamaChatBottombar({
   isLoading,
   stop,
   setInput,
+  contextText,
+  onRemoveContext,
 }: ChatBottombarProps) {
   // Reference for the input field
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
@@ -175,8 +180,19 @@ export default function OllamaChatBottombar({
       <AnimatePresence initial={false}>
         <form
           onSubmit={handleSubmit}
-          className="w-full items-center flex flex-col bg-accent dark:bg-secondary rounded-lg"
+          className="w-full items-center flex flex-col bg-accent dark:bg-secondary rounded-lg px-2 py-2"
         >
+          {/* Kontext-Nachricht im Input-Bereich */}
+          {contextText && onRemoveContext && (
+            <AnimatePresence mode="wait">
+              <ContextMessage
+                key={contextText}
+                text={contextText}
+                onRemove={onRemoveContext}
+              />
+            </AnimatePresence>
+          )}
+          
           {/* Chat input field */}
           <ChatInput
             value={isListening ? (transcript.length ? transcript : "") : input}

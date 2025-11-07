@@ -9,6 +9,17 @@ import {
 } from "@/components/ui/chat/chat-bubble";
 
 /**
+ * Erweiterte Message-Type, die Anhänge für Persistenz enthält
+ */
+interface ExtendedMessage extends Message {
+  experimental_attachments?: Array<{
+    contentType?: string;
+    url: string;
+  }>;
+  contextText?: string;
+}
+
+/**
  * Props for the OllamaChatList component
  */
 interface ChatListProps {
@@ -17,6 +28,7 @@ interface ChatListProps {
   loadingSubmit?: boolean;
   reload: (chatRequestOptions?: ChatRequestOptions) => Promise<string | null | undefined>;
   isCogneeMode?: boolean;
+  onAddSelectedTextToInput?: (selectedText: string) => void;
 }
 
 /**
@@ -41,6 +53,7 @@ const OllamaChatListComponent = ({
   loadingSubmit,
   reload,
   isCogneeMode = false,
+  onAddSelectedTextToInput,
 }: ChatListProps) => {
   return (
     <div className="flex-1 w-full overflow-y-auto">
@@ -49,12 +62,13 @@ const OllamaChatListComponent = ({
         {messages.map((message, index) => (
           <OllamaChatMessage
             key={message.id || index}
-            message={message}
+            message={message as ExtendedMessage}
             isLast={index === messages.length - 1}
             isSecondLast={index === messages.length - 2}
             isLoading={isLoading}
             reload={reload}
             isCogneeMode={isCogneeMode}
+            onAddSelectedTextToInput={onAddSelectedTextToInput}
           />
         ))}
         

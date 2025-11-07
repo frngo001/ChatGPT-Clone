@@ -125,7 +125,7 @@ export function ProfileForm() {
                   <FormControl>
                     <Input placeholder='benutzername' {...field} />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className='text-xs text-muted-foreground leading-relaxed'>
                     Das ist dein öffentlicher Anzeigename. Es kann dein echter Name oder ein
                     Pseudonym sein. Du kannst dies nur alle 30 Tage ändern.
                   </FormDescription>
@@ -143,7 +143,7 @@ export function ProfileForm() {
                   <FormControl>
                     <Input placeholder='email@example.com' {...field} disabled />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className='text-xs text-muted-foreground leading-relaxed'>
                     Ihre E-Mail-Adresse wird vom Cognee-System verwaltet und kann hier nicht geändert werden.
                   </FormDescription>
                   <FormMessage />

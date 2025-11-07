@@ -1,12 +1,13 @@
 "use client"
 
-import { memo, useEffect, useRef } from "react"
+import { memo, useEffect, useRef, useContext } from "react"
 import { cn } from "@/lib/utils"
 import { AIResponse } from "./ai/response"
 import CogneeMarkdown from "./cognee-markdown"
 import { Streamdown } from "streamdown"
 import { type BundledTheme } from "shiki/themes"
 import { toast } from "sonner"
+import { TextSelectionContext } from "@/context/text-selection-context"
 
 interface ResponseProps {
   children: React.ReactNode
@@ -44,6 +45,12 @@ const removeSourcesFromContent = (content: string): string => {
 const Response = memo(({ children, className, isCogneeMode = false, originalChunks, sources, ...props }: ResponseProps) => {
   const content = String(children)
   const streamdownRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  
+  // Optional: Nur verwenden wenn TextSelectionProvider vorhanden ist
+  const textSelectionContext = useContext(TextSelectionContext)
+  const setSelection = textSelectionContext?.setSelection
+  const clearSelection = textSelectionContext?.clearSelection
 
   // Check if content contains code blocks (```)
   const hasCodeBlocks = content.includes('```')
@@ -59,6 +66,71 @@ const Response = memo(({ children, className, isCogneeMode = false, originalChun
 
   // Define shiki themes for Streamdown (light and dark)
   const shikiThemes: [BundledTheme, BundledTheme] = ['catppuccin-latte', 'github-dark']
+  
+  // Handle text selection for AI responses (nur wenn Provider vorhanden ist)
+  useEffect(() => {
+    // Nur aktivieren wenn TextSelectionProvider vorhanden ist
+    if (!setSelection || !clearSelection) return
+    
+    const container = containerRef.current
+    if (!container) return
+
+    const handleMouseUp = (e: MouseEvent) => {
+      // Ignoriere Klicks auf interaktive Elemente (Buttons, Links, etc.)
+      const target = e.target as HTMLElement
+      if (
+        target.closest('button') ||
+        target.closest('a') ||
+        target.closest('[role="button"]') ||
+        target.closest('input') ||
+        target.closest('textarea')
+      ) {
+        clearSelection()
+        return
+      }
+
+      const selection = window.getSelection()
+      
+      if (!selection || selection.rangeCount === 0) {
+        // Nur löschen wenn keine Selektion vorhanden ist
+        // Delay um zu vermeiden, dass die Selektion sofort gelöscht wird
+        setTimeout(() => {
+          const currentSelection = window.getSelection()
+          if (!currentSelection || currentSelection.rangeCount === 0 || currentSelection.toString().trim().length === 0) {
+            clearSelection()
+          }
+        }, 100)
+        return
+      }
+
+      const range = selection.getRangeAt(0)
+      const selectedText = range.toString().trim()
+
+      // Prüfe ob Selektion innerhalb dieser Response-Komponente liegt
+      if (!container.contains(range.commonAncestorContainer)) {
+        clearSelection()
+        return
+      }
+
+      // Nur wenn Text selektiert wurde (mindestens 3 Zeichen für bessere UX)
+      if (selectedText.length >= 3) {
+        const rect = range.getBoundingClientRect()
+        setSelection(selectedText, {
+          x: rect.left,
+          y: rect.top,
+          width: rect.width,
+        })
+      } else {
+        clearSelection()
+      }
+    }
+
+    container.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      container.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [setSelection, clearSelection])
   
   // Override Streamdown copy functionality to work with host access
   useEffect(() => {
@@ -134,6 +206,7 @@ const Response = memo(({ children, className, isCogneeMode = false, originalChun
   
   return (
     <div
+      ref={containerRef}
       className={cn(
         // Remove top margin from first child and bottom margin from last child
         "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0",

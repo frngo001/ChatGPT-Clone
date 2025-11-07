@@ -138,7 +138,7 @@ export function AppearanceForm() {
             <FormItem>
               <div className='mb-4'>
                 <FormLabel className='text-base'>Seitenleiste</FormLabel>
-                <FormDescription>
+                <FormDescription className='text-xs text-muted-foreground leading-relaxed'>
                   Wähle die Elemente aus, die in der Seitenleiste angezeigt werden sollen.
                 </FormDescription>
               </div>

@@ -1,0 +1,102 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e6]:
+    - link "Skip to Main" [ref=e7] [cursor=pointer]:
+      - /url: "#content"
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - list [ref=e13]:
+          - listitem [ref=e14]:
+            - generic [ref=e15]:
+              - img "Agent AI" [ref=e17]
+              - generic [ref=e18]: Agent AI
+        - list [ref=e21]:
+          - listitem [ref=e22]:
+            - link "Neuer Chat" [ref=e23] [cursor=pointer]:
+              - /url: /chat
+              - img [ref=e25]
+              - generic [ref=e28]: Neuer Chat
+          - listitem [ref=e29]:
+            - button "Datasets" [ref=e30] [cursor=pointer]:
+              - img [ref=e32]
+              - generic [ref=e35]: Datasets
+              - img [ref=e36]
+          - listitem [ref=e38]:
+            - link "Dashboard" [ref=e39] [cursor=pointer]:
+              - /url: /dashboard
+              - img [ref=e40]
+              - generic [ref=e45]: Dashboard
+        - generic [ref=e46]:
+          - generic [ref=e47]: Chat-Verlauf
+          - generic [ref=e49]:
+            - generic [ref=e51]:
+              - img [ref=e52]
+              - textbox "Chats durchsuchen..." [ref=e55]
+            - generic [ref=e58]:
+              - button "Test message for timing" [ref=e60] [cursor=pointer]:
+                - generic [ref=e61]: Test message for timing
+              - button [ref=e62] [cursor=pointer]:
+                - img
+      - button "Toggle Sidebar" [ref=e63]
+    - generic [ref=e64]:
+      - banner [ref=e65]:
+        - generic [ref=e66]:
+          - button "Toggle Sidebar" [ref=e67] [cursor=pointer]:
+            - img
+            - generic [ref=e68]: Toggle Sidebar
+          - generic [ref=e69] [cursor=pointer]:
+            - generic [ref=e72]: Schneller finden mit
+            - generic [ref=e73]:
+              - generic [ref=e74]: Strg+
+              - text: K
+          - generic [ref=e76]:
+            - combobox [ref=e77] [cursor=pointer]:
+              - generic: Ollama
+              - img
+            - combobox [ref=e78] [cursor=pointer]:
+              - generic [ref=e79]: qwen3:1.7b
+              - img
+          - generic [ref=e80]:
+            - button "Toggle theme" [ref=e81] [cursor=pointer]:
+              - generic [ref=e82]:
+                - img
+              - generic:
+                - img
+              - generic [ref=e83]: Toggle theme
+            - button "Theme-Einstellungen öffnen" [ref=e84] [cursor=pointer]:
+              - generic [ref=e85]:
+                - img
+            - button "DE" [ref=e86] [cursor=pointer]:
+              - generic [ref=e88]: DE
+      - generic [ref=e92]:
+        - generic [ref=e96]:
+          - generic [ref=e99]:
+            - paragraph [ref=e102]: Test message for timing
+            - button [ref=e104] [cursor=pointer]:
+              - img
+          - generic [ref=e107]:
+            - paragraph [ref=e110]: Test message for timing
+            - button [ref=e112] [cursor=pointer]:
+              - img
+          - generic [ref=e117]: Analysiere deine Nachricht...
+        - generic [ref=e119]:
+          - textbox "Was willst du wissen?" [active] [ref=e120]
+          - generic [ref=e122]:
+            - generic [ref=e123] [cursor=pointer]:
+              - button "Choose File" [disabled] [ref=e124]
+              - button [disabled]:
+                - img
+            - generic [ref=e125]:
+              - button [disabled]:
+                - img
+              - button [ref=e127] [cursor=pointer]:
+                - generic [ref=e129]:
+                  - img
+                - img
+  - generic [ref=e130]:
+    - heading "Command Palette" [level=2] [ref=e131]
+    - paragraph [ref=e132]: Search for a command to run...
+  - region "Notifications alt+T"
+```

@@ -76,6 +76,7 @@ interface ExtendedMessage extends Message {
     contentType?: string;
     url: string;
   }>;
+  contextText?: string | null;
 }
 
 interface ChatSession {

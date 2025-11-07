@@ -23,6 +23,9 @@ import { FilePreviewSheet } from "@/features/datasets/components/file-preview-sh
 import { useDatasetStore } from "@/stores/dataset-store";
 import useOllamaChatStore from "@/stores/ollama-chat-store";
 import { toast } from "sonner";
+import { TextSelectionProvider } from "@/context/text-selection-context";
+import { TextSelectionButton } from "@/components/ui/text-selection-button";
+import { ContextMessage } from "@/components/ui/context-message";
 
 /**
  * Erweiterte Message-Type, die Anhänge für Persistenz enthält
@@ -32,6 +35,7 @@ interface ExtendedMessage extends Message {
     contentType?: string;
     url: string;
   }>;
+  contextText?: string;
 }
 
 /**
@@ -46,6 +50,7 @@ export type ChatMessageProps = {
   ) => Promise<string | null | undefined>;
   isSecondLast?: boolean;
   isCogneeMode?: boolean;
+  onAddSelectedTextToInput?: (selectedText: string) => void;
 };
 
 /**
@@ -85,6 +90,7 @@ function OllamaChatMessage({
   isLast,
   reload,
   isCogneeMode = false,
+  onAddSelectedTextToInput,
 }: ChatMessageProps) {
   // Local States
   const [isCopied, setIsCopied] = useState<boolean>(false);
@@ -103,8 +109,29 @@ function OllamaChatMessage({
   // Verhindert, dass jede Chat-Nachricht bei jedem Dataset-Store-Update re-rendert
   const getDatasetById = useDatasetStore((state) => state.getDatasetById);
 
+  // Kontext aus der Nachricht extrahieren
+  const extendedMessage = message as ExtendedMessage;
+  const contextText = extendedMessage?.contextText;
+
+  // Für User-Nachrichten mit Kontext: Extrahiere nur den Input aus dem Content
+  // Der Content hat das Format: "Kontext: {contextText}\n\n{input}"
+  const displayContent = useMemo(() => {
+    if (message.role === "user" && contextText && message.content.includes("Kontext:")) {
+      // Entferne den Kontext-Teil und zeige nur den Input
+      const parts = message.content.split(/\n\n/);
+      if (parts.length > 1) {
+        // Der Input ist alles nach dem ersten "\n\n"
+        return parts.slice(1).join("\n\n");
+      }
+      // Fallback: Entferne "Kontext: ..." manuell
+      return message.content.replace(/^Kontext:[\s\S]*?\n\n/, "");
+    }
+    return message.content;
+  }, [message.content, message.role, contextText]);
+
   /**
    * Extrahiere "think" Content von DeepSeek R1 Modellen und bereinige Nachricht
+   * Verwende displayContent für User-Nachrichten (ohne Kontext), message.content für Assistant-Nachrichten
    */
   const { thinkContent, cleanContent } = useMemo(() => {
     const getThinkContent = (content: string) => {
@@ -112,14 +139,17 @@ function OllamaChatMessage({
       return match ? match[1].trim() : null;
     };
 
+    // Für User-Nachrichten verwende displayContent (ohne Kontext), für Assistant message.content
+    const contentToProcess = message.role === "user" ? displayContent : message.content;
+
     return {
       thinkContent:
         message.role === "assistant" ? getThinkContent(message.content) : null,
-      cleanContent: message.content
+      cleanContent: contentToProcess
         .replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "")
         .trim(),
     };
-  }, [message.content, message.role]);
+  }, [message.content, message.role, displayContent]);
 
   /**
    * Auto-Collapse Think-Content, wenn Streaming startet
@@ -467,7 +497,9 @@ function OllamaChatMessage({
     </div>
   );
 
-  return (
+
+  // Wrappe nur Assistant-Nachrichten mit TextSelectionProvider
+  const content = (
     <>
       <motion.div {...MOTION_CONFIG} className={`flex flex-col ${message.role === "user" ? "gap-1" : "gap-2"}`}>
         <ChatBubble 
@@ -475,6 +507,16 @@ function OllamaChatMessage({
           className={message.role === "assistant" ? "max-w-[95%]" : ""}
         >
           <ChatBubbleMessage className={message.role === "user" ? "p-2" : ""}>
+            {/* Kontext im Header der Nachricht */}
+            {contextText && message.role === "user" && (
+              <div className="mb-2">
+                <ContextMessage 
+                  text={contextText}
+                  showRemoveButton={false} // Kein Remove-Button für gesendete Nachrichten
+                  className="mt-0 mb-0"
+                />
+              </div>
+            )}
             {renderThinkingProcess()}
             {renderAttachments()}
             {renderContent()}
@@ -484,6 +526,11 @@ function OllamaChatMessage({
         
         {/* Sources are now rendered inline next to action buttons */}
       </motion.div>
+      
+      {/* Text-Selection Button nur für Assistant-Nachrichten */}
+      {message.role === "assistant" && onAddSelectedTextToInput && (
+        <TextSelectionButton onAsk={onAddSelectedTextToInput} />
+      )}
 
       {/* Image Modal */}
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
@@ -513,7 +560,18 @@ function OllamaChatMessage({
         />
       )}
     </>
-  );
+  )
+
+  // Wrappe nur Assistant-Nachrichten mit TextSelectionProvider
+  if (message.role === "assistant" && onAddSelectedTextToInput) {
+    return (
+      <TextSelectionProvider>
+        {content}
+      </TextSelectionProvider>
+    )
+  }
+
+  return content
 }
 
 export default memo(OllamaChatMessage, (prevProps, nextProps) => {

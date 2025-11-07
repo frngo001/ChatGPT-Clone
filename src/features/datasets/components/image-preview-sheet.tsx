@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Download, Loader2, ZoomIn, ZoomOut, RotateCw } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Download, Loader2, ZoomIn, ZoomOut, RotateCw, GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { toast } from 'sonner'
@@ -26,6 +26,7 @@ export function ImagePreviewSheet({
   const [error, setError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(100)
   const [rotation, setRotation] = useState(0)
+  const sheetContentRef = useRef<HTMLElement | null>(null)
   
   const { downloadDatasetFile } = useDatasetStore()
 
@@ -80,6 +81,22 @@ export function ImagePreviewSheet({
       setIsLoading(false)
     }
   }
+
+  // Set max width when sheet opens to allow resizing
+  useEffect(() => {
+    if (open) {
+      // Use setTimeout to ensure the sheet is rendered
+      const timer = setTimeout(() => {
+        const sheetElement = document.querySelector('[role="dialog"]') as HTMLElement
+        if (sheetElement) {
+          sheetContentRef.current = sheetElement
+          const maxWidth = window.innerWidth * 0.95
+          sheetElement.style.maxWidth = `${maxWidth}px`
+        }
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [open])
 
   // Load image when sheet opens
   useEffect(() => {
@@ -140,6 +157,55 @@ export function ImagePreviewSheet({
         side="right" 
         className="w-full sm:w-3/4 md:w-2/3 lg:w-1/2 xl:max-w-[900px] p-0 flex flex-col"
       >
+        {/* Resizable Panel Group for entire component */}
+        <div className="h-full flex flex-col relative group">
+          {/* Resize Handle - Shadcn style */}
+          <div 
+            className="absolute left-0 top-0 bottom-0 w-px flex items-center justify-center bg-border after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2 z-10 cursor-col-resize group-hover:bg-border/80 transition-colors"
+            style={{ willChange: 'width' }}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              const sheetElement = sheetContentRef.current || e.currentTarget.closest('[role="dialog"]') as HTMLElement
+              if (!sheetElement) return
+              
+              const startX = e.clientX
+              const startWidth = sheetElement.getBoundingClientRect().width
+              const maxWidth = window.innerWidth * 0.95
+              const minWidth = 300
+              
+              // Disable transitions during resize for immediate response
+              const originalTransition = sheetElement.style.transition
+              sheetElement.style.transition = 'none'
+              sheetElement.style.willChange = 'width'
+              
+              const handleMouseMove = (moveEvent: MouseEvent) => {
+                const diff = startX - moveEvent.clientX
+                const newWidth = Math.max(minWidth, Math.min(startWidth + diff, maxWidth))
+                sheetElement.style.width = `${newWidth}px`
+                sheetElement.style.maxWidth = `${maxWidth}px`
+              }
+              
+              const handleMouseUp = () => {
+                // Re-enable transitions after resize
+                sheetElement.style.transition = originalTransition
+                sheetElement.style.willChange = ''
+                document.removeEventListener('mousemove', handleMouseMove)
+                document.removeEventListener('mouseup', handleMouseUp)
+              }
+              
+              document.addEventListener('mousemove', handleMouseMove, { passive: true })
+              document.addEventListener('mouseup', handleMouseUp)
+            }}
+          >
+            {/* Shadcn style handle */}
+            <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-background shadow-sm pointer-events-none">
+              <GripVertical className="h-2.5 w-2.5 text-muted-foreground" />
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex flex-col min-h-0 h-full">
         <SheetHeader className="px-4 py-3 border-b shrink-0">
           <div className="flex items-start justify-between gap-4 pr-8">
             <div className="flex flex-col gap-1 min-w-0">
@@ -251,6 +317,8 @@ export function ImagePreviewSheet({
               />
             </div>
           )}
+        </div>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

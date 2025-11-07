@@ -29,6 +29,7 @@ interface ExtendedMessage extends Message {
     contentType?: string;
     url: string;
   }>;
+  contextText?: string;
 }
 
 /**
@@ -75,6 +76,14 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   // Navigation and error state
   const navigate = useNavigate();
   const [apiError, setApiError] = React.useState<string | null>(null);
+  const [contextText, setContextText] = React.useState<string | null>(null);
+  // Ref um den aktuellen Context zu speichern, damit der fetch-Hook immer den neuesten Wert hat
+  const contextTextRef = React.useRef<string | null>(null);
+  
+  // Aktualisiere den Ref, wenn sich contextText ändert
+  React.useEffect(() => {
+    contextTextRef.current = contextText;
+  }, [contextText]);
 
   // Get state from store for images and model
   const base64Images = useOllamaChatStore((state) => state.base64Images);
@@ -143,6 +152,35 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
         }
       }
 
+      // WICHTIG: Überschreibe die Nachrichten im Body, um sicherzustellen,
+      // dass der Context direkt mitgeschickt wird
+      // Verwende den Ref, um immer den aktuellsten Context-Wert zu erhalten
+      const currentContextText = contextTextRef.current;
+      if (options?.body && currentContextText) {
+        try {
+          const body = JSON.parse(options.body as string);
+          // Wenn Nachrichten im Body sind, stelle sicher, dass der Context enthalten ist
+          if (body.messages && Array.isArray(body.messages) && body.messages.length > 0) {
+            const lastMessage = body.messages[body.messages.length - 1];
+            // Stelle sicher, dass der Context im Content enthalten ist
+            if (lastMessage.role === 'user') {
+              const content = typeof lastMessage.content === 'string' 
+                ? lastMessage.content 
+                : JSON.stringify(lastMessage.content);
+              
+              // Füge Context hinzu, wenn er noch nicht enthalten ist
+              if (!content.includes('Kontext:')) {
+                lastMessage.content = `Der User hat den folgenden Kontext hinzugefügt aus der Markierung: ${currentContextText}\n\n${content}`;
+                options.body = JSON.stringify(body);
+              }
+            }
+          }
+        } catch (e) {
+          // Wenn das Parsen fehlschlägt, ignoriere es
+          console.warn('Could not parse request body for context injection:', e);
+        }
+      }
+
       return fetch(url, options);
     },
     onResponse: (response) => {
@@ -154,7 +192,15 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     onFinish: (message) => {
       // Save message to store
       const savedMessages = getMessagesById(id);
-      saveMessages(id, [...savedMessages, message as ExtendedMessage]);
+      // Stelle sicher, dass der Kontext der User-Nachricht erhalten bleibt
+      const messagesWithContext = savedMessages.map((msg) => {
+        // Wenn die Nachricht eine User-Nachricht ist und contextText hat, behalte es
+        if (msg.role === 'user' && (msg as ExtendedMessage).contextText) {
+          return msg as ExtendedMessage;
+        }
+        return msg as ExtendedMessage;
+      });
+      saveMessages(id, [...messagesWithContext, message as ExtendedMessage]);
       setLoadingSubmit(false);
       setApiError(null); // Clear error on successful completion
 
@@ -257,10 +303,42 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   // Loading state for submission
   const [loadingSubmit, setLoadingSubmit] = React.useState(false);
 
-  // Update messages when initialMessages or id changes
+  // Stelle sicher, dass der Kontext erhalten bleibt
   useEffect(() => {
-    setMessages(initialMessages);
-  }, [id, initialMessages]);
+    setMessages(initialMessages as ExtendedMessage[]);
+  }, [id, initialMessages, setMessages]);
+
+  // Synchronisiere Nachrichten mit Store, um contextText zu erhalten
+  useEffect(() => {
+    const savedMessages = getMessagesById(id);
+    if (savedMessages.length > 0 && messages.length > 0) {
+      // Erstelle eine Map der gespeicherten Nachrichten mit contextText
+      const savedMessagesMap = new Map(
+        savedMessages.map((msg) => [msg.id, msg as ExtendedMessage])
+      );
+      
+      // Aktualisiere die aktuellen Nachrichten mit contextText aus dem Store
+      let messagesWithContext = messages.map((msg) => {
+        const savedMsg = savedMessagesMap.get(msg.id);
+        if (savedMsg && savedMsg.contextText) {
+          // Behalte alle anderen Eigenschaften der aktuellen Nachricht, aber füge contextText hinzu
+          return { ...msg, contextText: savedMsg.contextText } as ExtendedMessage;
+        }
+        return msg as ExtendedMessage;
+      });
+      
+      // Prüfe ob sich contextText geändert hat oder ob eine Nachricht contextText hat aber nicht in messages
+      const hasChanges = messagesWithContext.some((msg, idx) => {
+        const originalMsg = messages[idx] as ExtendedMessage;
+        return msg.contextText !== originalMsg?.contextText;
+      });
+      
+      if (hasChanges) {
+        // Aktualisiere sofort, damit contextText direkt sichtbar ist
+        setMessages(messagesWithContext);
+      }
+    }
+  }, [messages, id, getMessagesById, setMessages]);
 
   // Track previous chatMode to detect mode changes
   const prevChatModeRef = useRef(chatMode);
@@ -311,10 +389,18 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       }
     }
 
-    const userMessage: Message = {
+    // Kombiniere Kontext-Text mit User-Input für die API
+    const messageContent = contextText 
+      ? `Kontext: ${contextText}\n\n${input}`
+      : input;
+
+    // Erstelle User-Nachricht mit Kontext als separates Feld (für Anzeige)
+    // aber mit kombiniertem Content für die API
+    const userMessage: ExtendedMessage = {
       id: uuidv4(),
       role: "user",
-      content: input,
+      content: messageContent, // Für API mit Kontext kombiniert
+      ...(contextText && { contextText }), // Für Anzeige separat gespeichert
       ...(base64Images && {
         experimental_attachments: base64Images.map((image) => ({
           contentType: "image/base64",
@@ -332,16 +418,39 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
         }))
       : [];
 
+    // WICHTIG: Aktualisiere den Ref SOFORT, damit der fetch-Hook den Context hat
+    // Der Ref wird für den fetch-Hook verwendet und muss erhalten bleiben, bis der Request abgeschlossen ist
+    contextTextRef.current = contextText;
+    setInput('');
+    // WICHTIG: Lösche den Context State SOFORT, BEVOR die Nachricht hinzugefügt wird
+    // Der Context ist bereits in der User-Nachricht gespeichert und wird oben angezeigt
+    // Durch frühes Löschen des States verschwindet er sofort aus der Bottom Bar
+    // Der Ref bleibt erhalten, damit der fetch-Hook den Context noch verwenden kann
+    setContextText(null);
+    
+     // WICHTIG: Leere den Input, damit useChat die Nachricht nicht nochmal hinzufügt
+    // Die Nachricht ist bereits in messagesWithContext enthalten
+ 
+
+    // WICHTIG: Füge die User-Nachricht mit Context direkt zu den Messages hinzu
+    // BEVOR handleSubmit aufgerufen wird, damit useChat die Nachricht mit Context verwendet
+    const messagesWithContext = [...messages as ExtendedMessage[], userMessage as ExtendedMessage];
+    setMessages(messagesWithContext);
+    
+   
+
     // Different request body based on chat mode
     const requestOptions: ChatRequestOptions = chatMode === 'cognee' ? {
       body: {
         searchType: "CHUNKS",
-        query: formatMessageHistoryForCognee([...messages as ExtendedMessage[], userMessage as ExtendedMessage]),
+        query: formatMessageHistoryForCognee(messagesWithContext),
         datasetIds: [selectedDataset],
         systemPrompt: systemPrompt,
       },
     } : {
       body: {
+        // WICHTIG: Übergebe die Nachrichten direkt im Body, damit der Context sofort enthalten ist
+        messages: messagesWithContext,
         selectedModel: selectedModel,
         systemPrompt: systemPrompt,
         streamingConfig: {
@@ -361,10 +470,14 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       }),
     };
 
-
-    handleSubmit(e, requestOptions);
+    // Verwende requestAnimationFrame, um sicherzustellen, dass setMessages und setInput abgeschlossen sind
+    // bevor handleSubmit aufgerufen wird
+    requestAnimationFrame(() => {
+      handleSubmit(e, requestOptions);
+    });
     saveMessages(id, [...messages as ExtendedMessage[], userMessage as ExtendedMessage]);
     setBase64Images(null);
+    // Context wurde bereits oben gelöscht, bevor handleSubmit aufgerufen wurde 
   }, [
     id,
     chatMode,
@@ -384,6 +497,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     handleSubmit,
     saveMessages,
     setBase64Images,
+    contextText,
   ]);
 
   // useCallback für removeLatestMessage um Referenz-Stabilität zu gewährleisten
@@ -400,6 +514,14 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     saveMessages(id, [...messages as ExtendedMessage[]]);
     setLoadingSubmit(false);
   }, [stop, saveMessages, id, messages]);
+
+  // Callback zum Hinzufügen des selektierten Textes als Kontext
+  const handleAddSelectedTextToInput = useCallback((selectedText: string) => {
+    const formattedText = selectedText.trim()
+    setContextText(formattedText)
+    // Aktualisiere auch den Ref sofort, damit er sofort verfügbar ist
+    contextTextRef.current = formattedText
+  }, [])
 
   // useCallback für reload callback um Referenz-Stabilität zu gewährleisten
   const reloadCallback = useCallback(async (chatRequestOptions?: ChatRequestOptions) => {
@@ -502,6 +624,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
             loadingSubmit={loadingSubmit}
             isCogneeMode={chatMode === 'cognee'}
             reload={reloadCallback}
+            onAddSelectedTextToInput={handleAddSelectedTextToInput}
           />
           <OllamaChatBottombar
             input={input}
@@ -510,6 +633,8 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
             isLoading={isLoading}
             stop={handleStop}
             setInput={setInput}
+            contextText={contextText}
+            onRemoveContext={() => setContextText(null)}
           />
         </>
       )}

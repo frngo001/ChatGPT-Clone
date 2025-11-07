@@ -5,12 +5,12 @@ import { useEffect, useState } from 'react';
 import { useDatasetStore } from '@/stores/dataset-store';
 import useOllamaChatStore from '@/stores/ollama-chat-store';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { ChatErrorFallback } from '@/components/chat/chat-error-fallback';
+import { ErrorRedirect } from '@/components/error-redirect';
 
 function ChatIndexPageWithErrorBoundary() {
   return (
     <ErrorBoundary
-      fallback={<ChatErrorFallback />}
+      fallback={<ErrorRedirect />}
       onError={(error, errorInfo) => {
         // Log error in production (e.g., to Sentry)
         if (import.meta.env.PROD) {

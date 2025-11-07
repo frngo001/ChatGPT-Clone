@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
+import { Route as errors405RouteImport } from './routes/(errors)/405'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
 import { Route as errors403RouteImport } from './routes/(errors)/403'
 import { Route as errors401RouteImport } from './routes/(errors)/401'
@@ -77,6 +78,11 @@ const errors503Route = errors503RouteImport.update({
 const errors500Route = errors500RouteImport.update({
   id: '/(errors)/500',
   path: '/500',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors405Route = errors405RouteImport.update({
+  id: '/(errors)/405',
+  path: '/405',
   getParentRoute: () => rootRouteImport,
 } as any)
 const errors404Route = errors404RouteImport.update({
@@ -246,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/401': typeof errors401Route
   '/403': typeof errors403Route
   '/404': typeof errors404Route
+  '/405': typeof errors405Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/chat': typeof AuthenticatedChatRouteWithChildren
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/401': typeof errors401Route
   '/403': typeof errors403Route
   '/404': typeof errors404Route
+  '/405': typeof errors405Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/chat/$chatId': typeof AuthenticatedChatChatIdRoute
@@ -316,6 +324,7 @@ export interface FileRoutesById {
   '/(errors)/401': typeof errors401Route
   '/(errors)/403': typeof errors403Route
   '/(errors)/404': typeof errors404Route
+  '/(errors)/405': typeof errors405Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/chat': typeof AuthenticatedChatRouteWithChildren
@@ -353,6 +362,7 @@ export interface FileRouteTypes {
     | '/401'
     | '/403'
     | '/404'
+    | '/405'
     | '/500'
     | '/503'
     | '/chat'
@@ -386,6 +396,7 @@ export interface FileRouteTypes {
     | '/401'
     | '/403'
     | '/404'
+    | '/405'
     | '/500'
     | '/503'
     | '/chat/$chatId'
@@ -422,6 +433,7 @@ export interface FileRouteTypes {
     | '/(errors)/401'
     | '/(errors)/403'
     | '/(errors)/404'
+    | '/(errors)/405'
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/chat'
@@ -457,6 +469,7 @@ export interface RootRouteChildren {
   errors401Route: typeof errors401Route
   errors403Route: typeof errors403Route
   errors404Route: typeof errors404Route
+  errors405Route: typeof errors405Route
   errors500Route: typeof errors500Route
   errors503Route: typeof errors503Route
 }
@@ -510,6 +523,13 @@ declare module '@tanstack/react-router' {
       path: '/500'
       fullPath: '/500'
       preLoaderRoute: typeof errors500RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(errors)/405': {
+      id: '/(errors)/405'
+      path: '/405'
+      fullPath: '/405'
+      preLoaderRoute: typeof errors405RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(errors)/404': {
@@ -831,6 +851,7 @@ const rootRouteChildren: RootRouteChildren = {
   errors401Route: errors401Route,
   errors403Route: errors403Route,
   errors404Route: errors404Route,
+  errors405Route: errors405Route,
   errors500Route: errors500Route,
   errors503Route: errors503Route,
 }

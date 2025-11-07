@@ -3,7 +3,7 @@ import { ChatLayout } from '@/components/ollama-chat/chat-layout';
 import useOllamaChatStore from '@/stores/ollama-chat-store';
 import { useEffect } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { ChatErrorFallback } from '@/components/chat/chat-error-fallback';
+import { ErrorRedirect } from '@/components/error-redirect';
 
 function ChatDetailPage() {
   const { chatId } = Route.useParams();
@@ -40,7 +40,7 @@ function ChatDetailPageWithErrorBoundary() {
   
   return (
     <ErrorBoundary
-      fallback={<ChatErrorFallback />}
+      fallback={<ErrorRedirect />}
       onError={(error, errorInfo) => {
         // Log error in production (e.g., to Sentry)
         if (import.meta.env.PROD) {

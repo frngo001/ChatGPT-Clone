@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react'
-import { Download, Loader2, FileText, FileCode, File as FileIcon } from 'lucide-react'
+import { Download, Loader2, FileText, FileCode, File as FileIcon, GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { toast } from 'sonner'
@@ -46,6 +46,7 @@ export function FilePreviewSheet({
   const [error, setError] = useState<string | null>(null)
   const [fileType, setFileType] = useState<string>('')
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const sheetContentRef = useRef<HTMLElement | null>(null)
   
   const { downloadDatasetFile } = useDatasetStore()
   const { resolvedTheme } = useTheme()
@@ -145,6 +146,22 @@ export function FilePreviewSheet({
       setIsLoading(false)
     }
   }
+
+  // Set max width when sheet opens to allow resizing
+  useEffect(() => {
+    if (open) {
+      // Use setTimeout to ensure the sheet is rendered
+      const timer = setTimeout(() => {
+        const sheetElement = document.querySelector('[role="dialog"]') as HTMLElement
+        if (sheetElement) {
+          sheetContentRef.current = sheetElement
+          const maxWidth = window.innerWidth * 0.95
+          sheetElement.style.maxWidth = `${maxWidth}px`
+        }
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [open])
 
   // Load file when sheet opens
   useEffect(() => {
@@ -296,49 +313,98 @@ export function FilePreviewSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
         side="right" 
-        className="w-full sm:w-3/4 md:w-2/3 lg:w-1/2 xl:max-w-[900px] p-0 flex flex-col"
+        className="w-full sm:w-3/4 md:w-2/3 lg:w-1/2 xl:max-w-[1200px] p-0 flex flex-col"
       >
-        <SheetHeader className="px-4 py-3 border-b shrink-0">
-          <div className="flex items-start justify-between gap-4 pr-8">
-            <div className="flex flex-col gap-1 min-w-0">
-              <div className="flex items-center gap-2">
-                {getFileIcon()}
-                <SheetTitle className="text-base truncate">{fileName}</SheetTitle>
-              </div>
-              <SheetDescription className="text-xs">
-                {getFileDescription()}
-              </SheetDescription>
+        {/* Resizable Panel Group for entire component */}
+        <div className="h-full flex flex-col relative group">
+          {/* Resize Handle - Shadcn style */}
+          <div 
+            className="absolute left-0 top-0 bottom-0 w-px flex items-center justify-center bg-border after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2 z-10 cursor-col-resize group-hover:bg-border/80 transition-colors"
+            style={{ willChange: 'width' }}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              const sheetElement = sheetContentRef.current || e.currentTarget.closest('[role="dialog"]') as HTMLElement
+              if (!sheetElement) return
+              
+              const startX = e.clientX
+              const startWidth = sheetElement.getBoundingClientRect().width
+              const maxWidth = window.innerWidth * 0.95
+              const minWidth = 300
+              
+              // Disable transitions during resize for immediate response
+              const originalTransition = sheetElement.style.transition
+              sheetElement.style.transition = 'none'
+              sheetElement.style.willChange = 'width'
+              
+              const handleMouseMove = (moveEvent: MouseEvent) => {
+                const diff = startX - moveEvent.clientX
+                const newWidth = Math.max(minWidth, Math.min(startWidth + diff, maxWidth))
+                sheetElement.style.width = `${newWidth}px`
+                sheetElement.style.maxWidth = `${maxWidth}px`
+              }
+              
+              const handleMouseUp = () => {
+                // Re-enable transitions after resize
+                sheetElement.style.transition = originalTransition
+                sheetElement.style.willChange = ''
+                document.removeEventListener('mousemove', handleMouseMove)
+                document.removeEventListener('mouseup', handleMouseUp)
+              }
+              
+              document.addEventListener('mousemove', handleMouseMove, { passive: true })
+              document.addEventListener('mouseup', handleMouseUp)
+            }}
+          >
+            {/* Shadcn style handle */}
+            <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-background shadow-sm pointer-events-none">
+              <GripVertical className="h-2.5 w-2.5 text-muted-foreground" />
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownload}
-              className="h-8 px-3 text-xs shrink-0"
-            >
-              <Download className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Download</span>
-            </Button>
           </div>
-        </SheetHeader>
 
-        {/* File Content */}
-        <div 
-          ref={scrollContainerRef} 
-          className={cn(
-            "flex-1 overflow-auto relative",
-            "[&::-webkit-scrollbar]:w-2",
-            "[&::-webkit-scrollbar-track]:bg-transparent",
-            "[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30",
-            "[&::-webkit-scrollbar-thumb]:rounded-full",
-            "[&::-webkit-scrollbar-thumb]:hover:bg-muted-foreground/50",
-            "dark:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40",
-            "dark:[&::-webkit-scrollbar-thumb]:hover:bg-muted-foreground/60"
-          )}
-          style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(156, 163, 175, 0.5) transparent'
-          }}
-        >
+          {/* Main Content */}
+          <div className="flex flex-col min-h-0 h-full">
+            <SheetHeader className="px-4 py-3 border-b shrink-0">
+              <div className="flex items-start justify-between gap-4 pr-8">
+                <div className="flex flex-col gap-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    {getFileIcon()}
+                    <SheetTitle className="text-base truncate">{fileName}</SheetTitle>
+                  </div>
+                  <SheetDescription className="text-xs">
+                    {getFileDescription()}
+                  </SheetDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownload}
+                  className="h-8 px-3 text-xs shrink-0"
+                >
+                  <Download className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Download</span>
+                </Button>
+              </div>
+            </SheetHeader>
+
+            {/* Content Area */}
+            <div 
+              ref={scrollContainerRef} 
+              className={cn(
+                "flex-1 overflow-auto relative min-h-0",
+                "[&::-webkit-scrollbar]:w-2",
+                "[&::-webkit-scrollbar-track]:bg-transparent",
+                "[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30",
+                "[&::-webkit-scrollbar-thumb]:rounded-full",
+                "[&::-webkit-scrollbar-thumb]:hover:bg-muted-foreground/50",
+                "dark:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40",
+                "dark:[&::-webkit-scrollbar-thumb]:hover:bg-muted-foreground/60"
+              )}
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(156, 163, 175, 0.5) transparent'
+              }}
+            >
           {isLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background z-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -540,6 +606,8 @@ export function FilePreviewSheet({
               </Button>
             </div>
           )}
+            </div>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

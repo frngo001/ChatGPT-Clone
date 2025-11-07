@@ -1,10 +1,11 @@
 import {
-  FolderPlus,
+  LayoutDashboard,
   FolderSearch2,
   Folder,
 } from 'lucide-react'
 import { type SidebarData } from '../types'
 import { useDatasetStore } from '@/stores/dataset-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { FoldersIcon } from '@/components/ui/folders-icon'
 import { SquarePenIcon } from '@/components/ui/square-pen-icon'
 
@@ -12,6 +13,7 @@ export function useDynamicSidebarData(): SidebarData {
   // Selektiver Store-Selektor: Nur datasets abonnieren
   // Verhindert, dass Sidebar-Daten bei jedem Store-Update neu berechnet werden
   const datasets = useDatasetStore((state) => state.datasets)
+  const isAdmin = useAuthStore((state) => state.auth.isAdmin)
 
   // Generate dynamic dataset items
   const datasetItems = datasets.map((dataset) => ({
@@ -50,11 +52,11 @@ export function useDynamicSidebarData(): SidebarData {
               ...datasetItems,
             ],
           },
-          {
-            title: 'Projekte',
-            url: '/projects',
-            icon: FolderPlus,
-          },
+          ...(isAdmin() ? [{
+            title: 'Dashboard',
+            url: '/dashboard',
+            icon: LayoutDashboard ,
+          }] : []),
         ],
       },
     ],
