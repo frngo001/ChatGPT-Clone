@@ -195,21 +195,21 @@ const FileCardComponent = ({
     >
 
       <CardHeader className="relative z-10 pb-1.5 sm:pb-2 flex-shrink-0 px-3 sm:px-4 pt-2 sm:pt-2.5">
-        <div className="flex items-start justify-between gap-2">
-          {/* Content */}
-          <div className="flex-1 min-w-0 space-y-0">
+        <div className="flex items-start justify-between gap-1.5 sm:gap-2">
+          {/* Content - ensure it can shrink properly */}
+          <div className="flex-1 min-w-0 space-y-0 overflow-hidden">
             {isUrl && urlForNavigation ? (
               <a
                 href={urlForNavigation}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="text-[11px] sm:text-xs md:text-[11px] font-semibold text-primary underline decoration-dotted underline-offset-2 flex items-center gap-1 w-fit group/link leading-tight"
+                className="text-[11px] sm:text-xs md:text-[11px] font-semibold text-primary underline decoration-dotted underline-offset-2 flex items-center gap-1 group/link leading-tight overflow-hidden"
                 title={urlForNavigation}
               >
                 {faviconUrl && (
-                  <img 
-                    src={faviconUrl} 
+                  <img
+                    src={faviconUrl}
                     alt=""
                     className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 rounded-sm"
                     onError={(e) => {
@@ -217,17 +217,17 @@ const FileCardComponent = ({
                     }}
                   />
                 )}
-                <span className="truncate line-clamp-2 group-hover/link:text-primary/80 leading-tight">
-                  {truncateFileName(file.name, 40)}
+                <span className="truncate line-clamp-2 group-hover/link:text-primary/80 leading-tight min-w-0">
+                  {truncateFileName(file.name, 30)}
                 </span>
                 <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 opacity-70 group-hover/link:opacity-100" />
               </a>
             ) : (
-              <CardTitle 
-                className="text-[11px] sm:text-xs md:text-[11px] font-semibold line-clamp-2 group-hover:text-primary leading-tight"
+              <CardTitle
+                className="text-[11px] sm:text-xs md:text-[11px] font-semibold line-clamp-2 group-hover:text-primary leading-tight overflow-hidden"
                 title={file.name}
               >
-                {truncateFileName(file.name, 40)}
+                <span className="block truncate">{truncateFileName(file.name, 30)}</span>
               </CardTitle>
             )}
             
@@ -239,8 +239,8 @@ const FileCardComponent = ({
             </CardDescription>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-0.5 shrink-0">
+          {/* Actions - always visible on the right */}
+          <div className="flex items-center gap-0.5 shrink-0 ml-auto">
             {isUrl ? (
               <Button 
                 variant="ghost" 

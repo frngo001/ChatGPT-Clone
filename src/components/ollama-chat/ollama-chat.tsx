@@ -184,7 +184,6 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     messages,
     input,
     handleInputChange,
-    handleSubmit,
     isLoading,
     stop,
     setMessages,
@@ -303,17 +302,24 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
    * Handles message submission
    *
    * Process:
-   * 1. Validates required selections (model/dataset)
-   * 2. Creates user message with context and attachments
-   * 3. Saves to store for persistence
-   * 4. Creates API-specific message with embedded context
-   * 5. Sends to appropriate API endpoint
+   * 1. Prevents submission if a response is currently being generated
+   * 2. Validates required selections (model/dataset)
+   * 3. Creates user message with context and attachments
+   * 4. Saves to store for persistence
+   * 5. Creates API-specific message with embedded context
+   * 6. Sends to appropriate API endpoint
    *
    * Note: Context text is kept separate in UI but embedded for API
    */
   const onSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     window.history.replaceState({}, "", `/chat/${id}`);
+
+    // Prevent sending new message while response is being generated
+    if (isLoading || loadingSubmit) {
+      toast.warning("Bitte warten Sie, bis die aktuelle Antwort vollständig generiert wurde");
+      return;
+    }
 
     // Validation
     if (chatMode === 'general' && !selectedModel) {
@@ -430,6 +436,8 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     setBase64Images,
     setContextText,
     contextText,
+    isLoading,
+    loadingSubmit,
   ]);
 
   /**
