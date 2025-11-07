@@ -502,7 +502,7 @@ function OllamaChatMessage({
   const content = (
     <>
       <motion.div {...MOTION_CONFIG} className={`flex flex-col ${message.role === "user" ? "gap-1" : "gap-2"}`}>
-        <ChatBubble 
+        <ChatBubble
           variant={message.role === "user" ? "sent" : "received"}
           className={message.role === "assistant" ? "max-w-[95%]" : ""}
         >

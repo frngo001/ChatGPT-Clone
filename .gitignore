@@ -5,3 +5,4 @@ CHANGELOG.md
 docker*
 /dist
 /logs
+/.claude

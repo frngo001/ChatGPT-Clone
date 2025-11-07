@@ -77,13 +77,6 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   const navigate = useNavigate();
   const [apiError, setApiError] = React.useState<string | null>(null);
   const [contextText, setContextText] = React.useState<string | null>(null);
-  // Ref um den aktuellen Context zu speichern, damit der fetch-Hook immer den neuesten Wert hat
-  const contextTextRef = React.useRef<string | null>(null);
-  
-  // Aktualisiere den Ref, wenn sich contextText ändert
-  React.useEffect(() => {
-    contextTextRef.current = contextText;
-  }, [contextText]);
 
   // Get state from store for images and model
   const base64Images = useOllamaChatStore((state) => state.base64Images);
@@ -127,6 +120,7 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     setMessages,
     setInput,
     reload,
+    append,
   } = useChat({
     id,
     initialMessages,
@@ -152,35 +146,6 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
         }
       }
 
-      // WICHTIG: Überschreibe die Nachrichten im Body, um sicherzustellen,
-      // dass der Context direkt mitgeschickt wird
-      // Verwende den Ref, um immer den aktuellsten Context-Wert zu erhalten
-      const currentContextText = contextTextRef.current;
-      if (options?.body && currentContextText) {
-        try {
-          const body = JSON.parse(options.body as string);
-          // Wenn Nachrichten im Body sind, stelle sicher, dass der Context enthalten ist
-          if (body.messages && Array.isArray(body.messages) && body.messages.length > 0) {
-            const lastMessage = body.messages[body.messages.length - 1];
-            // Stelle sicher, dass der Context im Content enthalten ist
-            if (lastMessage.role === 'user') {
-              const content = typeof lastMessage.content === 'string' 
-                ? lastMessage.content 
-                : JSON.stringify(lastMessage.content);
-              
-              // Füge Context hinzu, wenn er noch nicht enthalten ist
-              if (!content.includes('Kontext:')) {
-                lastMessage.content = `Der User hat den folgenden Kontext hinzugefügt aus der Markierung: ${currentContextText}\n\n${content}`;
-                options.body = JSON.stringify(body);
-              }
-            }
-          }
-        } catch (e) {
-          // Wenn das Parsen fehlschlägt, ignoriere es
-          console.warn('Could not parse request body for context injection:', e);
-        }
-      }
-
       return fetch(url, options);
     },
     onResponse: (response) => {
@@ -190,19 +155,45 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       }
     },
     onFinish: (message) => {
-      // Save message to store
-      const savedMessages = getMessagesById(id);
-      // Stelle sicher, dass der Kontext der User-Nachricht erhalten bleibt
-      const messagesWithContext = savedMessages.map((msg) => {
-        // Wenn die Nachricht eine User-Nachricht ist und contextText hat, behalte es
-        if (msg.role === 'user' && (msg as ExtendedMessage).contextText) {
-          return msg as ExtendedMessage;
+      /**
+       * ============================================================================
+       * ON FINISH - Speichere AI-Antwort im Store
+       * ============================================================================
+       *
+       * Die User-Nachricht wurde bereits in onSubmit gespeichert.
+       * Hier fügen wir nur die AI-Antwort hinzu.
+       *
+       * WICHTIG: handleSubmit hat die AI-Nachricht bereits zum messages-Array hinzugefügt,
+       * daher müssen wir sie NUR noch im Store persistieren.
+       */
+      const currentMessages = getMessagesById(id);
+
+      // Prüfe, ob die letzte Nachricht im Store eine User-Nachricht ist
+      const lastMessage = currentMessages[currentMessages.length - 1];
+
+      if (lastMessage && lastMessage.role === "user") {
+        // ✅ Normal case: User-Nachricht ist im Store, füge AI-Antwort hinzu
+        saveMessages(id, [...currentMessages, message as ExtendedMessage]);
+      } else {
+        // ⚠️ Fallback: Wenn die User-Nachricht fehlt (sollte nicht passieren)
+        console.warn('onFinish: User message missing from store, attempting recovery');
+
+        // Finde die fehlende User-Nachricht im messages-Array
+        const userMessage = messages.find(msg =>
+          msg.role === "user" && !currentMessages.some(cm => cm.id === msg.id)
+        );
+
+        if (userMessage) {
+          // Füge beide Nachrichten hinzu (User + AI)
+          saveMessages(id, [...currentMessages, userMessage as ExtendedMessage, message as ExtendedMessage]);
+        } else {
+          // Letzter Fallback: Nur AI-Antwort hinzufügen
+          saveMessages(id, [...currentMessages, message as ExtendedMessage]);
         }
-        return msg as ExtendedMessage;
-      });
-      saveMessages(id, [...messagesWithContext, message as ExtendedMessage]);
+      }
+
       setLoadingSubmit(false);
-      setApiError(null); // Clear error on successful completion
+      setApiError(null);
 
       // Navigate to chat page
       navigate({ to: `/chat/${id}` });
@@ -303,42 +294,11 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   // Loading state for submission
   const [loadingSubmit, setLoadingSubmit] = React.useState(false);
 
-  // Stelle sicher, dass der Kontext erhalten bleibt
+  // Stelle sicher, dass initialMessages geladen werden
   useEffect(() => {
     setMessages(initialMessages as ExtendedMessage[]);
   }, [id, initialMessages, setMessages]);
 
-  // Synchronisiere Nachrichten mit Store, um contextText zu erhalten
-  useEffect(() => {
-    const savedMessages = getMessagesById(id);
-    if (savedMessages.length > 0 && messages.length > 0) {
-      // Erstelle eine Map der gespeicherten Nachrichten mit contextText
-      const savedMessagesMap = new Map(
-        savedMessages.map((msg) => [msg.id, msg as ExtendedMessage])
-      );
-      
-      // Aktualisiere die aktuellen Nachrichten mit contextText aus dem Store
-      let messagesWithContext = messages.map((msg) => {
-        const savedMsg = savedMessagesMap.get(msg.id);
-        if (savedMsg && savedMsg.contextText) {
-          // Behalte alle anderen Eigenschaften der aktuellen Nachricht, aber füge contextText hinzu
-          return { ...msg, contextText: savedMsg.contextText } as ExtendedMessage;
-        }
-        return msg as ExtendedMessage;
-      });
-      
-      // Prüfe ob sich contextText geändert hat oder ob eine Nachricht contextText hat aber nicht in messages
-      const hasChanges = messagesWithContext.some((msg, idx) => {
-        const originalMsg = messages[idx] as ExtendedMessage;
-        return msg.contextText !== originalMsg?.contextText;
-      });
-      
-      if (hasChanges) {
-        // Aktualisiere sofort, damit contextText direkt sichtbar ist
-        setMessages(messagesWithContext);
-      }
-    }
-  }, [messages, id, getMessagesById, setMessages]);
 
   // Track previous chatMode to detect mode changes
   const prevChatModeRef = useRef(chatMode);
@@ -356,23 +316,36 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     prevChatModeRef.current = chatMode;
   }, [chatMode]);
 
-  // useCallback für onSubmit um Referenz-Stabilität zu gewährleisten
+  /**
+   * ============================================================================
+   * SUBMIT HANDLER - Haupt-Logik für das Senden von Nachrichten
+   * ============================================================================
+   *
+   * Diese Funktion orchestriert den gesamten Nachrichtenversand:
+   * 1. Validierung (Modell/Dataset ausgewählt)
+   * 2. Erstellen der User-Nachricht mit Context und Attachments
+   * 3. Sofortiges Speichern im Store (für Persistence)
+   * 4. Sofortiges Anzeigen im UI (mit Context)
+   * 5. Senden des API Requests
+   */
   const onSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     window.history.replaceState({}, "", `/chat/${id}`);
 
-    // Validation based on chat mode
+    // ============================================================================
+    // VALIDIERUNG
+    // ============================================================================
     if (chatMode === 'general' && !selectedModel) {
       toast.error("Bitte wählen Sie ein Modell aus");
       return;
     }
-    
+
     if (chatMode === 'cognee' && !selectedDataset) {
       toast.error("Bitte wählen Sie ein Dataset aus");
       return;
     }
 
-    // Preventive check for Cognee mode - check if dataset has data
+    // Preventive check für Cognee mode - prüfe ob Dataset Daten hat
     if (chatMode === 'cognee' && selectedDataset) {
       try {
         const hasData = await cogneeApi.checkDatasetHasData(selectedDataset);
@@ -385,32 +358,21 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
         }
       } catch (error) {
         console.error('Error checking dataset data:', error);
-        // Continue with the request - the error will be handled by the onError callback
       }
     }
 
-    // Kombiniere Kontext-Text mit User-Input für die API
-    const messageContent = contextText 
+    setLoadingSubmit(true);
+
+    // ============================================================================
+    // MESSAGE CREATION - Erstelle User-Nachricht mit allen Daten
+    // ============================================================================
+
+    // Kombiniere Context mit Input für die API (aber behalte contextText separat für UI)
+    const messageContent = contextText
       ? `Kontext: ${contextText}\n\n${input}`
       : input;
 
-    // Erstelle User-Nachricht mit Kontext als separates Feld (für Anzeige)
-    // aber mit kombiniertem Content für die API
-    const userMessage: ExtendedMessage = {
-      id: uuidv4(),
-      role: "user",
-      content: messageContent, // Für API mit Kontext kombiniert
-      ...(contextText && { contextText }), // Für Anzeige separat gespeichert
-      ...(base64Images && {
-        experimental_attachments: base64Images.map((image) => ({
-          contentType: "image/base64",
-          url: image,
-        })),
-      }),
-    };
-
-    setLoadingSubmit(true);
-
+    // Erstelle Attachments Array
     const attachments: Attachment[] = base64Images
       ? base64Images.map((image) => ({
           contentType: "image/base64",
@@ -418,39 +380,44 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
         }))
       : [];
 
-    // WICHTIG: Aktualisiere den Ref SOFORT, damit der fetch-Hook den Context hat
-    // Der Ref wird für den fetch-Hook verwendet und muss erhalten bleiben, bis der Request abgeschlossen ist
-    contextTextRef.current = contextText;
+    // ✅ Erstelle vollständige User-Nachricht mit ALLEN custom fields
+    const userMessage: ExtendedMessage = {
+      id: uuidv4(),
+      role: "user",
+      content: messageContent, // Kombinierter Content für API
+      ...(contextText && { contextText }), // ✅ WICHTIG: Separates contextText für UI-Anzeige
+      ...(base64Images && {
+        experimental_attachments: attachments,
+      }),
+    };
+
+    // ============================================================================
+    // STORE PERSISTENCE - Speichere SOFORT für Refresh-Sicherheit
+    // ============================================================================
+    const currentStoreMessages = getMessagesById(id);
+    saveMessages(id, [...currentStoreMessages, userMessage]);
+
+    // ============================================================================
+    // CLEANUP - Leere Input, Context und Images
+    // ============================================================================
     setInput('');
-    // WICHTIG: Lösche den Context State SOFORT, BEVOR die Nachricht hinzugefügt wird
-    // Der Context ist bereits in der User-Nachricht gespeichert und wird oben angezeigt
-    // Durch frühes Löschen des States verschwindet er sofort aus der Bottom Bar
-    // Der Ref bleibt erhalten, damit der fetch-Hook den Context noch verwenden kann
     setContextText(null);
-    
-     // WICHTIG: Leere den Input, damit useChat die Nachricht nicht nochmal hinzufügt
-    // Die Nachricht ist bereits in messagesWithContext enthalten
- 
+    setBase64Images(null);
 
-    // WICHTIG: Füge die User-Nachricht mit Context direkt zu den Messages hinzu
-    // BEVOR handleSubmit aufgerufen wird, damit useChat die Nachricht mit Context verwendet
-    const messagesWithContext = [...messages as ExtendedMessage[], userMessage as ExtendedMessage];
-    setMessages(messagesWithContext);
-    
-   
-
-    // Different request body based on chat mode
+    // ============================================================================
+    // REQUEST OPTIONS - Baue Request basierend auf Chat-Modus
+    // ============================================================================
     const requestOptions: ChatRequestOptions = chatMode === 'cognee' ? {
       body: {
         searchType: "CHUNKS",
-        query: formatMessageHistoryForCognee(messagesWithContext),
+        query: formatMessageHistoryForCognee([...messages, userMessage]),
         datasetIds: [selectedDataset],
         systemPrompt: systemPrompt,
       },
     } : {
       body: {
-        // WICHTIG: Übergebe die Nachrichten direkt im Body, damit der Context sofort enthalten ist
-        messages: messagesWithContext,
+        // Sende messages MIT userMessage für korrekten Context
+        messages: [...messages, userMessage],
         selectedModel: selectedModel,
         systemPrompt: systemPrompt,
         streamingConfig: {
@@ -470,14 +437,15 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       }),
     };
 
-    // Verwende requestAnimationFrame, um sicherzustellen, dass setMessages und setInput abgeschlossen sind
-    // bevor handleSubmit aufgerufen wird
-    requestAnimationFrame(() => {
-      handleSubmit(e, requestOptions);
-    });
-    saveMessages(id, [...messages as ExtendedMessage[], userMessage as ExtendedMessage]);
-    setBase64Images(null);
-    // Context wurde bereits oben gelöscht, bevor handleSubmit aufgerufen wurde 
+    // ============================================================================
+    // API REQUEST - Verwende append() mit der vollständigen userMessage
+    // ============================================================================
+    // append() fügt die Message zum UI hinzu UND startet die API-Anfrage
+    // Übergebe die userMessage als vollständiges Message-Objekt mit allen custom fields
+    append(
+      userMessage as any,
+      requestOptions
+    );
   }, [
     id,
     chatMode,
@@ -494,9 +462,12 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     maxTokens,
     batchSize,
     throttleDelay,
-    handleSubmit,
+    append,
     saveMessages,
+    getMessagesById,
+    setInput,
     setBase64Images,
+    setContextText,
     contextText,
   ]);
 
@@ -516,15 +487,13 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   }, [stop, saveMessages, id, messages]);
 
   // Callback zum Hinzufügen des selektierten Textes als Kontext
-  const handleAddSelectedTextToInput = useCallback((selectedText: string) => {
-    const formattedText = selectedText.trim()
-    setContextText(formattedText)
-    // Aktualisiere auch den Ref sofort, damit er sofort verfügbar ist
-    contextTextRef.current = formattedText
-  }, [])
+    const handleAddSelectedTextToInput = useCallback((selectedText: string) => {
+      const formattedText = selectedText.trim()
+      setContextText(formattedText)
+    }, [])
 
-  // useCallback für reload callback um Referenz-Stabilität zu gewährleisten
-  const reloadCallback = useCallback(async (chatRequestOptions?: ChatRequestOptions) => {
+    // useCallback für reload callback um Referenz-Stabilität zu gewährleisten
+    const reloadCallback = useCallback(async (chatRequestOptions?: ChatRequestOptions) => {
     removeLatestMessage();
 
     // Preventive check for Cognee mode - check if dataset has data
