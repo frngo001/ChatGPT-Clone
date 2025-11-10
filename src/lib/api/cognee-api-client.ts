@@ -346,6 +346,25 @@ export const cogneeApi = {
       })
     },
 
+    // Get users with permissions on a specific dataset
+    getDatasetPermissions: (datasetId: string) => {
+      // Cognee API: GET /v1/permissions/datasets/{dataset_id}
+      // Returns list of users/principals with permissions on this dataset
+      return cogneeApiClient.get(`/v1/permissions/datasets/${datasetId}`)
+    },
+
+    // Revoke dataset permission from a user
+    revokeDatasetPermission: (datasetId: string, userId: string) => {
+      // Cognee API: DELETE /v1/permissions/datasets/{principal_id}?permission_name=read
+      // Body: [dataset_id]
+      const params = new URLSearchParams();
+      params.append('permission_name', 'read');
+      return cogneeApiClient.delete(
+        `/v1/permissions/datasets/${userId}?${params.toString()}`,
+        { data: [datasetId] }
+      )
+    },
+
     removeUserFromRole: (userId: string, roleId: string) => {
       const params = new URLSearchParams();
       params.append('role_id', roleId);

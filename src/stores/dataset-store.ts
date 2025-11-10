@@ -107,7 +107,8 @@ interface DatasetStore {
   // Permissions actions
   shareDatasetWithTenant: (datasetId: string, tenantId: string) => Promise<void>
   shareDatasetWithUser: (datasetId: string, userId: string) => Promise<void>
-  fetchDatasetPermissions: (datasetId: string) => Promise<DatasetPermission[]>
+  fetchDatasetPermissions: (datasetId: string) => Promise<string[]>
+  revokeDatasetPermission: (datasetId: string, userId: string) => Promise<void>
   
   // Filter actions
   setFilterState: (filters: Partial<DatasetStore['filterState']>) => void
@@ -1400,10 +1401,40 @@ Der Dateiname wird für Zitationen verwendet und MUSS klickbar sein, damit Benut
         }
       },
 
-      fetchDatasetPermissions: async (_datasetId) => {
-        // This would fetch actual permissions from Cognee
-        // For now, return empty array as placeholder
-        return []
+      fetchDatasetPermissions: async (datasetId: string) => {
+        try {
+          set({ isLoading: true })
+          const response = await cogneeApi.permissions.getDatasetPermissions(datasetId)
+          set({ isLoading: false })
+
+          // Extract user IDs from the response
+          // The response structure depends on the backend API
+          // Assuming it returns an array of objects with user_id or id field
+          const userIds = response.data?.map((permission: any) => permission.user_id || permission.id) || []
+          return userIds
+        } catch (error) {
+          console.error('Failed to fetch dataset permissions:', error)
+          set({
+            error: error instanceof Error ? error.message : 'Failed to fetch dataset permissions',
+            isLoading: false
+          })
+          return []
+        }
+      },
+
+      revokeDatasetPermission: async (datasetId: string, userId: string) => {
+        try {
+          set({ isLoading: true })
+          await cogneeApi.permissions.revokeDatasetPermission(datasetId, userId)
+          set({ isLoading: false })
+        } catch (error) {
+          console.error('Failed to revoke dataset permission:', error)
+          set({
+            error: error instanceof Error ? error.message : 'Failed to revoke dataset permission',
+            isLoading: false
+          })
+          throw error
+        }
       },
       
       // Filter actions

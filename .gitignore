@@ -6,3 +6,8 @@ docker*
 /dist
 /logs
 /.claude
+/.tanstack
+/.cursor
+/playwright-report/
+/test-results/
+/display.md

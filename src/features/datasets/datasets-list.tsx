@@ -12,7 +12,7 @@ import { ShareDatasetDialog } from './components/share-dataset-dialog'
 import { useDatasetFilters } from './hooks/use-dataset-filters'
 import { DatasetFilters } from './components/dataset-filters'
 import { DatasetCard } from './components/dataset-card'
-import { canShareDataset } from '@/lib/permissions-helper'
+import { canShareDataset, canDeleteDataset } from '@/lib/permissions-helper'
 
 export function DatasetsPage() {
   const navigate = useNavigate()
@@ -273,16 +273,18 @@ export function DatasetsPage() {
           {filteredDatasets.map((dataset) => {
             const ownerName = getOwnerName(dataset.ownerId)
             const canShare = canShareDataset(auth.user, dataset)
-            
+            const canDelete = canDeleteDataset(auth.user, dataset)
+
             return (
               <DatasetCard
                 key={dataset.id}
                 dataset={dataset}
                 ownerName={ownerName}
                 onClick={() => navigate({ to: `/library/datasets/${dataset.id}` })}
-                onDelete={(e) => handleDeleteDataset(dataset.id, dataset.name, dataset.files.length, e)}
+                onDelete={canDelete ? (e) => handleDeleteDataset(dataset.id, dataset.name, dataset.files.length, e) : undefined}
                 onShare={canShare ? (e) => handleShareDataset(dataset.id, dataset.name, e) : undefined}
                 showShareButton={canShare}
+                showDeleteButton={canDelete}
               />
             )
           })}
@@ -292,16 +294,18 @@ export function DatasetsPage() {
           {filteredDatasets.map((dataset) => {
             const ownerName = getOwnerName(dataset.ownerId)
             const canShare = canShareDataset(auth.user, dataset)
-            
+            const canDelete = canDeleteDataset(auth.user, dataset)
+
             return (
               <DatasetCard
                 key={dataset.id}
                 dataset={dataset}
                 ownerName={ownerName}
                 onClick={() => navigate({ to: `/library/datasets/${dataset.id}` })}
-                onDelete={(e) => handleDeleteDataset(dataset.id, dataset.name, dataset.files.length, e)}
+                onDelete={canDelete ? (e) => handleDeleteDataset(dataset.id, dataset.name, dataset.files.length, e) : undefined}
                 onShare={canShare ? (e) => handleShareDataset(dataset.id, dataset.name, e) : undefined}
                 showShareButton={canShare}
+                showDeleteButton={canDelete}
                 variant="list"
               />
             )

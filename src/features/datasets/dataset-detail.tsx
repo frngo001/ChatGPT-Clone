@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 import { useDatasetStore } from '@/stores/dataset-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { AddDataDialog } from './components/add-data-dialog'
 import { ProcessingStatusBadge } from './components/processing-status-badge'
 import { DeleteFileDialog } from './components/delete-file-dialog'
@@ -26,11 +27,12 @@ import { truncateFileName } from '@/lib/utils'
 export function DatasetDetailPage() {
   const { datasetId } = useParams({ from: '/_authenticated/library/datasets/$datasetId' })
   const navigate = useNavigate()
+  const { auth } = useAuthStore()
   // Selektive Selektoren für optimale Performance - verhindert unnötige Re-renders
   // Reaktiver Selektor für dataset - aktualisiert sich automatisch bei Store-Änderungen
-  const dataset = useDatasetStore((state) => 
-    state.currentDataset?.id === datasetId 
-      ? state.currentDataset 
+  const dataset = useDatasetStore((state) =>
+    state.currentDataset?.id === datasetId
+      ? state.currentDataset
       : state.datasets.find(d => d.id === datasetId)
   )
   const fetchDatasetDataWithCache = useDatasetStore((state) => state.fetchDatasetDataWithCache)
@@ -354,9 +356,12 @@ export function DatasetDetailPage() {
     setShowAddDataDialog(true)
   }, []) // Keine Dependencies, da nur State-Setter verwendet wird
 
-  const needsProcessing = !dataset?.processingStatus || 
-                         dataset.processingStatus === 'DATASET_PROCESSING_INITIATED' || 
+  const needsProcessing = !dataset?.processingStatus ||
+                         dataset.processingStatus === 'DATASET_PROCESSING_INITIATED' ||
                          dataset.processingStatus === 'DATASET_PROCESSING_ERRORED'
+
+  // Check if current user is owner or admin
+  const isOwner = dataset?.ownerId === auth.user?.id || auth.user?.is_superuser
 
 
   return (
@@ -382,22 +387,24 @@ export function DatasetDetailPage() {
                   Aktualisiere...
                 </Badge>
               )}
-              <Button 
-                variant="outline" 
-                className="h-6 px-2 py-0.5 text-xs w-fit gap-1.5"
-                onClick={handleShowEditDialog}
-              >
-                <Edit className="h-3 w-3" />
-                <span className="hidden sm:inline">Bearbeiten</span>
-                <span className="sm:hidden">Edit</span>
-              </Button>
+              {isOwner && (
+                <Button
+                  variant="outline"
+                  className="h-6 px-2 py-0.5 text-xs w-fit gap-1.5"
+                  onClick={handleShowEditDialog}
+                >
+                  <Edit className="h-3 w-3" />
+                  <span className="hidden sm:inline">Bearbeiten</span>
+                  <span className="sm:hidden">Edit</span>
+                </Button>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 ml-auto md:gap-1.5">
-            {needsProcessing && (
-              <Button 
-                size="sm" 
-                variant="outline" 
+            {isOwner && needsProcessing && (
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={handleProcessDataset}
                 disabled={isProcessing}
                 className="hidden sm:flex md:h-8 md:px-3 md:text-xs"
@@ -405,11 +412,13 @@ export function DatasetDetailPage() {
                 {isProcessing ? 'Wird verarbeitet...' : 'Dataset verarbeiten'}
               </Button>
             )}
-            <Button size="sm" onClick={handleShowAddDataDialog} className="md:h-7 md:px-2.5 md:text-xs">
-              <Upload className="mr-2 h-4 w-4 md:mr-1 md:h-3 md:w-3" />
-              <span className="hidden sm:inline">Daten hinzufügen</span>
-              <span className="sm:hidden">Hinzufügen</span>
-            </Button>
+            {isOwner && (
+              <Button size="sm" onClick={handleShowAddDataDialog} className="md:h-7 md:px-2.5 md:text-xs">
+                <Upload className="mr-2 h-4 w-4 md:mr-1 md:h-3 md:w-3" />
+                <span className="hidden sm:inline">Daten hinzufügen</span>
+                <span className="sm:hidden">Hinzufügen</span>
+              </Button>
+            )}
           </div>
         </div>
         
@@ -504,12 +513,14 @@ export function DatasetDetailPage() {
                 {searchQuery ? 'Keine Dateien gefunden' : 'Keine Dateien hochgeladen'}
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                {searchQuery 
-                  ? 'Versuchen Sie, Ihre Suchbegriffe anzupassen.' 
-                  : 'Laden Sie Dateien hoch, um mit diesem Dataset zu beginnen.'
+                {searchQuery
+                  ? 'Versuchen Sie, Ihre Suchbegriffe anzupassen.'
+                  : isOwner
+                    ? 'Laden Sie Dateien hoch, um mit diesem Dataset zu beginnen.'
+                    : 'Dieses Dataset enthält noch keine Dateien.'
                 }
               </p>
-              {!searchQuery && (
+              {!searchQuery && isOwner && (
                 <Button size="sm" onClick={() => setShowAddDataDialog(true)} className="md:h-7 md:px-2.5 md:text-xs">
                   <Upload className="mr-2 h-4 w-4 md:mr-1 md:h-3 md:w-3" />
                   Daten hinzufügen
@@ -528,11 +539,12 @@ export function DatasetDetailPage() {
                   file={file}
                   onPreview={handlePreviewFile}
                   onDownload={handleDownloadFile}
-                  onDelete={handleDeleteFile}
+                  onDelete={isOwner ? handleDeleteFile : undefined}
                   getFaviconUrl={getFaviconUrl}
                   getUrlDescription={getUrlDescription}
                   truncateFileName={truncateFileNameCallback}
                   variant={viewMode === 'list' ? 'list' : 'grid'}
+                  showDeleteButton={isOwner}
                 />
               ))}
             </div>

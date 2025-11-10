@@ -23,6 +23,7 @@ interface DatasetCardProps {
   className?: string
   variant?: 'grid' | 'list'
   showShareButton?: boolean
+  showDeleteButton?: boolean
 }
 
 const DatasetCardComponent = ({
@@ -34,6 +35,7 @@ const DatasetCardComponent = ({
   className,
   variant = 'grid',
   showShareButton = false,
+  showDeleteButton = false,
 }: DatasetCardProps) => {
   const isListVariant = variant === 'list'
 
@@ -117,7 +119,7 @@ const DatasetCardComponent = ({
                 <span className="sr-only">Teilen</span>
               </Button>
             )}
-            {!isListVariant && onDelete && (
+            {!isListVariant && showDeleteButton && onDelete && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -240,7 +242,7 @@ const DatasetCardComponent = ({
             )}
 
             {/* Delete Button */}
-            {onDelete && (
+            {showDeleteButton && onDelete && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -292,7 +294,8 @@ export const DatasetCard = memo(DatasetCardComponent, (prevProps, nextProps) => 
     prevProps.ownerName !== nextProps.ownerName ||
     prevProps.variant !== nextProps.variant ||
     prevProps.className !== nextProps.className ||
-    prevProps.showShareButton !== nextProps.showShareButton
+    prevProps.showShareButton !== nextProps.showShareButton ||
+    prevProps.showDeleteButton !== nextProps.showDeleteButton
   )
   
   // Wenn Props sich geändert haben, return false (Re-render nötig)

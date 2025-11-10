@@ -23,6 +23,7 @@ interface FileCardProps {
   truncateFileName?: (fileName: string, maxLength?: number) => string
   className?: string
   variant?: 'grid' | 'list'
+  showDeleteButton?: boolean
 }
 
 const FileCardComponent = ({
@@ -35,6 +36,7 @@ const FileCardComponent = ({
   truncateFileName = (name) => name,
   className,
   variant = 'grid',
+  showDeleteButton = true,
 }: FileCardProps) => {
   const isUrl = file.type === 'url' || file.type === 'text/url' || file.type === 'text/uri-list' || file.extension === 'url'
   // Get the actual URL - prefer file.content (full URL) or file.name if it looks like a URL
@@ -134,44 +136,48 @@ const FileCardComponent = ({
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0">
           {isUrl ? (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-primary/10 hover:text-primary"
-              onClick={handleDeleteClick}
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Löschen</span>
-            </Button>
-          ) : (
-            <>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-primary/10 hover:text-primary"
-                onClick={handlePreviewClick}
-              >
-                <Eye className="h-4 w-4" />
-                <span className="sr-only">Vorschau</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-primary/10 hover:text-primary"
-                onClick={handleDownloadClick}
-              >
-                <Download className="h-4 w-4" />
-                <span className="sr-only">Herunterladen</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+            showDeleteButton && onDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
                 className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-primary/10 hover:text-primary"
                 onClick={handleDeleteClick}
               >
                 <Trash2 className="h-4 w-4" />
                 <span className="sr-only">Löschen</span>
               </Button>
+            )
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                onClick={handlePreviewClick}
+              >
+                <Eye className="h-4 w-4" />
+                <span className="sr-only">Vorschau</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                onClick={handleDownloadClick}
+              >
+                <Download className="h-4 w-4" />
+                <span className="sr-only">Herunterladen</span>
+              </Button>
+              {showDeleteButton && onDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                  onClick={handleDeleteClick}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Löschen</span>
+                </Button>
+              )}
             </>
           )}
         </div>
@@ -242,47 +248,10 @@ const FileCardComponent = ({
           {/* Actions - always visible on the right */}
           <div className="flex items-center gap-0.5 shrink-0 ml-auto">
             {isUrl ? (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={cn(
-                  'h-6 w-6 sm:h-7 sm:w-7 p-0',
-                  'hover:bg-primary/10 hover:text-primary'
-                )}
-                onClick={handleDeleteClick}
-              >
-                <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="sr-only">Löschen</span>
-              </Button>
-            ) : (
-              <>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className={cn(
-                    'h-6 w-6 sm:h-7 sm:w-7 p-0',
-                    'hover:bg-primary/10 hover:text-primary'
-                  )}
-                  onClick={handlePreviewClick}
-                >
-                  <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  <span className="sr-only">Vorschau</span>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className={cn(
-                    'h-6 w-6 sm:h-7 sm:w-7 p-0',
-                    'hover:bg-primary/10 hover:text-primary'
-                  )}
-                  onClick={handleDownloadClick}
-                >
-                  <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  <span className="sr-only">Herunterladen</span>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+              showDeleteButton && onDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className={cn(
                     'h-6 w-6 sm:h-7 sm:w-7 p-0',
                     'hover:bg-primary/10 hover:text-primary'
@@ -292,6 +261,47 @@ const FileCardComponent = ({
                   <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   <span className="sr-only">Löschen</span>
                 </Button>
+              )
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'h-6 w-6 sm:h-7 sm:w-7 p-0',
+                    'hover:bg-primary/10 hover:text-primary'
+                  )}
+                  onClick={handlePreviewClick}
+                >
+                  <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="sr-only">Vorschau</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'h-6 w-6 sm:h-7 sm:w-7 p-0',
+                    'hover:bg-primary/10 hover:text-primary'
+                  )}
+                  onClick={handleDownloadClick}
+                >
+                  <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="sr-only">Herunterladen</span>
+                </Button>
+                {showDeleteButton && onDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      'h-6 w-6 sm:h-7 sm:w-7 p-0',
+                      'hover:bg-primary/10 hover:text-primary'
+                    )}
+                    onClick={handleDeleteClick}
+                  >
+                    <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    <span className="sr-only">Löschen</span>
+                  </Button>
+                )}
               </>
             )}
           </div>
@@ -334,7 +344,8 @@ export const FileCard = memo(FileCardComponent, (prevProps, nextProps) => {
     prevProps.file.extension !== nextProps.file.extension ||
     prevDate !== nextDate ||
     prevProps.variant !== nextProps.variant ||
-    prevProps.className !== nextProps.className
+    prevProps.className !== nextProps.className ||
+    prevProps.showDeleteButton !== nextProps.showDeleteButton
   )
   
   // Wenn Props sich geändert haben, return false (Re-render nötig)

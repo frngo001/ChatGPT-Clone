@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -19,34 +20,52 @@ interface ShareDatasetDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-export function ShareDatasetDialog({ 
-  datasetId, 
-  datasetName, 
-  open, 
-  onOpenChange 
+export function ShareDatasetDialog({
+  datasetId,
+  datasetName,
+  open,
+  onOpenChange
 }: ShareDatasetDialogProps) {
-  const { shareDatasetWithUser, shareDatasetWithTenant } = useDatasetStore()
+  const { shareDatasetWithUser, shareDatasetWithTenant, fetchDatasetPermissions, revokeDatasetPermission } = useDatasetStore()
   const { tenant, users, fetchAllUsers } = usePermissionsStore()
   const { auth } = useAuthStore()
   const { toast } = useToast()
   const [isSharing, setIsSharing] = useState(false)
+  const [isLoadingPermissions, setIsLoadingPermissions] = useState(false)
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
+  const [usersWithPermissions, setUsersWithPermissions] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [shareWithTenant, setShareWithTenant] = useState(false)
-  
-  // Lade Nutzer beim Öffnen
+
+  // Lade Nutzer und bestehende Berechtigungen beim Öffnen
   useEffect(() => {
     if (open) {
+      // Fetch users if not already loaded
       if (users.length === 0) {
         fetchAllUsers().catch(error => {
           console.error('Failed to fetch users:', error)
         })
       }
-      setSelectedUserIds(new Set())
+
+      // Fetch existing dataset permissions
+      setIsLoadingPermissions(true)
+      fetchDatasetPermissions(datasetId)
+        .then(userIds => {
+          const permissionsSet = new Set(userIds)
+          setUsersWithPermissions(permissionsSet)
+          setSelectedUserIds(permissionsSet) // Pre-check users with existing permissions
+        })
+        .catch(error => {
+          console.error('Failed to fetch dataset permissions:', error)
+        })
+        .finally(() => {
+          setIsLoadingPermissions(false)
+        })
+
       setSearchQuery('')
       setShareWithTenant(false)
     }
-  }, [open, users.length, fetchAllUsers])
+  }, [open, users.length, fetchAllUsers, datasetId, fetchDatasetPermissions])
 
   // Filtere Nutzer: Entferne den aktuellen Nutzer und filtere nach Suchanfrage
   const filteredUsers = useMemo(() => {
@@ -78,39 +97,80 @@ export function ShareDatasetDialog({
   const handleShare = async () => {
     setIsSharing(true)
     try {
+      // Calculate changes
+      const usersToGrant = Array.from(selectedUserIds).filter(
+        userId => !usersWithPermissions.has(userId)
+      )
+      const usersToRevoke = Array.from(usersWithPermissions).filter(
+        userId => !selectedUserIds.has(userId)
+      )
+
       // Teile mit Tenant, wenn ausgewählt
       if (shareWithTenant && tenant) {
         await shareDatasetWithTenant(datasetId, tenant.id)
       }
-      
-      // Teile mit ausgewählten Nutzern
-      const sharePromises = Array.from(selectedUserIds).map(userId =>
+
+      // Grant permissions to newly selected users
+      const grantPromises = usersToGrant.map(userId =>
         shareDatasetWithUser(datasetId, userId)
       )
-      
-      await Promise.all(sharePromises)
-      
-      const userCount = selectedUserIds.size
-      const tenantText = shareWithTenant ? ' mit allen Nutzern' : ''
-      const usersText = userCount > 0 ? ` mit ${userCount} ${userCount === 1 ? 'Nutzer' : 'Nutzern'}` : ''
-      
-      toast({ 
-        title: 'Dataset geteilt', 
-        description: `"${datasetName}" wurde${tenantText}${usersText} geteilt (Read-Only)`,
-        variant: 'success' 
+
+      // Revoke permissions from unchecked users
+      const revokePromises = usersToRevoke.map(userId =>
+        revokeDatasetPermission(datasetId, userId)
+      )
+
+      await Promise.all([...grantPromises, ...revokePromises])
+
+      // Build success message
+      const parts = []
+      if (shareWithTenant) {
+        parts.push('mit allen Nutzern geteilt')
+      }
+      if (usersToGrant.length > 0) {
+        parts.push(`${usersToGrant.length} ${usersToGrant.length === 1 ? 'Nutzer' : 'Nutzern'} hinzugefügt`)
+      }
+      if (usersToRevoke.length > 0) {
+        parts.push(`${usersToRevoke.length} ${usersToRevoke.length === 1 ? 'Nutzer' : 'Nutzern'} entfernt`)
+      }
+
+      const description = parts.length > 0
+        ? `"${datasetName}": ${parts.join(', ')}`
+        : `"${datasetName}" - Keine Änderungen`
+
+      toast({
+        title: 'Berechtigungen aktualisiert',
+        description,
+        variant: 'success'
       })
       onOpenChange(false)
     } catch (error) {
-      toast({ 
-        title: 'Fehler beim Teilen', 
+      toast({
+        title: 'Fehler beim Aktualisieren',
         description: error instanceof Error ? error.message : 'Unbekannter Fehler',
-        variant: 'error' 
+        variant: 'error'
       })
     } finally {
       setIsSharing(false)
     }
   }
   
+  // Check if there are any changes to save
+  const hasChanges = useMemo(() => {
+    // Check if sharing with tenant
+    if (shareWithTenant) return true
+
+    // Check if any users were added or removed
+    const usersToGrant = Array.from(selectedUserIds).filter(
+      userId => !usersWithPermissions.has(userId)
+    )
+    const usersToRevoke = Array.from(usersWithPermissions).filter(
+      userId => !selectedUserIds.has(userId)
+    )
+
+    return usersToGrant.length > 0 || usersToRevoke.length > 0
+  }, [selectedUserIds, usersWithPermissions, shareWithTenant])
+
   const hasSelection = selectedUserIds.size > 0 || shareWithTenant
   
   return (
@@ -120,7 +180,6 @@ export function ShareDatasetDialog({
           <DialogTitle>Dataset teilen</DialogTitle>
           <DialogDescription>
             Wählen Sie Nutzer aus, mit denen Sie das Dataset "{datasetName}" teilen möchten.
-            Alle geteilten Nutzer erhalten Read-Only-Zugriff.
           </DialogDescription>
         </DialogHeader>
         
@@ -178,31 +237,43 @@ export function ShareDatasetDialog({
             {/* Nutzer-Liste */}
             <ScrollArea className="flex-1 border rounded-md">
               <div className="p-2 space-y-1">
-                {filteredUsers.length === 0 ? (
+                {isLoadingPermissions ? (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    Lade Berechtigungen...
+                  </div>
+                ) : filteredUsers.length === 0 ? (
                   <div className="text-center py-8 text-sm text-muted-foreground">
                     {searchQuery ? 'Keine Nutzer gefunden' : 'Keine Nutzer verfügbar'}
                   </div>
                 ) : (
-                  filteredUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
-                      onClick={() => !isSharing && handleToggleUser(user.id)}
-                    >
-                      <Checkbox
-                        checked={selectedUserIds.has(user.id)}
-                        onCheckedChange={() => handleToggleUser(user.id)}
-                        disabled={isSharing}
-                      />
-                      <div className="flex-1 flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{user.email}</span>
-                        {user.is_superuser && (
-                          <span className="text-xs text-muted-foreground">(Admin)</span>
-                        )}
+                  filteredUsers.map((user) => {
+                    const hasExistingPermission = usersWithPermissions.has(user.id)
+                    return (
+                      <div
+                        key={user.id}
+                        className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                        onClick={() => !isSharing && !isLoadingPermissions && handleToggleUser(user.id)}
+                      >
+                        <Checkbox
+                          checked={selectedUserIds.has(user.id)}
+                          onCheckedChange={() => handleToggleUser(user.id)}
+                          disabled={isSharing || isLoadingPermissions}
+                        />
+                        <div className="flex-1 flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">{user.email}</span>
+                          {user.is_superuser && (
+                            <span className="text-xs text-muted-foreground">(Admin)</span>
+                          )}
+                          {hasExistingPermission && (
+                            <Badge variant="secondary" className="text-xs">
+                              Hat Zugriff
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
             </ScrollArea>
@@ -213,17 +284,14 @@ export function ShareDatasetDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSharing}>
               Abbrechen
             </Button>
-            <Button onClick={handleShare} disabled={isSharing || !hasSelection}>
+            <Button onClick={handleShare} disabled={isSharing || isLoadingPermissions || !hasChanges}>
               {isSharing ? (
                 <>
-                  <span className="mr-2">Wird geteilt...</span>
+                  <span className="mr-2">Wird aktualisiert...</span>
                 </>
               ) : (
                 <>
-                  {selectedUserIds.size > 0 && (
-                    <span className="mr-2">({selectedUserIds.size})</span>
-                  )}
-                  Teilen
+                  Speichern
                 </>
               )}
             </Button>

@@ -68,6 +68,7 @@ export function PermissionsSettings() {
   
   return (
     <div className="flex flex-1 flex-col w-full h-full">
+      {/* Fixed Header Section */}
       <div className="flex-none mb-4 md:mb-5">
         <div className="flex items-center justify-between mb-1.5">
           <h3 className="text-base md:text-lg font-semibold">Berechtigungen</h3>
@@ -87,20 +88,21 @@ export function PermissionsSettings() {
           Verwalten Sie Benutzer, Rollen und Zugriffsrechte
         </p>
       </div>
-      <div className="flex-1 w-full overflow-hidden">
-        <div className="h-full w-full overflow-y-auto scroll-smooth pe-2 md:pe-4 pb-4 md:pb-6">
-          <div className="w-full max-w-none space-y-6 md:space-y-5">
 
-            {/* User Management */}
-            <div className="space-y-4 md:space-y-3 w-full">
-              <UserFilters />
-              <ScrollArea className="w-full h-[600px] md:h-[calc(100svh-220px)]">
-                <div className="w-full">
-                  <UserManagementTable />
-                </div>
-              </ScrollArea>
+      {/* Content Section with Fixed Filters and Scrollable Table */}
+      <div className="flex-1 flex flex-col w-full min-h-0">
+        {/* Fixed Filters */}
+        <div className="flex-none mb-4 md:mb-3">
+          <UserFilters />
+        </div>
+
+        {/* Scrollable Table Only */}
+        <div className="flex-1 min-h-0">
+          <ScrollArea className="h-full w-full">
+            <div className="w-full pe-2 md:pe-4">
+              <UserManagementTable />
             </div>
-          </div>
+          </ScrollArea>
         </div>
       </div>
 
