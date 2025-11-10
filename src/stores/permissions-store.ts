@@ -44,6 +44,12 @@ interface PermissionsStore {
     principal_type: PrincipalType
     permission_type: PermissionType
   }) => Promise<void>
+  revokeDatasetPermission: (payload: {
+    dataset_ids: string[]
+    principal_id: string
+    principal_type: PrincipalType
+    permission_type: PermissionType
+  }) => Promise<void>
   setSearchQuery: (query: string) => void
   setRoleFilter: (role: string | null) => void
   setStatusFilter: (status: 'all' | 'active' | 'inactive') => void
@@ -435,6 +441,28 @@ export const usePermissionsStore = create<PermissionsStore>()((set, get) => ({
     } catch (error) {
       set({ 
         error: error instanceof Error ? error.message : 'Failed to give dataset permission',
+        isLoading: false 
+      })
+      throw error
+    }
+  },
+
+  revokeDatasetPermission: async (payload: {
+    dataset_ids: string[]
+    principal_id: string
+    principal_type: PrincipalType
+    permission_type: PermissionType
+  }) => {
+    set({ isLoading: true, error: null })
+    try {
+      const promises = payload.dataset_ids.map(datasetId =>
+        cogneeApi.permissions.revokeDatasetPermission(datasetId, payload.principal_id, payload.permission_type)
+      )
+      await Promise.all(promises)
+      set({ isLoading: false })
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to revoke dataset permission',
         isLoading: false 
       })
       throw error

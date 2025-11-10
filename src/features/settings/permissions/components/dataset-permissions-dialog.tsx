@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { usePermissionsStore } from '@/stores/permissions-store'
 import { useDatasetStore } from '@/stores/dataset-store'
 import { useToast } from '@/hooks/use-sonner-toast'
@@ -24,10 +25,12 @@ export function DatasetPermissionsDialog({ open, onOpenChange }: DatasetPermissi
   const [selectedPrincipalId, setSelectedPrincipalId] = useState<string>('')
   const [permissionType, setPermissionType] = useState<PermissionType>('read')
   const [isGranting, setIsGranting] = useState(false)
+  const [actionType, setActionType] = useState<'grant' | 'revoke'>('grant')
 
   const users = usePermissionsStore((state) => state.users)
   const roles = usePermissionsStore((state) => state.roles)
   const giveDatasetPermission = usePermissionsStore((state) => state.giveDatasetPermission)
+  const revokeDatasetPermission = usePermissionsStore((state) => state.revokeDatasetPermission)
   const datasets = useDatasetStore((state) => state.datasets)
   const { toast } = useToast()
 
@@ -100,6 +103,63 @@ export function DatasetPermissionsDialog({ open, onOpenChange }: DatasetPermissi
     }
   }
 
+  const handleRevoke = async () => {
+    if (selectedDatasetIds.length === 0 || !selectedPrincipalId) {
+      toast({ 
+        title: 'Fehler', 
+        description: 'Bitte wählen Sie mindestens ein Dataset und einen Principal aus', 
+        variant: 'error' 
+      })
+      return
+    }
+
+    setIsGranting(true)
+    try {
+      await revokeDatasetPermission({
+        dataset_ids: selectedDatasetIds,
+        principal_id: selectedPrincipalId,
+        principal_type: principalType,
+        permission_type: permissionType,
+      })
+
+      const selectedDatasets = datasets.filter((d) => selectedDatasetIds.includes(d.id))
+      const principal = principals.find((p) => p.id === selectedPrincipalId)
+      const principalName = 'email' in principal! ? principal!.email : principal!.name
+
+      const datasetNames = selectedDatasets.map((d) => d.name).join(', ')
+      const datasetCount = selectedDatasets.length
+
+      toast({ 
+        title: 'Berechtigung entfernt', 
+        description: `"${principalName}" hat keinen ${permissionType}-Zugriff mehr auf ${datasetCount} Dataset${datasetCount > 1 ? 's' : ''}: ${datasetNames}`, 
+        variant: 'success' 
+      })
+      
+      // Reset form
+      setSelectedDatasetIds([])
+      setSelectedPrincipalId('')
+      setPrincipalType('user')
+      setPermissionType('read')
+      onOpenChange(false)
+    } catch (error) {
+      toast({ 
+        title: 'Fehler', 
+        description: error instanceof Error ? error.message : 'Berechtigung konnte nicht entfernt werden', 
+        variant: 'error' 
+      })
+    } finally {
+      setIsGranting(false)
+    }
+  }
+
+  const handleSubmit = () => {
+    if (actionType === 'grant') {
+      handleGrant()
+    } else {
+      handleRevoke()
+    }
+  }
+
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       // Reset form when dialog closes
@@ -107,6 +167,7 @@ export function DatasetPermissionsDialog({ open, onOpenChange }: DatasetPermissi
       setSelectedPrincipalId('')
       setPrincipalType('user')
       setPermissionType('read')
+      setActionType('grant')
     }
     onOpenChange(newOpen)
   }
@@ -118,13 +179,21 @@ export function DatasetPermissionsDialog({ open, onOpenChange }: DatasetPermissi
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="!max-w-[18vw] !w-[18vw] sm:!max-w-[30vw] sm:!w-[30vw] md:!max-w-[28vw] md:!w-[28vw] lg:!max-w-[28vw] lg:!w-[28vw] xl:!max-w-[28vw] xl:!w-[28vw] max-h-[98vh]">
         <DialogHeader>
-          <DialogTitle>Dataset-Berechtigung vergeben</DialogTitle>
+          <DialogTitle>Dataset-Berechtigung verwalten</DialogTitle>
           <DialogDescription>
-            Erteilen Sie einem Benutzer oder einer Rolle Zugriff auf ein oder mehrere Datasets.
+            Erteilen oder entfernen Sie Berechtigungen für einen Benutzer oder eine Rolle auf ein oder mehrere Datasets.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Action Type Selection */}
+          <Tabs value={actionType} onValueChange={(value) => setActionType(value as 'grant' | 'revoke')} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="grant">Berechtigung erteilen</TabsTrigger>
+              <TabsTrigger value="revoke">Berechtigung entfernen</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           {/* Dataset Selection Table */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -289,11 +358,12 @@ export function DatasetPermissionsDialog({ open, onOpenChange }: DatasetPermissi
             Abbrechen
           </Button>
           <Button 
-            onClick={handleGrant} 
+            onClick={handleSubmit} 
             disabled={isGranting || selectedDatasetIds.length === 0 || !selectedPrincipalId}
+            variant={actionType === 'revoke' ? 'destructive' : 'default'}
           >
             {isGranting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Berechtigung erteilen
+            {actionType === 'grant' ? 'Berechtigung erteilen' : 'Berechtigung entfernen'}
           </Button>
         </DialogFooter>
       </DialogContent>

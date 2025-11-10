@@ -353,13 +353,13 @@ export const cogneeApi = {
       return cogneeApiClient.get(`/v1/datasets/${datasetId}/permissions`)
     },
 
-    // Revoke dataset permission from a user
-    revokeDatasetPermission: (datasetId: string, userId: string) => {
+    // Revoke dataset permission from a user or role
+    revokeDatasetPermission: (datasetId: string, principalId: string, permissionType: PermissionType = 'read') => {
       // Cognee API: DELETE /v1/permissions/datasets/{dataset_id}/permissions/{principal_id}?permission_name={permission_name}
       const params = new URLSearchParams();
-      params.append('permission_name', 'read');
+      params.append('permission_name', permissionType);
       return cogneeApiClient.delete(
-        `/v1/permissions/datasets/${datasetId}/permissions/${userId}?${params.toString()}`
+        `/v1/permissions/datasets/${datasetId}/permissions/${principalId}?${params.toString()}`
       )
     },
 
