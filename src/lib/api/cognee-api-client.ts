@@ -348,29 +348,29 @@ export const cogneeApi = {
 
     // Get users with permissions on a specific dataset
     getDatasetPermissions: (datasetId: string) => {
-      // Cognee API: GET /v1/permissions/datasets/{dataset_id}
-      // Returns list of users/principals with permissions on this dataset
-      return cogneeApiClient.get(`/v1/permissions/datasets/${datasetId}`)
+      // Cognee API: GET /v1/datasets/{dataset_id}/permissions
+      // Returns: { permissions: [{ userId, email, permissions: [] }] }
+      return cogneeApiClient.get(`/v1/datasets/${datasetId}/permissions`)
     },
 
     // Revoke dataset permission from a user
     revokeDatasetPermission: (datasetId: string, userId: string) => {
-      // Cognee API: DELETE /v1/permissions/datasets/{principal_id}?permission_name=read
-      // Body: [dataset_id]
+      // Cognee API: DELETE /v1/permissions/datasets/{dataset_id}/permissions/{principal_id}?permission_name={permission_name}
       const params = new URLSearchParams();
       params.append('permission_name', 'read');
       return cogneeApiClient.delete(
-        `/v1/permissions/datasets/${userId}?${params.toString()}`,
-        { data: [datasetId] }
+        `/v1/permissions/datasets/${datasetId}/permissions/${userId}?${params.toString()}`
       )
     },
 
     removeUserFromRole: (userId: string, roleId: string) => {
-      const params = new URLSearchParams();
-      params.append('role_id', roleId);
-      // Annahme: DELETE /v1/permissions/users/{user_id}/roles?role_id={role_id}
-      // Falls nicht korrekt, muss Backend-Endpoint geprüft werden
-      return cogneeApiClient.delete(`/v1/permissions/users/${userId}/roles?${params.toString()}`)
+      // Cognee API: DELETE /v1/permissions/users/{user_id}/roles/{role_id}
+      return cogneeApiClient.delete(`/v1/permissions/users/${userId}/roles/${roleId}`)
+    },
+
+    removeUserFromTenant: (userId: string, tenantId: string) => {
+      // Cognee API: DELETE /v1/permissions/users/{user_id}/tenants/{tenant_id}
+      return cogneeApiClient.delete(`/v1/permissions/users/${userId}/tenants/${tenantId}`)
     }
   },
 

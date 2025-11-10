@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { usePermissionsStore } from '@/stores/permissions-store'
 import { useToast } from '@/hooks/use-sonner-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 
 interface AssignRoleToUserDialogProps {
   open: boolean
@@ -17,8 +17,10 @@ interface AssignRoleToUserDialogProps {
 export function AssignRoleToUserDialog({ open, onOpenChange, userId, userEmail }: AssignRoleToUserDialogProps) {
   const [selectedRoleId, setSelectedRoleId] = useState<string>('')
   const [isAssigning, setIsAssigning] = useState(false)
+  const [removingRoleId, setRemovingRoleId] = useState<string | null>(null)
   const roles = usePermissionsStore((state) => state.roles)
   const assignUserToRole = usePermissionsStore((state) => state.assignUserToRole)
+  const removeUserFromRole = usePermissionsStore((state) => state.removeUserFromRole)
   const users = usePermissionsStore((state) => state.users)
   const { toast } = useToast()
 
@@ -63,6 +65,27 @@ export function AssignRoleToUserDialog({ open, onOpenChange, userId, userEmail }
     }
   }
 
+  const handleRemoveRole = async (roleId: string) => {
+    setRemovingRoleId(roleId)
+    try {
+      await removeUserFromRole(userId, roleId)
+      const role = roles.find((r) => r.id === roleId)
+      toast({ 
+        title: 'Rolle entfernt', 
+        description: `Die Rolle "${role?.name || 'Rolle'}" wurde von ${userEmail} entfernt`, 
+        variant: 'success' 
+      })
+    } catch (error) {
+      toast({ 
+        title: 'Fehler', 
+        description: error instanceof Error ? error.message : 'Entfernen fehlgeschlagen', 
+        variant: 'error' 
+      })
+    } finally {
+      setRemovingRoleId(null)
+    }
+  }
+
   if (!open) return null
 
   return (
@@ -82,12 +105,25 @@ export function AssignRoleToUserDialog({ open, onOpenChange, userId, userEmail }
               <Label>Aktuelle Rollen</Label>
               <div className="flex flex-wrap gap-2">
                 {userRoles.map((role) => (
-                  <span
+                  <div
                     key={role.id}
-                    className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
                   >
-                    {role.name}
-                  </span>
+                    <span>{role.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive"
+                      onClick={() => handleRemoveRole(role.id)}
+                      disabled={removingRoleId === role.id || isAssigning}
+                    >
+                      {removingRoleId === role.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <X className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
                 ))}
               </div>
             </div>

@@ -1408,9 +1408,8 @@ Der Dateiname wird für Zitationen verwendet und MUSS klickbar sein, damit Benut
           set({ isLoading: false })
 
           // Extract user IDs from the response
-          // The response structure depends on the backend API
-          // Assuming it returns an array of objects with user_id or id field
-          const userIds = response.data?.map((permission: any) => permission.user_id || permission.id) || []
+          // Response structure: { permissions: [{ userId, email, permissions: [] }] }
+          const userIds = response.data?.permissions?.map((permission: any) => permission.userId) || []
           return userIds
         } catch (error) {
           console.error('Failed to fetch dataset permissions:', error)

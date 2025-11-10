@@ -33,6 +33,7 @@ interface PermissionsStore {
   updateUser: (userId: string, payload: UpdateUserPayload) => Promise<void>
   deleteUser: (userId: string) => Promise<void>
   removeUserFromRole: (userId: string, roleId: string) => Promise<void>
+  removeUserFromTenant: (userId: string, tenantId: string) => Promise<void>
   toggleUserRole: (userId: string, roleName: 'admin' | 'user') => Promise<void>
   assignTenantToUser: (userId: string, tenantId: string) => Promise<void>
   assignUserToRole: (userId: string, roleId: string) => Promise<void>
@@ -345,6 +346,21 @@ export const usePermissionsStore = create<PermissionsStore>()((set, get) => ({
     } catch (error) {
       set({ 
         error: error instanceof Error ? error.message : 'Failed to remove role',
+        isLoading: false 
+      })
+      throw error
+    }
+  },
+
+  removeUserFromTenant: async (userId: string, tenantId: string) => {
+    set({ isLoading: true, error: null })
+    try {
+      await cogneeApi.permissions.removeUserFromTenant(userId, tenantId)
+      await get().fetchAllUsers()
+      set({ isLoading: false })
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to remove tenant',
         isLoading: false 
       })
       throw error

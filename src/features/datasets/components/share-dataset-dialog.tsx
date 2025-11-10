@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -170,8 +169,6 @@ export function ShareDatasetDialog({
 
     return usersToGrant.length > 0 || usersToRevoke.length > 0
   }, [selectedUserIds, usersWithPermissions, shareWithTenant])
-
-  const hasSelection = selectedUserIds.size > 0 || shareWithTenant
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -247,7 +244,6 @@ export function ShareDatasetDialog({
                   </div>
                 ) : (
                   filteredUsers.map((user) => {
-                    const hasExistingPermission = usersWithPermissions.has(user.id)
                     return (
                       <div
                         key={user.id}
@@ -264,11 +260,6 @@ export function ShareDatasetDialog({
                           <span className="text-sm">{user.email}</span>
                           {user.is_superuser && (
                             <span className="text-xs text-muted-foreground">(Admin)</span>
-                          )}
-                          {hasExistingPermission && (
-                            <Badge variant="secondary" className="text-xs">
-                              Hat Zugriff
-                            </Badge>
                           )}
                         </div>
                       </div>
