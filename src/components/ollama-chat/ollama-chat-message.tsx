@@ -35,7 +35,7 @@ interface ExtendedMessage extends Message {
     contentType?: string;
     url: string;
   }>;
-  contextText?: string;
+  contextText?: string | null;
 }
 
 /**

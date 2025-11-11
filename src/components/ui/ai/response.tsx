@@ -5,7 +5,17 @@ import type { HTMLAttributes } from "react"
 import { memo, useMemo } from "react"
 import ReactMarkdown, { type Options } from "react-markdown"
 import remarkGfm from "remark-gfm"
+import remarkMath from "remark-math"
+import rehypeKatex from "rehype-katex"
 import { ExternalLink } from "lucide-react"
+import "katex/dist/katex.min.css"
+import remarkEmoji from "remark-emoji"
+import remarkBreaks from "remark-breaks"
+import remarkSmartypants from "remark-smartypants"
+import remarkToc from "remark-toc"
+import remarkFrontmatter from "remark-frontmatter"
+import rehypeRaw from "rehype-raw"
+import rehypeHighlight from "rehype-highlight"
 
 /**
  * Simplified and optimized markdown parser that handles incomplete tokens during streaming.
@@ -193,7 +203,8 @@ const AIResponse = memo(
     return (
       <div className={cn("prose dark:prose-invert", className)} {...props}>
         <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
+          remarkPlugins={[remarkMath, remarkGfm, remarkEmoji, remarkBreaks, remarkSmartypants, remarkToc, remarkFrontmatter]}
+          rehypePlugins={[rehypeKatex, rehypeRaw, rehypeHighlight]}
           components={components}
           {...options}
         >

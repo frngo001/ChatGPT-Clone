@@ -26,7 +26,7 @@ function ChatIndexPageWithErrorBoundary() {
 }
 
 export const Route = createFileRoute('/_authenticated/chat/')({
-  component: ChatIndexPageWithErrorBoundary,
+  component: ChatIndexPageWithErrorBoundary
 });
 
 function ChatIndexPage() {

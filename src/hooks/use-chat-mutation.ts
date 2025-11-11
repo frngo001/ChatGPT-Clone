@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { Message } from 'ai'
+import { Message } from 'ai/react'
 
 /**
  * Request structure for chat mutations

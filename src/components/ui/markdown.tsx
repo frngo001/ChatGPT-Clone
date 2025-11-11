@@ -4,9 +4,12 @@ import React, { Suspense } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkEmoji from "remark-emoji"
+import remarkMath from "remark-math"
 import rehypeHighlight from "rehype-highlight"
 import rehypeRaw from "rehype-raw"
 import rehypeSlug from "rehype-slug"
+import rehypeKatex from "rehype-katex"
+import "katex/dist/katex.min.css"
 // SyntaxHighlighter wird dynamisch in LazySyntaxHighlighter geladen
 import { cn } from "@/lib/utils"
 
@@ -94,69 +97,30 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     showLineNumbers = false,
   } = config
 
-  // ✅ Optimized: Lazy-load remarkMath und rehypeKatex nur wenn enableMath aktiviert ist
-  const [remarkMathPlugin, setRemarkMathPlugin] = React.useState<any>(null)
-  const [rehypeKatexPlugin, setRehypeKatexPlugin] = React.useState<any>(null)
-  const [isLoadingMath, setIsLoadingMath] = React.useState(false)
-
-  // ✅ Lazy-load KaTeX CSS wenn Math aktiviert ist
-  React.useEffect(() => {
-    if (enableMath && !document.querySelector('link[href*="katex"]')) {
-      // Lade KaTeX CSS dynamisch nur wenn Math aktiviert ist
-      import("katex/dist/katex.min.css").catch(() => {
-        // Fallback: Versuche CDN wenn lokales CSS nicht verfügbar
-        const link = document.createElement('link')
-        link.rel = 'stylesheet'
-        link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css'
-        link.crossOrigin = 'anonymous'
-        document.head.appendChild(link)
-      })
-    }
-  }, [enableMath])
-
-  React.useEffect(() => {
-    if (enableMath && (!remarkMathPlugin || !rehypeKatexPlugin) && !isLoadingMath) {
-      setIsLoadingMath(true)
-      Promise.all([
-        import("remark-math"),
-        import("rehype-katex")
-      ])
-        .then(([remarkMathModule, rehypeKatexModule]) => {
-          setRemarkMathPlugin(remarkMathModule.default || remarkMathModule)
-          setRehypeKatexPlugin(rehypeKatexModule.default || rehypeKatexModule)
-          setIsLoadingMath(false)
-        })
-        .catch(error => {
-          console.error("Failed to load math plugins:", error)
-          setIsLoadingMath(false)
-        })
-    }
-  }, [enableMath, remarkMathPlugin, rehypeKatexPlugin, isLoadingMath])
-
-  // Erstelle remarkPlugins Array mit lazy-loaded remarkMath
+  // Erstelle remarkPlugins Array
   const remarkPlugins = React.useMemo(() => {
     const plugins: any[] = [remarkGfm]
-    if (enableMath && remarkMathPlugin) {
-      plugins.push(remarkMathPlugin)
+    if (enableMath) {
+      plugins.push(remarkMath)
     }
     if (enableEmoji) {
       plugins.push(remarkEmoji)
     }
     return plugins
-  }, [enableMath, remarkMathPlugin, enableEmoji])
+  }, [enableMath, enableEmoji])
 
-  // Erstelle rehypePlugins Array mit lazy-loaded rehypeKatex
+  // Erstelle rehypePlugins Array
   const rehypePlugins = React.useMemo(() => {
     const plugins: any[] = [
       rehypeRaw,
       rehypeSlug,
       rehypeHighlight,
     ]
-    if (enableMath && rehypeKatexPlugin) {
-      plugins.push(rehypeKatexPlugin)
+    if (enableMath) {
+      plugins.push(rehypeKatex)
     }
     return plugins
-  }, [enableMath, rehypeKatexPlugin])
+  }, [enableMath])
 
   const handleLinkClick = (url: string, event: React.MouseEvent) => {
     if (onLinkClick) {

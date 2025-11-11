@@ -30,7 +30,6 @@ export function TextSelectionButton({ onAsk }: TextSelectionButtonProps) {
     
     // Stelle sicher, dass der Button nicht außerhalb des Viewports ist
     const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
     
     // Korrigiere horizontale Position
     if (left < 10) {
@@ -41,7 +40,7 @@ export function TextSelectionButton({ onAsk }: TextSelectionButtonProps) {
     
     // Korrigiere vertikale Position (falls zu weit oben)
     if (top < 10) {
-      top = selectionPosition.y + selectionPosition.height + spacing
+      top = selectionPosition.y - buttonHeight - spacing
     }
 
     setButtonPosition({ top, left })

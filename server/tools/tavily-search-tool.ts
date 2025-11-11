@@ -1,5 +1,4 @@
-import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
-import { Tool } from "@langchain/core/tools";
+import { TavilySearch } from "@langchain/tavily";
 
 /**
  * Tavily Search Tool für LangChain Integration
@@ -8,7 +7,7 @@ import { Tool } from "@langchain/core/tools";
  * Wrapper um das Tavily Search Tool von LangChain für Websuche.
  * Ermöglicht strukturierte Suchergebnisse mit Titel, URL und Inhalt.
  */
-export async function createTavilySearchTool(): Promise<Tool> {
+export async function createTavilySearchTool(): Promise<TavilySearch> {
   const tavilyApiKey = process.env.TAVILY_API_KEY;
   
   if (!tavilyApiKey) {
@@ -18,11 +17,16 @@ export async function createTavilySearchTool(): Promise<Tool> {
   }
 
   // Erstelle Tavily Search Tool mit max 10 Ergebnissen
-  const tavilyTool = new TavilySearchResults({
-    apiKey: tavilyApiKey,
+  const tavilyTool = new TavilySearch({
     maxResults: 30,
+    includeAnswer: false,
+    includeRawContent: true,
+    includeImages: true,
+    includeImageDescriptions: true,
+    searchDepth: "advanced",
+    timeRange: "month",
+    tavilyApiKey: tavilyApiKey,
   });
-
   return tavilyTool;
 }
 
@@ -37,7 +41,7 @@ export async function performTavilySearch(
 ): Promise<Array<{ title: string; url: string; content: string }>> {
   try {
     const tavilyTool = await createTavilySearchTool();
-    const result = await tavilyTool.invoke(query);
+    const result = await tavilyTool.invoke({ query });
     
     // TavilySearchResults.invoke() gibt einen String zurück (JSON-encoded)
     // Oder direkt ein Array je nach LangChain Version

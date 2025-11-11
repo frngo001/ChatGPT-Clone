@@ -1,7 +1,8 @@
 import OllamaChatTopbar from "./ollama-chat-topbar";
 import OllamaChatList from "./ollama-chat-list";
 import OllamaChatBottombar from "./ollama-chat-bottombar";
-import type { Message, ChatRequestOptions } from "ai";
+import type { Message } from "ai/react";
+import type { ChatRequestOptions } from "ai";
 import { useChat } from "ai/react";
 import React, { useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
@@ -35,7 +36,7 @@ interface ExtendedMessage extends Message {
     url: string;
   }>;
   /** Optional context text shown separately from main message content */
-  contextText?: string;
+  contextText?: string | null;
 }
 
 /**

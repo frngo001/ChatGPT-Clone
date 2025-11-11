@@ -79,6 +79,30 @@ function extractTextContent(content: any, maxLength: number = 500): string {
 }
 
 /**
+ * Escaped einen String sicher für JSON-Formatierung im AI SDK Data Stream
+ * 
+ * @description 
+ * Escaped alle JSON-Steuerzeichen korrekt, inkl. Backslashes, Anführungszeichen
+ * und alle Steuerzeichen (U+0000 bis U+001F). Verwendet JSON.stringify() für
+ * sicheres Escaping, um Probleme mit LaTeX-Formeln und anderen speziellen Zeichen
+ * zu vermeiden.
+ * 
+ * @param content - Der zu escaped String-Inhalt
+ * @returns Sicher escaped String ohne äußere Anführungszeichen
+ * 
+ * @example
+ * ```typescript
+ * const escaped = escapeJsonString('Text mit $$ LaTeX $$ und "Anführungszeichen"');
+ * // Ergebnis: Text mit $$ LaTeX $$ und \"Anführungszeichen\"
+ * ```
+ */
+function escapeJsonString(content: string): string {
+  // Verwende JSON.stringify() für sicheres Escaping aller Steuerzeichen
+  // und entferne die äußeren Anführungszeichen, da wir nur den String-Inhalt benötigen
+  return JSON.stringify(content).slice(1, -1);
+}
+
+/**
  * Führt eine LangChain-basierte Web-Suche mit Tavily durch
  * 
  * @description 
@@ -219,11 +243,11 @@ export function setupChatApi(server: ViteDevServer) {
           ],
           temperature: streamingConfig?.temperature ?? 0.7,
           topP: streamingConfig?.topP ?? 0.9,
-          maxTokens: streamingConfig?.maxTokens ?? 1000000,
+          maxOutputTokens: streamingConfig?.maxTokens ?? 1000000,
         });
 
-        // Convert to data stream response
-        const stream = result.toDataStreamResponse();
+        // Convert to text stream response
+        const stream = result.toTextStreamResponse();
         
         // Copy headers
         if (stream.headers) {
@@ -451,7 +475,7 @@ export function setupChatApi(server: ViteDevServer) {
             if (webSearchEnabled && sources.length > 0) {
               // Format sources as URLs only (plain links without markdown parsing)
               const sourcesText = `\n\n### Sources\n${sources.map(s => `- ${s.url}`).join('\n')}`;
-              const escapedSources = sourcesText.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+              const escapedSources = escapeJsonString(sourcesText);
               res.write(`0:"${escapedSources}"\n`);
             }
             res.end();
@@ -473,7 +497,7 @@ export function setupChatApi(server: ViteDevServer) {
                 if (webSearchEnabled && sources.length > 0) {
                   // Format sources as URLs only (plain links without markdown parsing)
                   const sourcesText = `\n\n### Sources\n${sources.map(s => `- ${s.url}`).join('\n')}`;
-                  const escapedSources = sourcesText.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+                  const escapedSources = escapeJsonString(sourcesText);
                   res.write(`0:"${escapedSources}"\n`);
                 }
                 res.end();
@@ -486,7 +510,7 @@ export function setupChatApi(server: ViteDevServer) {
                 if (content) {
                   // Convert to AI SDK Data Stream format
                   // Format: 0:"content"
-                  const escapedContent = content.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+                  const escapedContent = escapeJsonString(content);
                   buffer += `0:"${escapedContent}"\n`;
                   tokenCount++;
                   
@@ -1500,6 +1524,47 @@ You are a RAG assistant that MUST provide structured responses with sources, mod
 ### 💻 Code & Data
 - Use fenced code blocks (\`\`\`) for commands, snippets, or JSON.
 
+### 🧩 Formula Explanation Style
+
+1. Show the formula in block mode.  
+2. Then list all components with inline math.
+
+**Example:**
+$$
+y = \\beta_0 + \\beta_1 x + \\varepsilon
+$$
+
+Here:  
+- $y$: dependent variable (target)  
+- $x$: independent variable (predictor)  
+- $\\beta_0$: intercept  
+- $\\beta_1$: slope  
+- $\\varepsilon$: error term (residual)
+
+**More notation:**
+- $x_i$: the $i$-th observation of $x$  
+- $y_i$: the $i$-th observation of $y$  
+- $\\bar{x}$: mean of $x$ values  
+- $\\bar{y}$: mean of $y$ values
+
+**Style Tips:**
+- Use spaces between operators (e.g., \`a + b\`, not \`a+b\`)  
+- Avoid text inside math (\`\\\\text{}\`) — explain outside  
+- Split very long equations; numbering optional via \`\\\\tag{1}\`
+
+**Conventions:**
+- Random vars: $X, Y$; values: $x, y$  
+- Vectors: $\\mathbf{x}$ or $\\vec{y}$  
+- Expectations/variance: $E[Y]$, $\\mathrm{Var}(Y)$, $\\mathrm{Cov}(X,Y)$  
+- Probabilities/densities: $P(A)$, $f_X(x)$, $p(x|y)$
+
+**Example (nonparametric regression):**
+$$
+\\hat{r}_n(x) = \\sum_{i=1}^{n} W_{ni}(x) Y_i
+$$
+with $\\hat{r}_n(x)$ = estimator of $E[Y|X=x]$, $W_{ni}(x)$ = weight, $Y_i$ = observation, $n$ = sample size.
+
+
 ### 📊 Tables
 - Use markdown tables when presenting structured data, comparisons, or multiple related items.
 
@@ -1537,7 +1602,7 @@ ${chunks}
 
 1. **Content & Adherence:**
    - STRICTLY use ONLY information from the provided Document Chunks
-   - DO NOT invent, assume, or add information not in the chunks
+   - DO NOT invent, assume, or add information not in the chunks even if the source is a website.
    - If information is missing, state: "I don't have enough information to answer this"
    - Maintain conversation history continuity
 
@@ -1580,16 +1645,63 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
 
 ---Response---`;
 
-        // Extract the actual user question from the query (remove conversation history formatting)
-        const userQuestion = query.includes('User:') ? 
-          query.split('User:').pop()?.trim() || query : 
-          query;        
-        // Step 3: Use existing DeepSeek logic directly
+        // Parse message history from query format: "User: ...\n\nAI: ...\n\nUser: ..."
+        const parseMessageHistory = (queryString: string): Array<{ role: 'user' | 'assistant', content: string }> => {
+          const messages: Array<{ role: 'user' | 'assistant', content: string }> = [];
+          
+          // Split by double newlines to separate messages
+          const parts = queryString.split('\n\n');
+          
+          for (const part of parts) {
+            const trimmed = part.trim();
+            if (!trimmed) continue;
+            
+            if (trimmed.startsWith('User:')) {
+              const content = trimmed.replace(/^User:\s*/i, '').trim();
+              if (content) {
+                messages.push({ role: 'user', content });
+              }
+            } else if (trimmed.startsWith('AI:')) {
+              const content = trimmed.replace(/^AI:\s*/i, '').trim();
+              if (content) {
+                messages.push({ role: 'assistant', content });
+              }
+            } else if (messages.length > 0) {
+              // If no prefix, append to last message (handles multi-line content)
+              messages[messages.length - 1].content += '\n\n' + trimmed;
+            }
+          }
+          
+          return messages;
+        };
         
-        const deepseekMessages = [
-          { role: 'system' as const, content: enhancedSystemPrompt },
-          { role: 'user' as const, content: userQuestion },
+        // Parse the full query to extract message history
+        const messageHistory = parseMessageHistory(query);
+        
+        // Build DeepSeek messages array with history
+        const deepseekMessages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
+          { role: 'system', content: enhancedSystemPrompt },
         ];
+        
+        // Add message history (all except the last user message, which is the current question)
+        if (messageHistory.length > 0) {
+          // If the last message is a user message, it's the current question
+          // Add all previous messages as history
+          const historyMessages = messageHistory.slice(0, -1);
+          deepseekMessages.push(...historyMessages);
+          
+          // Add the current user question (last message)
+          const currentUserMessage = messageHistory[messageHistory.length - 1];
+          if (currentUserMessage && currentUserMessage.role === 'user') {
+            deepseekMessages.push(currentUserMessage);
+          } else {
+            // Fallback: if no user message found, use the query as-is
+            deepseekMessages.push({ role: 'user', content: query });
+          }
+        } else {
+          // Fallback: if parsing failed, use query as current user message
+          deepseekMessages.push({ role: 'user', content: query });
+        }
 
         // Stream text using DeepSeek API directly with AI SDK compatible format
         const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -1665,7 +1777,7 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
                 if (content) {
                   // Convert to AI SDK Data Stream format
                   // Format: 0:"content"
-                  const escapedContent = content.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+                  const escapedContent = escapeJsonString(content);
                   buffer += `0:"${escapedContent}"\n`;
                   tokenCount++;
                   
