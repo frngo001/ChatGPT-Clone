@@ -20,10 +20,6 @@ interface ChatRequest {
     topP?: number
     /** Maximum tokens to generate */
     maxTokens?: number
-    /** Batch size for streaming */
-    batchSize?: number
-    /** Delay between batches in ms */
-    throttleDelay?: number
   }
   /** Optional data payload */
   data?: {
@@ -81,8 +77,6 @@ export function useChatMutation() {
             temperature: 0.7,
             topP: 0.9,
             maxTokens: 1000000,
-            batchSize: 400,
-            throttleDelay: 17,
           },
         }),
       })

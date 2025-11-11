@@ -95,6 +95,7 @@ $$
 $$
 with $\\hat{r}_n(x)$ = estimator of $E[Y|X=x]$, $W_{ni}(x)$ = weight, $Y_i$ = observation, $n$ = sample size.
 
+
 ---
 
 ### 📊 Tables
@@ -139,8 +140,6 @@ interface State {
   temperature: number;
   topP: number;
   maxTokens: number;
-  batchSize: number;
-  throttleDelay: number;
   systemPrompt: string;
   // Cognee settings
   chatMode: 'general' | 'cognee';
@@ -167,8 +166,6 @@ interface Actions {
   setTemperature: (temperature: number) => void;
   setTopP: (topP: number) => void;
   setMaxTokens: (maxTokens: number) => void;
-  setBatchSize: (batchSize: number) => void;
-  setThrottleDelay: (throttleDelay: number) => void;
   setSystemPrompt: (systemPrompt: string) => void;
   // Cognee settings actions
   setChatMode: (chatMode: 'general' | 'cognee') => void;
@@ -193,8 +190,6 @@ const useOllamaChatStore = create<State & Actions>()(
       temperature: 1.0,
       topP: 0.9,
       maxTokens: 1000000,
-      batchSize: 400,
-      throttleDelay: 17,
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
       // Cognee settings defaults
       chatMode: 'general',
@@ -292,8 +287,6 @@ const useOllamaChatStore = create<State & Actions>()(
       setTemperature: (temperature) => set({ temperature }),
       setTopP: (topP) => set({ topP }),
       setMaxTokens: (maxTokens) => set({ maxTokens }),
-      setBatchSize: (batchSize) => set({ batchSize }),
-      setThrottleDelay: (throttleDelay) => set({ throttleDelay }),
       setSystemPrompt: (systemPrompt) => set({ systemPrompt }),
       // Cognee settings actions
       setChatMode: (chatMode) => set({ chatMode }),
@@ -327,8 +320,6 @@ const useOllamaChatStore = create<State & Actions>()(
         temperature: state.temperature,
         topP: state.topP,
         maxTokens: state.maxTokens,
-        batchSize: state.batchSize,
-        throttleDelay: state.throttleDelay,
         systemPrompt: state.systemPrompt,
         chatMode: state.chatMode,
         selectedDataset: state.selectedDataset,

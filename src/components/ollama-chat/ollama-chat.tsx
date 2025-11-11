@@ -170,8 +170,6 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
   const temperature = useOllamaChatStore((state) => state.temperature);
   const topP = useOllamaChatStore((state) => state.topP);
   const maxTokens = useOllamaChatStore((state) => state.maxTokens);
-  const batchSize = useOllamaChatStore((state) => state.batchSize);
-  const throttleDelay = useOllamaChatStore((state) => state.throttleDelay);
   const systemPrompt = useOllamaChatStore((state) => state.systemPrompt);
 
   const chatMode = useOllamaChatStore((state) => state.chatMode);
@@ -391,6 +389,11 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
         query: formatMessageHistoryForCognee([...messages, apiMessage]),
         datasetIds: [selectedDataset],
         systemPrompt: systemPrompt,
+        streamingConfig: {
+          temperature,
+          topP,
+          maxTokens,
+        },
       },
     } : {
       body: {
@@ -401,8 +404,6 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
           temperature,
           topP,
           maxTokens,
-          batchSize,
-          throttleDelay,
         },
         ...(chatMode === 'general' && selectedProvider === 'deepseek' && { webSearchEnabled }),
       },
@@ -428,8 +429,6 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
     temperature,
     topP,
     maxTokens,
-    batchSize,
-    throttleDelay,
     append,
     saveMessages,
     getMessagesById,
@@ -502,8 +501,6 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
           temperature: 0.7,
           topP: 0.9,
           maxTokens: 1000000,
-          batchSize: 400,
-          throttleDelay: 17,
         },
         ...(chatMode === 'general' && { webSearchEnabled }),
       },

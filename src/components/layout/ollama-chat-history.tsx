@@ -153,9 +153,26 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
         ) : (
           <div className="space-y-1 px-2">
             {sortedChats.map((chat) => {
-              const firstMessage = chat.messages.length > 0 
-                ? chat.messages[0].content 
-                : 'Leerer Chat'
+              // Extract text from message content (handles string, array, or undefined)
+              let firstMessage = 'Leerer Chat';
+              if (chat.messages.length > 0) {
+                const content = chat.messages[0].content;
+                if (typeof content === 'string') {
+                  firstMessage = content;
+                } else if (Array.isArray(content)) {
+                  // Extract text from multimodal content array
+                  firstMessage = content
+                    .filter((part: any) => part.type === 'text' && part.text)
+                    .map((part: any) => part.text)
+                    .join(' ') || 'Leerer Chat';
+                } else if (content) {
+                  // Fallback: convert to string if content exists but is not string/array
+                  firstMessage = String(content);
+                }
+              }
+              
+              // Ensure firstMessage is always a string for slice operation
+              const displayText = typeof firstMessage === 'string' ? firstMessage : 'Leerer Chat';
               
               return (
                 <div
@@ -175,8 +192,8 @@ export function OllamaChatHistory({ className }: OllamaChatHistoryProps) {
                       className="flex-1 text-left min-w-0 w-full"
                     >
                       <div className="truncate font-normal text-xs">
-                        {highlightMatches(firstMessage.slice(0, 80), searchQuery)}
-                        {firstMessage.length > 80 && '...'}
+                        {highlightMatches(displayText.slice(0, 80), searchQuery)}
+                        {displayText.length > 80 && '...'}
                       </div>
                     </button>
                   </div>

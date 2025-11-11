@@ -1,6 +1,5 @@
 import type { ViteDevServer } from 'vite';
 import { performLangChainWebSearch } from './agents/web-search-agent.js';
-
 /**
  * ============================================================================
  * CHAT API SETUP - Vollständige Dokumentation aller API Endpoints
@@ -21,7 +20,7 @@ import { performLangChainWebSearch } from './agents/web-search-agent.js';
  * - Cognee User Management: CRUD Operationen für Benutzer
  * - Cognee RAG Search: Semantische Suche mit DeepSeek Integration
  * 
- * @author ChatGPT-Clone Team
+ * @author Franc
  * @since 1.0.0
  */
 
@@ -182,7 +181,7 @@ export function setupChatApi(server: ViteDevServer) {
    * @description 
    * Streaming Chat API für Ollama lokalen Server.
    * Unterstützt multimodal input (Text + Bilder) und konfigurierbare
-   * Stream-Parameter (temperature, topP, maxTokens, batchSize).
+   * Stream-Parameter (temperature, topP, maxTokens).
    * 
    * Request Body:
    * - messages: Array von Chat-Nachrichten
@@ -212,87 +211,124 @@ export function setupChatApi(server: ViteDevServer) {
     req.on('end', async () => {
       try {
         // Dynamic import to avoid TypeScript version conflicts
-        const { createOllama } = await import('ollama-ai-provider');
+        const { createOllama } = await import('ollama-ai-provider-v2');
         const { streamText, convertToCoreMessages } = await import('ai');
         
-        const { messages, selectedModel, data, streamingConfig, systemPrompt } = JSON.parse(body);
+        const parsedBody = JSON.parse(body);
+        console.log('Ollama Chat API - Request Body:', JSON.stringify(parsedBody, null, 2));
+        
+        // AI SDK 4: Direct body access (no nested metadata.body)
+        const { messages, selectedModel, data, streamingConfig, systemPrompt } = parsedBody;
+        
+        const actualSelectedModel = selectedModel;
+        const actualMessages = messages;
+        const actualData = data;
+        const actualStreamingConfig = streamingConfig;
+        const actualSystemPrompt = systemPrompt;
+
+        // Validate selectedModel
+        if (!actualSelectedModel || typeof actualSelectedModel !== 'string') {
+          console.error('Ollama Chat API - Missing selectedModel. Body keys:', Object.keys(parsedBody));
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'selectedModel is required and must be a string', received: parsedBody }));
+          return;
+        }
 
         const ollamaUrl = process.env.VITE_OLLAMA_URL || 'http://imeso-ki-02:11434';
 
-        const initialMessages = messages.slice(0, -1);
-        const currentMessage = messages[messages.length - 1];
+        const initialMessages = actualMessages.slice(0, -1);
+        const currentMessage = actualMessages[actualMessages.length - 1];
 
         const ollama = createOllama({ baseURL: ollamaUrl + '/api' });
 
-        // Build message content array directly
-        const messageContent: any[] = [{ type: 'text', text: currentMessage.content }];
+        // AI SDK 4: Extract text from content (can be string or array)
+        let messageText = '';
+        if (typeof currentMessage.content === 'string') {
+          messageText = currentMessage.content;
+        } else if (Array.isArray(currentMessage.content)) {
+          messageText = currentMessage.content
+            .filter((part: any) => part.type === 'text' && part.text)
+            .map((part: any) => part.text)
+            .join('');
+        } else {
+          messageText = currentMessage.content || '';
+        }
 
-        // Add images if they exist
-        data?.images?.forEach((imageUrl: string) => {
-          const image = new URL(imageUrl);
-          messageContent.push({ type: 'image', image });
-        });
+        // Build message content for v4 (supports multimodal as array)
+        let messageContent: string | Array<{ type: 'text'; text: string } | { type: 'image'; image: URL }> = messageText;
+
+        // Add images if they exist (v4 supports multimodal as array)
+        if (actualData?.images && actualData.images.length > 0) {
+          messageContent = [
+            { type: 'text' as const, text: messageText },
+            ...actualData.images.map((imageUrl: string) => ({
+              type: 'image' as const,
+              image: new URL(imageUrl),
+            })),
+          ];
+        }
 
         // Stream text using the ollama model with parameters
         const result = await streamText({
-          model: ollama(selectedModel) as any,
-          system: systemPrompt || "You are a helpful AI assistant. Please provide accurate and helpful responses.",
+          model: ollama(actualSelectedModel),
+          system: actualSystemPrompt || "You are a helpful AI assistant. Please provide accurate and helpful responses.",
           messages: [
             ...convertToCoreMessages(initialMessages),
             { role: 'user' as const, content: messageContent },
           ],
-          temperature: streamingConfig?.temperature ?? 0.7,
-          topP: streamingConfig?.topP ?? 0.9,
-          maxOutputTokens: streamingConfig?.maxTokens ?? 1000000,
+          temperature: actualStreamingConfig?.temperature ?? 0.7,
+          topP: actualStreamingConfig?.topP ?? 0.9,
         });
-
-        // Convert to text stream response
-        const stream = result.toTextStreamResponse();
         
-        // Copy headers
-        if (stream.headers) {
-          stream.headers.forEach((value, key) => {
+        // Use toDataStreamResponse() as documented - TypeScript may not recognize it but it exists in runtime
+        const streamResponse = (result as any).toDataStreamResponse();
+        
+        // Set status and headers (must be set before writing)
+        res.statusCode = streamResponse.status || 200;
+        streamResponse.headers.forEach((value, key) => {
+          // Skip content-length as it may not be known for streaming
+          if (key.toLowerCase() !== 'content-length') {
             res.setHeader(key, value);
-          });
-        }
-
-        // Pipe the response with throttling and batch processing
-        if (stream.body) {
-          const reader = stream.body.getReader();
-          let buffer = '';
-          let batchSize = streamingConfig?.batchSize ?? 15; // Small batch size for ChatGPT-like fast streaming
-          let tokenCount = 0;
+          }
+        });
+        
+        // Debug: Log headers to verify correct format
+        console.log('Stream Response Headers:', Object.fromEntries(streamResponse.headers.entries()));
+        
+        // Pipe the body manually - ensure proper format
+        if (streamResponse.body) {
+          const reader = streamResponse.body.getReader();
           
           const pump = async () => {
-            const { done, value } = await reader.read();
-            if (done) {
-              // Send any remaining buffered data
-              if (buffer) {
-                res.write(buffer);
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                  console.log('Stream completed');
+                  res.end();
+                  return;
+                }
+                if (value && value.length > 0) {
+                  // Write Uint8Array directly - ensure we don't modify the data
+                  res.write(Buffer.from(value));
+                }
               }
-              res.end();
-              return;
+            } catch (error) {
+              console.error('Stream pump error:', error);
+              if (!res.headersSent) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                res.end(JSON.stringify({ error: 'Stream error', details: errorMessage }));
+              } else {
+                res.end();
+              }
             }
-            
-            const chunk = new TextDecoder().decode(value);
-            buffer += chunk;
-            tokenCount++;
-            
-            // Send batch when we reach batch size or on natural breaks
-            if (tokenCount >= batchSize || chunk.includes('\n') || chunk.includes(' ')) {
-              res.write(buffer);
-              buffer = '';
-              tokenCount = 0;
-              
-              // Add throttling delay (configurable delay between batches)
-              const delay = streamingConfig?.throttleDelay ?? 20; // Optimal delay for ChatGPT-like speed
-              await new Promise(resolve => setTimeout(resolve, delay));
-            }
-            
-            pump();
           };
+          
           pump();
         } else {
+          console.warn('No body in stream response');
           res.end();
         }
       } catch (error) {
@@ -348,9 +384,27 @@ export function setupChatApi(server: ViteDevServer) {
     req.on('end', async () => {
       try {
         // Dynamic import to avoid TypeScript version conflicts
-        const { convertToCoreMessages } = await import('ai');
+        const { createOpenAI } = await import('@ai-sdk/openai');
+        const { streamText, convertToCoreMessages } = await import('ai');
         
-        const { messages, selectedModel, data, streamingConfig, systemPrompt, webSearchEnabled } = JSON.parse(body);
+        const parsedBody = JSON.parse(body);        
+        // AI SDK 4: Direct body access (no nested metadata.body)
+        const { messages, selectedModel, data, streamingConfig, systemPrompt, webSearchEnabled } = parsedBody;
+        
+        const actualSelectedModel = selectedModel;
+        const actualMessages = messages;
+        const actualData = data;
+        const actualStreamingConfig = streamingConfig;
+        const actualSystemPrompt = systemPrompt;
+        const actualWebSearchEnabled = webSearchEnabled;
+
+        // Validate selectedModel
+        if (!actualSelectedModel || typeof actualSelectedModel !== 'string') {
+          console.error('DeepSeek Chat API - Missing selectedModel. Body keys:', Object.keys(parsedBody));
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'selectedModel is required and must be a string', received: parsedBody }));
+          return;
+        }
 
         const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
         if (!deepseekApiKey) {
@@ -359,21 +413,33 @@ export function setupChatApi(server: ViteDevServer) {
           return;
         }
 
-        const initialMessages = messages.slice(0, -1);
-        const currentMessage = messages[messages.length - 1];
+        const initialMessages = actualMessages.slice(0, -1);
+        const currentMessage = actualMessages[actualMessages.length - 1];
+
+        // AI SDK 4: Extract text from content (can be string or array)
+        let messageText = '';
+        if (typeof currentMessage.content === 'string') {
+          messageText = currentMessage.content;
+        } else if (Array.isArray(currentMessage.content)) {
+          messageText = currentMessage.content
+            .filter((part: any) => part.type === 'text' && part.text)
+            .map((part: any) => part.text)
+            .join('');
+        } else {
+          messageText = currentMessage.content || '';
+        }
 
         // DeepSeek only supports text messages (no multimodal support)
         // Convert multimodal content to text description if images are present
-        let messageText = currentMessage.content;
-        if (data?.images?.length > 0) {
-          messageText += `\n\n[Note: ${data.images.length} image(s) attached but DeepSeek doesn't support multimodal input]`;
+        if (actualData?.images?.length > 0) {
+          messageText += `\n\n[Note: ${actualData.images.length} image(s) attached but DeepSeek doesn't support multimodal input]`;
         }
 
         // Perform LangChain/Tavily search if web search is enabled
         // Wenn aktiviert, ist Websuche obligatorisch - Fehler werden zurückgegeben
         let searchContext = '';
         let sources: Array<{ title: string, url: string }> = [];
-        if (webSearchEnabled) {
+        if (actualWebSearchEnabled) {
           // Validiere TAVILY_API_KEY wenn Websuche aktiviert ist
           const tavilyApiKey = process.env.TAVILY_API_KEY;
           if (!tavilyApiKey) {
@@ -415,126 +481,86 @@ export function setupChatApi(server: ViteDevServer) {
           }
         }
 
-        // Use simple text format for DeepSeek API with system prompt
+        // Create DeepSeek provider with OpenAI-compatible API
+        const deepseek = createOpenAI({
+          apiKey: deepseekApiKey,
+          baseURL: 'https://api.deepseek.com/v1',
+        });
+
+        // Build messages array with system prompt
         const deepseekMessages = [
-          { role: 'system' as const, content: systemPrompt || "You are a helpful AI assistant. Please provide accurate and helpful responses." },
+          { role: 'system' as const, content: actualSystemPrompt || "You are a helpful AI assistant. Please provide accurate and helpful responses." },
           ...convertToCoreMessages(initialMessages),
           { role: 'user' as const, content: messageText },
         ];
 
-        // Stream text using DeepSeek API directly with AI SDK compatible format
-        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${deepseekApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: selectedModel,
-            messages: deepseekMessages,
-            temperature: streamingConfig?.temperature ?? 0.7,
-            top_p: streamingConfig?.topP ?? 0.9,
-            stream: true,
-          }),
+        // Stream text using streamText from AI SDK
+        const result = await streamText({
+          model: deepseek(actualSelectedModel),
+          messages: deepseekMessages,
+          temperature: actualStreamingConfig?.temperature ?? 0.7,
+          topP: actualStreamingConfig?.topP ?? 0.9,
         });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('DeepSeek API Error Response:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorText,
-          });
-          throw new Error(`DeepSeek API Error: ${response.status} - ${errorText}`);
-        }
-
-        // Set headers compatible with AI SDK Data Stream format
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        res.setHeader('Transfer-Encoding', 'chunked');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-
-        // Stream the response in AI SDK Data Stream format with batching
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error('No response body');
-        }
-
-        let buffer = '';
-        let batchSize = streamingConfig?.batchSize ?? 15; // Small batch size for ChatGPT-like fast streaming
-        let tokenCount = 0;
-
-        const pump = async () => {
-          const { done, value } = await reader.read();
-          if (done) {
-            // Send any remaining buffered data
-            if (buffer) {
-              res.write(buffer);
-            }
-            // Append sources to the end if web search was enabled
-            if (webSearchEnabled && sources.length > 0) {
-              // Format sources as URLs only (plain links without markdown parsing)
-              const sourcesText = `\n\n### Sources\n${sources.map(s => `- ${s.url}`).join('\n')}`;
-              const escapedSources = escapeJsonString(sourcesText);
-              res.write(`0:"${escapedSources}"\n`);
-            }
-            res.end();
-            return;
+        
+        // Get the stream response
+        // Use toDataStreamResponse() as documented - TypeScript may not recognize it but it exists in runtime
+        const streamResponse = (result as any).toDataStreamResponse();
+        
+        // Set status and headers (must be set before writing)
+        res.statusCode = streamResponse.status || 200;
+        streamResponse.headers.forEach((value, key) => {
+          // Skip content-length as it may not be known for streaming
+          if (key.toLowerCase() !== 'content-length') {
+            res.setHeader(key, value);
           }
-
-          const chunk = new TextDecoder().decode(value);
-          const lines = chunk.split('\n');
+        });
+        
+        // Debug: Log headers to verify correct format
+        console.log('Stream Response Headers:', Object.fromEntries(streamResponse.headers.entries()));
+        
+        // Handle streaming with sources append if web search enabled
+        if (streamResponse.body) {
+          const reader = streamResponse.body.getReader();
           
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6).trim();
-              if (data === '[DONE]') {
-                // Send any remaining buffered data
-                if (buffer) {
-                  res.write(buffer);
-                }
-                // Append sources to the end if web search was enabled
-                if (webSearchEnabled && sources.length > 0) {
-                  // Format sources as URLs only (plain links without markdown parsing)
-                  const sourcesText = `\n\n### Sources\n${sources.map(s => `- ${s.url}`).join('\n')}`;
-                  const escapedSources = escapeJsonString(sourcesText);
-                  res.write(`0:"${escapedSources}"\n`);
-                }
-                res.end();
-                return;
-              }
-              
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                if (content) {
-                  // Convert to AI SDK Data Stream format
-                  // Format: 0:"content"
-                  const escapedContent = escapeJsonString(content);
-                  buffer += `0:"${escapedContent}"\n`;
-                  tokenCount++;
-                  
-                  // Send batch when we reach batch size or on natural breaks
-                  if (tokenCount >= batchSize || content.includes(' ') || content.includes('\n')) {
-                    res.write(buffer);
-                    buffer = '';
-                    tokenCount = 0;
-                    
-                    // Add throttling delay (configurable delay between batches)
-                    const delay = streamingConfig?.throttleDelay ?? 5; // Minimal delay for ChatGPT-like speed
-                    await new Promise(resolve => setTimeout(resolve, delay));
+          const pump = async () => {
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                  // Append sources to the end if web search was enabled
+                  if (actualWebSearchEnabled && sources.length > 0) {
+                    // Format sources as URLs only (plain links without markdown parsing)
+                    const sourcesText = `\n\n### Sources\n${sources.map(s => `- ${s.url}`).join('\n')}`;
+                    const escapedSources = escapeJsonString(sourcesText);
+                    // Write sources in AI SDK Data Stream format
+                    res.write(`0:"${escapedSources}"\n`);
                   }
+                  res.end();
+                  return;
                 }
-              } catch (e) {
-                // Ignore parsing errors for incomplete chunks
+                if (value && value.length > 0) {
+                  // Write Uint8Array directly - ensure we don't modify the data
+                  res.write(Buffer.from(value));
+                }
+              }
+            } catch (error) {
+              console.error('Stream pump error:', error);
+              if (!res.headersSent) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                res.end(JSON.stringify({ error: 'Stream error', details: errorMessage }));
+              } else {
+                res.end();
               }
             }
-          }
+          };
           
           pump();
-        };
-        
-        pump();
+        } else {
+          console.warn('No body in stream response');
+          res.end();
+        }
       } catch (error) {
         console.error('DeepSeek Chat API Error:', error);
         res.statusCode = 500;
@@ -1379,7 +1405,11 @@ export function setupChatApi(server: ViteDevServer) {
 
     req.on('end', async () => {
       try {
-        const { searchType, query, datasetIds, systemPrompt } = JSON.parse(body);
+        // Dynamic import to avoid TypeScript version conflicts
+        const { createOpenAI } = await import('@ai-sdk/openai');
+        const { streamText, convertToCoreMessages } = await import('ai');
+        
+        const { searchType, query, datasetIds, systemPrompt, streamingConfig } = JSON.parse(body);
 
         if (!query) {
           res.statusCode = 400;
@@ -1678,9 +1708,15 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
         // Parse the full query to extract message history
         const messageHistory = parseMessageHistory(query);
         
-        // Build DeepSeek messages array with history
-        const deepseekMessages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
-          { role: 'system', content: enhancedSystemPrompt },
+        // Create DeepSeek provider with OpenAI-compatible API
+        const deepseek = createOpenAI({
+          apiKey: deepseekApiKey,
+          baseURL: 'https://api.deepseek.com/v1',
+        });
+
+        // Build messages array with system prompt and history (matching /api/deepseek/chat format)
+        const aiSdkMessages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
+          { role: 'system' as const, content: enhancedSystemPrompt },
         ];
         
         // Add message history (all except the last user message, which is the current question)
@@ -1688,120 +1724,83 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
           // If the last message is a user message, it's the current question
           // Add all previous messages as history
           const historyMessages = messageHistory.slice(0, -1);
-          deepseekMessages.push(...historyMessages);
+          aiSdkMessages.push(...historyMessages.map(msg => ({
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content
+          })));
           
           // Add the current user question (last message)
           const currentUserMessage = messageHistory[messageHistory.length - 1];
           if (currentUserMessage && currentUserMessage.role === 'user') {
-            deepseekMessages.push(currentUserMessage);
+            aiSdkMessages.push({ role: 'user' as const, content: currentUserMessage.content });
           } else {
             // Fallback: if no user message found, use the query as-is
-            deepseekMessages.push({ role: 'user', content: query });
+            aiSdkMessages.push({ role: 'user' as const, content: query });
           }
         } else {
           // Fallback: if parsing failed, use query as current user message
-          deepseekMessages.push({ role: 'user', content: query });
+          aiSdkMessages.push({ role: 'user' as const, content: query });
         }
 
-        // Stream text using DeepSeek API directly with AI SDK compatible format
-        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${deepseekApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'deepseek-chat',
-            messages: deepseekMessages,
-            temperature: 0.7,
-            top_p: 0.9,
-            stream: true,
-          }),
+        // Stream text using streamText from AI SDK
+        const result = await streamText({
+          model: deepseek('deepseek-chat'),
+          messages: aiSdkMessages,
+          temperature: streamingConfig?.temperature ?? 0.7,
+          topP: streamingConfig?.topP ?? 0.9,
         });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('DeepSeek API Error Response:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorText,
-          });
-          throw new Error(`DeepSeek API Error: ${response.status} - ${errorText}`);
-        }
-
-        // Set headers compatible with AI SDK Data Stream format
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        res.setHeader('Transfer-Encoding', 'chunked');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
         
-        // Stream the response in AI SDK Data Stream format with batching
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error('No response body');
-        }
-
-        let buffer = '';
-        let batchSize = 80; // Increased batch size for better performance
-        let tokenCount = 0;
-
-        const pump = async () => {
-          const { done, value } = await reader.read();
-          if (done) {
-            // Send any remaining buffered data
-            if (buffer) {
-              res.write(buffer);
-            }
-            res.end();
-            return;
+        // Get the stream response
+        // Use toDataStreamResponse() as documented - TypeScript may not recognize it but it exists in runtime
+        const streamResponse = (result as any).toDataStreamResponse();
+        
+        // Set status and headers (must be set before writing)
+        res.statusCode = streamResponse.status || 200;
+        streamResponse.headers.forEach((value, key) => {
+          // Skip content-length as it may not be known for streaming
+          if (key.toLowerCase() !== 'content-length') {
+            res.setHeader(key, value);
           }
-
-          const chunk = new TextDecoder().decode(value);
-          const lines = chunk.split('\n');
+        });
+        
+        // Debug: Log headers to verify correct format
+        console.log('Stream Response Headers:', Object.fromEntries(streamResponse.headers.entries()));
+        
+        // Handle streaming - ensure proper format
+        if (streamResponse.body) {
+          const reader = streamResponse.body.getReader();
           
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6).trim();
-              if (data === '[DONE]') {
-                // Send any remaining buffered data
-                if (buffer) {
-                  res.write(buffer);
+          const pump = async () => {
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                  res.end();
+                  return;
                 }
-                res.end();
-                return;
+                if (value && value.length > 0) {
+                  // Write Uint8Array directly - ensure we don't modify the data
+                  res.write(Buffer.from(value));
+                }
               }
-              
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-                if (content) {
-                  // Convert to AI SDK Data Stream format
-                  // Format: 0:"content"
-                  const escapedContent = escapeJsonString(content);
-                  buffer += `0:"${escapedContent}"\n`;
-                  tokenCount++;
-                  
-                  // Send batch when we reach batch size or on natural breaks
-                  if (tokenCount >= batchSize || content.includes(' ') || content.includes('\n')) {
-                    res.write(buffer);
-                    buffer = '';
-                    tokenCount = 0;
-                    
-                    // Add throttling delay
-                    const delay = 80;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                  }
-                }
-              } catch (e) {
-                // Ignore parsing errors for incomplete chunks
+            } catch (error) {
+              console.error('Stream pump error:', error);
+              if (!res.headersSent) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                res.end(JSON.stringify({ error: 'Stream error', details: errorMessage }));
+              } else {
+                res.end();
               }
             }
-          }
+          };
           
           pump();
-        };
-        
-        pump();
+        } else {
+          console.warn('No body in stream response');
+          res.end();
+        }
 
       } catch (error) {
         console.error('Cognee + DeepSeek Integration Error:', error);
