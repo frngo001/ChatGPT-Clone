@@ -183,6 +183,7 @@ export function AssignTenantDialog({
           </Button>
           <Button
             type="button"
+            variant="secondary"
             onClick={handleAssign}
             disabled={isSubmitting || !hasChanges || tenants.length === 0}
           >

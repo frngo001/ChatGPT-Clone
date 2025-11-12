@@ -95,7 +95,7 @@ export function CreateRoleDialog({ open, onOpenChange }: CreateRoleDialogProps) 
           >
             Abbrechen
           </Button>
-          <Button onClick={handleCreate} disabled={isCreating || !roleName.trim()}>
+          <Button variant="secondary" onClick={handleCreate} disabled={isCreating || !roleName.trim()}>
             {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Rolle erstellen
           </Button>

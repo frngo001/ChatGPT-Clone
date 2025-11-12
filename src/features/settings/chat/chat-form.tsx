@@ -218,7 +218,7 @@ export function ChatForm() {
           )}
         />
 
-        <Button type='submit'>Chat-Einstellungen aktualisieren</Button>
+        <Button type='submit' variant="secondary">Chat-Einstellungen aktualisieren</Button>
       </form>
     </Form>
   )

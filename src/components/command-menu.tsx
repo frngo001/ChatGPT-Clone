@@ -92,27 +92,27 @@ export function CommandMenu() {
             <CommandItem onSelect={() => runCommand(() => setOpen(false))}>
               <Keyboard className='size-4' />
               <span>Suchfunktion</span>
-              <CommandShortcut>⌘K</CommandShortcut>
+              <CommandShortcut>Strg K</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => navigate({ to: '/chat' }))}>
               <Keyboard className='size-4' />
               <span>Neuer Chat</span>
-              <CommandShortcut>⇧⌘N</CommandShortcut>
+              <CommandShortcut>⇧ Strg N</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => navigate({ to: '/settings' }))}>
               <Keyboard className='size-4' />
               <span>Profil-Einstellungen</span>
-              <CommandShortcut>⇧⌘P</CommandShortcut>
+              <CommandShortcut>⇧ Strg P</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => navigate({ to: '/settings/chat' }))}>
               <Keyboard className='size-4' />
               <span>Chat-Einstellungen</span>
-              <CommandShortcut>⇧⌘C</CommandShortcut>
+              <CommandShortcut>⇧ Strg C</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => navigate({ to: '/settings' }))}>
               <Keyboard className='size-4' />
               <span>Einstellungen</span>
-              <CommandShortcut>⌘S</CommandShortcut>
+              <CommandShortcut>Strg S</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => {
               auth.reset()
@@ -120,7 +120,7 @@ export function CommandMenu() {
             })}>
               <Keyboard className='size-4' />
               <span>Abmelden</span>
-              <CommandShortcut>⇧⌘Q</CommandShortcut>
+              <CommandShortcut>⇧ Strg Q</CommandShortcut>
             </CommandItem>
           </CommandGroup>
         </ScrollArea>

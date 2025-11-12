@@ -56,10 +56,10 @@ const DatasetCardComponent = ({
       )}>
         {/* Header: Icon, Title, Status & Actions */}
         <div className={cn(
-          'flex items-start gap-2 justify-between w-full',
+          'flex items-center gap-2 justify-between w-full',
           isListVariant && 'flex-1 min-w-0'
         )}>
-          <div className="flex items-start gap-2 flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             {/* Title */}
             <div className={cn(
               'flex-1 min-w-0'
@@ -67,7 +67,7 @@ const DatasetCardComponent = ({
               <h3 
                 className={cn(
                   'font-semibold leading-tight',
-                  isListVariant ? 'text-sm' : 'text-sm'
+                  isListVariant ? 'text-xs' : 'text-xs'
                 )}
                 title={dataset.name}
               >

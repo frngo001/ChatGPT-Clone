@@ -169,6 +169,7 @@ export function AssignRoleToUserDialog({ open, onOpenChange, userId, userEmail }
             Abbrechen
           </Button>
           <Button 
+            variant="secondary"
             onClick={handleAssign} 
             disabled={isAssigning || !selectedRoleId || availableRoles.length === 0}
           >

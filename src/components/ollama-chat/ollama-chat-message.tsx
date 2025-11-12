@@ -12,7 +12,7 @@ import ButtonWithTooltip from "@/components/button-with-tooltip";
 import { Button } from "@/components/ui/button";
 import TableDisplayBlock from "@/components/table-display-block";
 import { Response } from "@/components/ui/response";
-import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   Sources,
   SourcesTrigger,
@@ -644,6 +644,10 @@ function OllamaChatMessage({
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0">
           <DialogHeader className="p-4 pb-2">
+            <DialogTitle>Bildvorschau</DialogTitle>
+            <DialogDescription>
+              Vollständige Ansicht des angehängten Bildes
+            </DialogDescription>
           </DialogHeader>
           <div className="p-4 pt-0 flex items-center justify-center">
             {selectedImage && (

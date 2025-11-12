@@ -247,14 +247,26 @@ export function setupChatApi(server: ViteDevServer) {
           messageText = currentMessage.content || '';
         }
 
-        let messageContent: string | Array<{ type: 'text'; text: string } | { type: 'image'; image: URL }> = messageText;
+        let messageContent: string | Array<{ type: 'text'; text: string } | { type: 'image'; image: URL | string }> = messageText;
         if (actualData?.images && actualData.images.length > 0) {
           messageContent = [
             { type: 'text' as const, text: messageText },
-            ...actualData.images.map((imageUrl: string) => ({
-              type: 'image' as const,
-              image: new URL(imageUrl),
-            })),
+            ...actualData.images.map((imageData: string) => {
+              // Unterstützt sowohl URLs als auch base64 data URIs
+              if (imageData.startsWith('data:')) {
+                // Base64 data URI - direkt verwenden (AI SDK unterstützt data URIs)
+                return {
+                  type: 'image' as const,
+                  image: imageData,
+                };
+              } else {
+                // URL - als URL-Objekt verwenden
+                return {
+                  type: 'image' as const,
+                  image: new URL(imageData),
+                };
+              }
+            }),
           ];
         }
 

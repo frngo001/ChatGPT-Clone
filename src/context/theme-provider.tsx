@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
+import { useDisplayStore } from '@/stores/display-store'
+import { getDarkThemeById } from '@/config/dark-themes'
+import { applyDarkTheme, resetDarkTheme } from '@/lib/apply-dark-theme'
 
 type Theme = 'dark' | 'light' | 'system'
 type ResolvedTheme = Exclude<Theme, 'system'>
@@ -52,6 +55,9 @@ export function ThemeProvider({
     return theme as ResolvedTheme
   }, [theme])
 
+  // Get dark theme from store
+  const darkThemeId = useDisplayStore((state) => state.darkThemeId)
+
   useEffect(() => {
     const root = window.document.documentElement
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -59,6 +65,17 @@ export function ThemeProvider({
     const applyTheme = (currentResolvedTheme: ResolvedTheme) => {
       root.classList.remove('light', 'dark') // Remove existing theme classes
       root.classList.add(currentResolvedTheme) // Add the new theme class
+      
+      // Apply dark theme if dark mode is active
+      if (currentResolvedTheme === 'dark') {
+        const darkTheme = getDarkThemeById(darkThemeId)
+        if (darkTheme) {
+          applyDarkTheme(darkTheme)
+        }
+      } else {
+        // Reset to default theme.css values for light mode
+        resetDarkTheme()
+      }
     }
 
     const handleChange = () => {
@@ -73,7 +90,7 @@ export function ThemeProvider({
     mediaQuery.addEventListener('change', handleChange)
 
     return () => mediaQuery.removeEventListener('change', handleChange)
-  }, [theme, resolvedTheme])
+  }, [theme, resolvedTheme, darkThemeId])
 
   const setTheme = (theme: Theme) => {
     setCookie(storageKey, theme, THEME_COOKIE_MAX_AGE)

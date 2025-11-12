@@ -16,4 +16,16 @@
  *      --font-roboto: 'Roboto', var(--font-sans);
  *   }
  */
-export const fonts = ['inter', 'manrope', 'system'] as const
+export const fonts = [
+  'inter',
+  'manrope',
+  'roboto',
+  'open-sans',
+  'lato',
+  'montserrat',
+  'poppins',
+  'raleway',
+  'nunito',
+  'source-sans-pro',
+  'system'
+] as const

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
@@ -17,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { useProfileStore } from '@/stores/profile-store'
 import { useAuthStore } from '@/stores/auth-store'
+import { usePermissionsStore } from '@/stores/permissions-store'
 
 const profileFormSchema = z.object({
   username: z
@@ -32,6 +34,23 @@ export function ProfileForm() {
   const { profileData, updateProfileData } = useProfileStore()
   // Optimize: Only subscribe to user data, not the entire auth object
   const user = useAuthStore((state) => state.auth.user)
+  const tenants = usePermissionsStore((state) => state.tenants)
+  const fetchAllUsers = usePermissionsStore((state) => state.fetchAllUsers)
+  const isLoading = usePermissionsStore((state) => state.isLoading)
+  
+  // Load tenants if not already loaded and user has a tenant_id
+  useEffect(() => {
+    if (user?.tenant_id && tenants.length === 0 && !isLoading) {
+      fetchAllUsers().catch((error) => {
+        console.error('Failed to fetch tenants:', error)
+      })
+    }
+  }, [user?.tenant_id, tenants.length, isLoading, fetchAllUsers])
+  
+  // Find tenant name by tenant_id
+  const tenantName = user?.tenant_id 
+    ? tenants.find((tenant) => tenant.id === user.tenant_id)?.name 
+    : null
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -47,12 +66,7 @@ export function ProfileForm() {
       {/* Cognee User Information */}
       <div className="space-y-6">
         <div>
-          <div className="flex items-center gap-3 mb-1.5">
-            <img
-              src="/images/logo.png"
-              alt="IMESO Logo"
-              className="h-6 w-auto"
-            />
+          <div className="mb-1.5">
             <h3 className="text-base md:text-lg font-semibold">Benutzerinformationen</h3>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">Kontodaten und Status</p>
@@ -74,8 +88,8 @@ export function ProfileForm() {
           <Separator />
           
           <div className="space-y-1">
-            <div className="text-xs font-medium text-muted-foreground">Tenant-ID</div>
-            <div className="text-sm font-mono">{user?.tenant_id || 'Nicht zugewiesen'}</div>
+            <div className="text-xs font-medium text-muted-foreground">Tenant</div>
+            <div className="text-sm">{tenantName || 'Nicht zugewiesen'}</div>
           </div>
           
           <Separator />
@@ -85,7 +99,7 @@ export function ProfileForm() {
               <div className="text-xs font-medium text-muted-foreground">Status</div>
               <div className="text-sm">{user?.is_active ? 'Aktiv' : 'Inaktiv'}</div>
             </div>
-            <Badge variant={user?.is_verified ? 'default' : 'secondary'}>
+            <Badge variant="secondary">
               {user?.is_verified ? 'Verifiziert' : 'Nicht verifiziert'}
             </Badge>
           </div>
@@ -96,13 +110,6 @@ export function ProfileForm() {
 
       {/* Profile Form */}
       <div className="space-y-6">
-        <div>
-          <h3 className="text-base md:text-lg font-semibold mb-1.5">Profil-Einstellungen</h3>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Bearbeiten Sie Ihre persönlichen Informationen und Einstellungen
-          </p>
-        </div>
-        
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((data) => {
@@ -151,7 +158,7 @@ export function ProfileForm() {
               )}
             />
             
-            <Button type='submit'>Profil aktualisieren</Button>
+            <Button type='submit' variant="secondary">Profil aktualisieren</Button>
           </form>
         </Form>
       </div>

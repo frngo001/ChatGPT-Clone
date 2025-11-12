@@ -79,7 +79,7 @@ export function PermissionsSettings() {
             <Button variant="outline" size="sm" onClick={() => setCreateTenantDialogOpen(true)} className="md:h-8 md:px-3 md:text-xs">
               Tenant erstellen
             </Button>
-            <Button size="sm" onClick={() => setDatasetPermissionsDialogOpen(true)} className="md:h-8 md:px-3 md:text-xs">
+            <Button size="sm" variant="default" onClick={() => setDatasetPermissionsDialogOpen(true)} className="md:h-8 md:px-3 md:text-xs">
               Berechtigung vergeben
             </Button>
           </div>

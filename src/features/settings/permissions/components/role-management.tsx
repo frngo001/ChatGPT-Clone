@@ -159,7 +159,7 @@ export function RoleManagement() {
       <div className="flex justify-end">
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm">
+            <Button size="sm" variant="secondary">
               <Plus className="mr-2 h-4 w-4" />
               Rolle erstellen
             </Button>
@@ -195,7 +195,7 @@ export function RoleManagement() {
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                 Abbrechen
               </Button>
-              <Button onClick={handleCreateRole} disabled={isLoading}>
+              <Button variant="secondary" onClick={handleCreateRole} disabled={isLoading}>
                 {isLoading ? 'Erstelle...' : 'Erstellen'}
               </Button>
             </DialogFooter>
@@ -313,7 +313,7 @@ export function RoleManagement() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Abbrechen
             </Button>
-            <Button onClick={handleUpdateRole} disabled={isLoading}>
+            <Button variant="secondary" onClick={handleUpdateRole} disabled={isLoading}>
               {isLoading ? 'Speichere...' : 'Speichern'}
             </Button>
           </DialogFooter>

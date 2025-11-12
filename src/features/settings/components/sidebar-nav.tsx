@@ -15,7 +15,7 @@ type SidebarNavProps = React.HTMLAttributes<HTMLElement> & {
   items: {
     href: string
     title: string
-    icon: JSX.Element
+    icon: JSX.Element | null
   }[]
 }
 
@@ -40,7 +40,7 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
             {items.map((item) => (
               <SelectItem key={item.href} value={item.href}>
                 <div className='flex gap-x-4 px-2 py-1'>
-                  <span className='scale-125'>{item.icon}</span>
+                  {item.icon && <span className='scale-125'>{item.icon}</span>}
                   <span className='text-md'>{item.title}</span>
                 </div>
               </SelectItem>
@@ -68,12 +68,12 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
               className={cn(
                 buttonVariants({ variant: 'ghost' }),
                 pathname === item.href
-                  ? 'bg-muted hover:bg-accent'
-                  : 'hover:bg-accent hover:underline',
+                  ? 'bg-muted hover:bg-gray-200 dark:hover:bg-gray-700'
+                  : 'hover:bg-accent',
                 'justify-start md:h-8 md:px-3 md:text-xs'
               )}
             >
-              <span className='me-2 hidden lg:inline'>{item.icon}</span>
+              {item.icon && <span className='me-2 hidden lg:inline'>{item.icon}</span>}
               {item.title}
             </Link>
           ))}

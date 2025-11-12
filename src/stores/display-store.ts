@@ -1,19 +1,22 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { fonts } from '@/config/fonts'
+import { getDefaultDarkTheme } from '@/config/dark-themes'
 
 type Font = typeof fonts[number]
 
-interface State {
+export interface State {
   showThemeSettings: boolean
   selectedFont: Font
   theme: 'light' | 'dark' | 'system'
+  darkThemeId: string
 }
 
-interface Actions {
+export interface Actions {
   setShowThemeSettings: (show: boolean) => void
   setSelectedFont: (font: Font) => void
   setTheme: (theme: 'light' | 'dark' | 'system') => void
+  setDarkThemeId: (themeId: string) => void
 }
 
 export const useDisplayStore = create<State & Actions>()(
@@ -23,11 +26,13 @@ export const useDisplayStore = create<State & Actions>()(
       showThemeSettings: true,
       selectedFont: 'inter', // Default to Inter
       theme: 'system', // Default to system theme
+      darkThemeId: getDefaultDarkTheme().id, // Default to first dark theme
       
       // Actions
       setShowThemeSettings: (showThemeSettings) => set({ showThemeSettings }),
       setSelectedFont: (selectedFont) => set({ selectedFont }),
       setTheme: (theme) => set({ theme }),
+      setDarkThemeId: (darkThemeId) => set({ darkThemeId }),
     }),
     {
       name: 'display-settings-store', // unique name
@@ -35,6 +40,7 @@ export const useDisplayStore = create<State & Actions>()(
         showThemeSettings: state.showThemeSettings,
         selectedFont: state.selectedFont,
         theme: state.theme,
+        darkThemeId: state.darkThemeId,
       }),
     }
   )

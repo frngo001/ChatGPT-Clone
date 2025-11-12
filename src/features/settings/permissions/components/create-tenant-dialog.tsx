@@ -100,7 +100,7 @@ export function CreateTenantDialog({ open, onOpenChange }: CreateTenantDialogPro
           >
             Abbrechen
           </Button>
-          <Button onClick={handleCreate} disabled={isCreating || !tenantName.trim()}>
+          <Button variant="secondary" onClick={handleCreate} disabled={isCreating || !tenantName.trim()}>
             {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Tenant erstellen
           </Button>

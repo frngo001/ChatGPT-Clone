@@ -366,7 +366,7 @@ export default function SettingsPage() {
 
             {/* Save Button */}
             <div className="flex justify-end">
-              <Button onClick={handleSave} className="min-w-32">
+              <Button variant="secondary" onClick={handleSave} className="min-w-32">
                 <Save className="h-4 w-4 mr-2" />
                 Save Changes
               </Button>

@@ -1,5 +1,4 @@
 import { Outlet, useLocation } from '@tanstack/react-router'
-import { Palette, UserCog, Bot, Users } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { SidebarNav } from './components/sidebar-nav'
 import { useAuthStore } from '@/stores/auth-store'
@@ -10,17 +9,17 @@ const sidebarNavItems = [
   {
     title: 'Profil',
     href: '/settings',
-    icon: <UserCog size={18} />,
+    icon: null,
   },
   {
     title: 'Chat',
     href: '/settings/chat',
-    icon: <Bot size={18} />,
+    icon: null,
   },
   {
     title: 'Anzeige',
     href: '/settings/appearance',
-    icon: <Palette size={18} />,
+    icon: null,
   },
 ]
 
@@ -38,7 +37,7 @@ export function Settings() {
         {
           title: 'Berechtigungen',
           href: '/settings/permissions',
-          icon: <Users size={18} />,
+          icon: null,
         }
       ]
     : sidebarNavItems

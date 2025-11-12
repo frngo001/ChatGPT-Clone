@@ -360,7 +360,7 @@ export function DatasetPermissionsDialog({ open, onOpenChange }: DatasetPermissi
           <Button 
             onClick={handleSubmit} 
             disabled={isGranting || selectedDatasetIds.length === 0 || !selectedPrincipalId}
-            variant={actionType === 'revoke' ? 'destructive' : 'default'}
+            variant={actionType === 'revoke' ? 'destructive' : 'secondary'}
           >
             {isGranting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {actionType === 'grant' ? 'Berechtigung erteilen' : 'Berechtigung entfernen'}
