@@ -210,12 +210,10 @@ export function setupChatApi(server: ViteDevServer) {
 
     req.on('end', async () => {
       try {
-        // Dynamic import to avoid TypeScript version conflicts
         const { createOllama } = await import('ollama-ai-provider');
         const { streamText, convertToCoreMessages } = await import('ai');
         
-        const parsedBody = JSON.parse(body);        
-        // AI SDK 4: Direct body access (no nested metadata.body)
+        const parsedBody = JSON.parse(body);
         const { messages, selectedModel, data, streamingConfig, systemPrompt } = parsedBody;
         
         const actualSelectedModel = selectedModel;
@@ -223,8 +221,6 @@ export function setupChatApi(server: ViteDevServer) {
         const actualData = data;
         const actualStreamingConfig = streamingConfig;
         const actualSystemPrompt = systemPrompt;
-
-        // Validate selectedModel
         if (!actualSelectedModel || typeof actualSelectedModel !== 'string') {
           console.error('Ollama Chat API - Missing selectedModel. Body keys:', Object.keys(parsedBody));
           res.statusCode = 400;
@@ -239,7 +235,6 @@ export function setupChatApi(server: ViteDevServer) {
 
         const ollama = createOllama({ baseURL: ollamaUrl + '/api' });
 
-        // AI SDK 4: Extract text from content (can be string or array)
         let messageText = '';
         if (typeof currentMessage.content === 'string') {
           messageText = currentMessage.content;
@@ -252,10 +247,7 @@ export function setupChatApi(server: ViteDevServer) {
           messageText = currentMessage.content || '';
         }
 
-        // Build message content for v4 (supports multimodal as array)
         let messageContent: string | Array<{ type: 'text'; text: string } | { type: 'image'; image: URL }> = messageText;
-
-        // Add images if they exist (v4 supports multimodal as array)
         if (actualData?.images && actualData.images.length > 0) {
           messageContent = [
             { type: 'text' as const, text: messageText },
@@ -266,21 +258,14 @@ export function setupChatApi(server: ViteDevServer) {
           ];
         }
 
-        // Build messages array with system prompt (matching DeepSeek format)
         const ollamaMessages = [
           { role: 'system' as const, content: actualSystemPrompt || "You are a helpful AI assistant. Please provide accurate and helpful responses." },
           ...convertToCoreMessages(initialMessages),
           { role: 'user' as const, content: messageContent },
         ];
 
-        // Stream text using the ollama model with parameters
-        // Enable think parameter for reasoning models to include reasoning content
-        // For Qwen 3, DeepSeek-v3.1: use true
-        // For GPT-OSS: use "low", "medium", or "high"
         const result = await streamText({
           model: ollama(actualSelectedModel, {
-            // Pass think parameter via provider settings
-            // This will be forwarded to the Ollama API
             ...({ think: true } as any),
           }),
           messages: ollamaMessages,
@@ -288,20 +273,14 @@ export function setupChatApi(server: ViteDevServer) {
           topP: actualStreamingConfig?.topP ?? 0.9,
         });
         
-        // Get the stream response
-        // Use toDataStreamResponse() as documented - TypeScript may not recognize it but it exists in runtime
         const streamResponse = (result as any).toDataStreamResponse();
         
-        // Set status and headers (must be set before writing)
         res.statusCode = streamResponse.status || 200;
         streamResponse.headers.forEach((value, key) => {
-          // Skip content-length as it may not be known for streaming
           if (key.toLowerCase() !== 'content-length') {
             res.setHeader(key, value);
           }
         });
-          
-        // Handle streaming (matching DeepSeek format)
         if (streamResponse.body) {
           const reader = streamResponse.body.getReader();
           
@@ -388,12 +367,10 @@ export function setupChatApi(server: ViteDevServer) {
 
     req.on('end', async () => {
       try {
-        // Dynamic import to avoid TypeScript version conflicts
         const { createOpenAI } = await import('@ai-sdk/openai');
         const { streamText, convertToCoreMessages } = await import('ai');
         
-        const parsedBody = JSON.parse(body);        
-        // AI SDK 4: Direct body access (no nested metadata.body)
+        const parsedBody = JSON.parse(body);
         const { messages, selectedModel, data, streamingConfig, systemPrompt, webSearchEnabled } = parsedBody;
         
         const actualSelectedModel = selectedModel;
@@ -421,7 +398,6 @@ export function setupChatApi(server: ViteDevServer) {
         const initialMessages = actualMessages.slice(0, -1);
         const currentMessage = actualMessages[actualMessages.length - 1];
 
-        // AI SDK 4: Extract text from content (can be string or array)
         let messageText = '';
         if (typeof currentMessage.content === 'string') {
           messageText = currentMessage.content;
@@ -434,18 +410,13 @@ export function setupChatApi(server: ViteDevServer) {
           messageText = currentMessage.content || '';
         }
 
-        // DeepSeek only supports text messages (no multimodal support)
-        // Convert multimodal content to text description if images are present
         if (actualData?.images?.length > 0) {
           messageText += `\n\n[Note: ${actualData.images.length} image(s) attached but DeepSeek doesn't support multimodal input]`;
         }
 
-        // Perform LangChain/Tavily search if web search is enabled
-        // Wenn aktiviert, ist Websuche obligatorisch - Fehler werden zurückgegeben
         let searchContext = '';
         let sources: Array<{ title: string, url: string }> = [];
         if (actualWebSearchEnabled) {
-          // Validiere TAVILY_API_KEY wenn Websuche aktiviert ist
           const tavilyApiKey = process.env.TAVILY_API_KEY;
           if (!tavilyApiKey) {
             res.statusCode = 500;
@@ -455,28 +426,22 @@ export function setupChatApi(server: ViteDevServer) {
             return;
           }
 
-          // Extract last 10 messages from history for context
-          // Use safe text extraction to avoid JSON strings and URL length issues
           const chatHistory = initialMessages.slice(-10).map((msg: any) => ({
             role: msg.role,
-            content: extractTextContent(msg.content, 500) // Safe text extraction, max 500 chars per message
-          })).filter((msg: any) => msg.content.length > 0); // Filter out empty messages
+            content: extractTextContent(msg.content, 500)
+          })).filter((msg: any) => msg.content.length > 0);
           
-          // Websuche ist obligatorisch wenn aktiviert - Fehler werden propagiert
           try {
             const searchResult = await performLangChainWebSearch(messageText, chatHistory);
             searchContext = searchResult.content;
             sources = searchResult.sources;
             
-            // Prepend search context to the user message if available
             if (searchContext) {
               messageText = `Kontext aus Web-Suche:\n${searchContext}\n\nFrage des Benutzers: ${messageText}`;
             } else {
-              // Warnung wenn keine Suchergebnisse, aber fortsetzen
               console.warn('Websuche aktiviert aber keine Ergebnisse gefunden für:', messageText);
             }
           } catch (searchError: any) {
-            // Websuche ist aktiviert aber fehlgeschlagen - gib Fehler zurück
             console.error('Web search error:', searchError);
             res.statusCode = 500;
             res.end(JSON.stringify({ 
@@ -486,48 +451,33 @@ export function setupChatApi(server: ViteDevServer) {
           }
         }
 
-        // Create DeepSeek provider with OpenAI-compatible API
         const deepseek = createOpenAI({
           apiKey: deepseekApiKey,
           baseURL: 'https://api.deepseek.com/v1',
         });
 
-        // Build messages array with system prompt
         const deepseekMessages = [
           { role: 'system' as const, content: actualSystemPrompt || "You are a helpful AI assistant. Please provide accurate and helpful responses." },
           ...convertToCoreMessages(initialMessages),
           { role: 'user' as const, content: messageText },
         ];
 
-        // Stream text using streamText from AI SDK
-        // Enable think parameter for reasoning models to include reasoning content
-        // For Qwen 3, DeepSeek-v3.1: use true
-        // For GPT-OSS: use "low", "medium", or "high"
         const result = await streamText({
           model: deepseek(actualSelectedModel),
           messages: deepseekMessages,
           temperature: actualStreamingConfig?.temperature ?? 0.7,
           topP: actualStreamingConfig?.topP ?? 0.9,
-          // Enable reasoning/thinking for reasoning models
-          // This ensures reasoning content is included in the response
-          // Pass think parameter (may need to be passed via provider or as experimental option)
           ...({ think: true } as any),
         });
         
-        // Get the stream response
-        // Use toDataStreamResponse() as documented - TypeScript may not recognize it but it exists in runtime
         const streamResponse = (result as any).toDataStreamResponse();
         
-        // Set status and headers (must be set before writing)
         res.statusCode = streamResponse.status || 200;
         streamResponse.headers.forEach((value, key) => {
-          // Skip content-length as it may not be known for streaming
           if (key.toLowerCase() !== 'content-length') {
             res.setHeader(key, value);
           }
         });
-          
-        // Handle streaming with sources append if web search enabled
         if (streamResponse.body) {
           const reader = streamResponse.body.getReader();
           
@@ -536,19 +486,15 @@ export function setupChatApi(server: ViteDevServer) {
               while (true) {
                 const { done, value } = await reader.read();
                 if (done) {
-                  // Append sources to the end if web search was enabled
                   if (actualWebSearchEnabled && sources.length > 0) {
-                    // Format sources as URLs only (plain links without markdown parsing)
                     const sourcesText = `\n\n### Sources\n${sources.map(s => `- ${s.url}`).join('\n')}`;
                     const escapedSources = escapeJsonString(sourcesText);
-                    // Write sources in AI SDK Data Stream format
                     res.write(`0:"${escapedSources}"\n`);
                   }
                   res.end();
                   return;
                 }
                 if (value && value.length > 0) {
-                  // Write Uint8Array directly - ensure we don't modify the data
                   res.write(Buffer.from(value));
                 }
               }
@@ -676,7 +622,6 @@ export function setupChatApi(server: ViteDevServer) {
 
         const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
         
-        // Cognee expects form-urlencoded data for login
         const formData = new URLSearchParams();
         formData.append('username', email);
         formData.append('password', password);
@@ -697,13 +642,8 @@ export function setupChatApi(server: ViteDevServer) {
           return;
         }
 
-        // Get the response data
         const responseData: any = await cogneeResponse.json();
-        
-        // Extract token from response (Cognee might return it in different formats)
         const token = responseData.access_token || responseData.token || responseData;
-        
-        // Get user details from Cognee API using /api/v1/users/me
         let userData: any = null;
         
         try {
@@ -717,11 +657,8 @@ export function setupChatApi(server: ViteDevServer) {
           if (userResponse.ok) {
             userData = await userResponse.json();
             
-            // Auto-admin: Set first user as admin if not already admin
-            // This is a one-time setup for the first user
             if (userData && !(userData as any).is_superuser && email === 'default_user@example.com') {
               try {
-                // Use PATCH /api/v1/users/me to update current user
                 const updateResponse = await fetch(`${cogneeUrl}/api/v1/users/me`, {
                   method: 'PATCH',
                   headers: {
@@ -822,7 +759,7 @@ export function setupChatApi(server: ViteDevServer) {
             email,
             password,
             is_active: true,
-            is_verified: true, // Auto-verify for development
+            is_verified: true,
             is_superuser: false
           }),
         });
@@ -952,7 +889,6 @@ export function setupChatApi(server: ViteDevServer) {
 
           const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
           
-          // According to Cognee API docs, dataset permissions endpoint expects parameters as query params
           const url = new URL(`${cogneeUrl}/api/v1/permissions/datasets`);
           url.searchParams.append('dataset_id', dataset_id);
           url.searchParams.append('principal_id', principal_id);
@@ -977,7 +913,6 @@ export function setupChatApi(server: ViteDevServer) {
           } else {
             const errorText = await cogneeResponse.text();
             
-            // If Cognee API doesn't support this operation, return mock success
             if (cogneeResponse.status === 404 || cogneeResponse.status === 400) {
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
@@ -1045,7 +980,6 @@ export function setupChatApi(server: ViteDevServer) {
 
           const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
           
-          // According to Cognee API docs, create role endpoint expects role_name as query parameter
           const url = new URL(`${cogneeUrl}/api/v1/permissions/roles`);
           url.searchParams.append('role_name', name);
           if (description) {
@@ -1070,7 +1004,6 @@ export function setupChatApi(server: ViteDevServer) {
           } else {
             const errorText = await cogneeResponse.text();
             
-            // If Cognee API doesn't support role creation, return mock success
             if (cogneeResponse.status === 404 || cogneeResponse.status === 400) {
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
@@ -1117,9 +1050,8 @@ export function setupChatApi(server: ViteDevServer) {
         return;
       }
 
-      // Extract user_id from URL path
-      const userId = req.url?.split('/')[5]; // /api/cognee/permissions/users/{userId}/roles
-      const roleId = req.url?.split('?')[1]?.split('=')[1]; // Extract role_id from query params
+      const userId = req.url?.split('/')[5];
+      const roleId = req.url?.split('?')[1]?.split('=')[1];
 
       if (!userId || !roleId) {
         res.statusCode = 400;
@@ -1129,7 +1061,6 @@ export function setupChatApi(server: ViteDevServer) {
 
       const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
       
-      // According to Cognee API docs, add user to role endpoint expects parameters as query params
       const url = new URL(`${cogneeUrl}/api/v1/permissions/users/${userId}/roles`);
       url.searchParams.append('role_id', roleId);
 
@@ -1190,9 +1121,8 @@ export function setupChatApi(server: ViteDevServer) {
         return;
       }
 
-      // Extract user_id from URL path
-      const userId = req.url?.split('/')[5]; // /api/cognee/permissions/users/{userId}/tenants
-      const tenantId = req.url?.split('?')[1]?.split('=')[1]; // Extract tenant_id from query params
+      const userId = req.url?.split('/')[5];
+      const tenantId = req.url?.split('?')[1]?.split('=')[1];
 
       if (!userId || !tenantId) {
         res.statusCode = 400;
@@ -1202,7 +1132,6 @@ export function setupChatApi(server: ViteDevServer) {
 
       const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
       
-      // According to Cognee API docs, add user to tenant endpoint expects parameters as query params
       const url = new URL(`${cogneeUrl}/api/v1/permissions/users/${userId}/tenants`);
       url.searchParams.append('tenant_id', tenantId);
 
@@ -1280,7 +1209,6 @@ export function setupChatApi(server: ViteDevServer) {
 
           const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
           
-          // According to Cognee API docs, create tenant endpoint expects tenant_name as query parameter
           const url = new URL(`${cogneeUrl}/api/v1/permissions/tenants`);
           url.searchParams.append('tenant_name', name);
           if (description) {
@@ -1305,7 +1233,6 @@ export function setupChatApi(server: ViteDevServer) {
           } else {
             const errorText = await cogneeResponse.text();
             
-            // If Cognee API doesn't support tenant creation, return mock success
             if (cogneeResponse.status === 404 || cogneeResponse.status === 400) {
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
@@ -1358,7 +1285,6 @@ export function setupChatApi(server: ViteDevServer) {
 
       const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
       
-      // Use /api/v1/users/me to get current user data
       const cogneeResponse = await fetch(`${cogneeUrl}/api/v1/users/me`, {
         method: 'GET',
         headers: {
@@ -1414,7 +1340,6 @@ export function setupChatApi(server: ViteDevServer) {
 
     req.on('end', async () => {
       try {
-        // Dynamic import to avoid TypeScript version conflicts
         const { createOpenAI } = await import('@ai-sdk/openai');
         const { streamText, convertToCoreMessages } = await import('ai');
         
@@ -1432,7 +1357,6 @@ export function setupChatApi(server: ViteDevServer) {
           return;
         }
 
-        // Extract token from request headers
         const authHeader = req.headers.authorization;
         const token = authHeader?.replace('Bearer ', '');
 
@@ -1451,7 +1375,6 @@ export function setupChatApi(server: ViteDevServer) {
           return;
         }
         
-        // Step 1: Get chunks from Cognee API
         const cogneeRequestBody = {
           searchType: searchType || "CHUNKS",
           datasets: [],
@@ -1483,7 +1406,7 @@ Am Ende deiner Antwort MUSST du eine Sektion "### Sources" hinzufügen mit allen
 Die Benutzer können auf diese Dateinamen klicken, um eine Vorschau der Dateien zu sehen (funktioniert für PDFs, Bilder, Code, Markdown, Text und viele andere Dateitypen).`,
           nodeName: [],
           topK: 10,
-          onlyContext: false, // Get full response to extract chunks
+          onlyContext: false,
           useCombinedContext: false
         };
 
@@ -1504,13 +1427,10 @@ Die Benutzer können auf diese Dateinamen klicken, um eine Vorschau der Dateien 
 
         const cogneeData = await cogneeResponse.json() as any;
 
-        // Extract chunks from Cognee response
         let chunks = '';
         if (Array.isArray(cogneeData) && cogneeData.length > 0) {
-          // Cognee returns array of chunk objects, extract text content
           chunks = cogneeData
             .map((chunk: any) => {
-              // Handle different chunk formats
               if (typeof chunk === 'string') return chunk;
               if (chunk.text) return chunk.text;
               if (chunk.content) return chunk.content;
@@ -1529,7 +1449,6 @@ Die Benutzer können auf diese Dateinamen klicken, um eine Vorschau der Dateien 
           chunks = 'No relevant context found.';
         }
 
-        // Step 2: Use DeepSeek with chunks as context (reuse existing DeepSeek logic)
         const enhancedSystemPrompt = `---Role---
 
 You are a RAG assistant that MUST provide structured responses with sources, modeled after ChatGPT's style and clarity.
@@ -1684,11 +1603,8 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
 
 ---Response---`;
 
-        // Parse message history from query format: "User: ...\n\nAI: ...\n\nUser: ..."
         const parseMessageHistory = (queryString: string): Array<{ role: 'user' | 'assistant', content: string }> => {
           const messages: Array<{ role: 'user' | 'assistant', content: string }> = [];
-          
-          // Split by double newlines to separate messages
           const parts = queryString.split('\n\n');
           
           for (const part of parts) {
@@ -1706,7 +1622,6 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
                 messages.push({ role: 'assistant', content });
               }
             } else if (messages.length > 0) {
-              // If no prefix, append to last message (handles multi-line content)
               messages[messages.length - 1].content += '\n\n' + trimmed;
             }
           }
@@ -1714,44 +1629,34 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
           return messages;
         };
         
-        // Parse the full query to extract message history
         const messageHistory = parseMessageHistory(query);
         
-        // Create DeepSeek provider with OpenAI-compatible API
         const deepseek = createOpenAI({
           apiKey: deepseekApiKey,
           baseURL: 'https://api.deepseek.com/v1',
         });
 
-        // Build messages array with system prompt and history (matching /api/deepseek/chat format)
         const aiSdkMessages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
           { role: 'system' as const, content: enhancedSystemPrompt },
         ];
         
-        // Add message history (all except the last user message, which is the current question)
         if (messageHistory.length > 0) {
-          // If the last message is a user message, it's the current question
-          // Add all previous messages as history
           const historyMessages = messageHistory.slice(0, -1);
           aiSdkMessages.push(...historyMessages.map(msg => ({
             role: msg.role as 'user' | 'assistant',
             content: msg.content
           })));
           
-          // Add the current user question (last message)
           const currentUserMessage = messageHistory[messageHistory.length - 1];
           if (currentUserMessage && currentUserMessage.role === 'user') {
             aiSdkMessages.push({ role: 'user' as const, content: currentUserMessage.content });
           } else {
-            // Fallback: if no user message found, use the query as-is
             aiSdkMessages.push({ role: 'user' as const, content: query });
           }
         } else {
-          // Fallback: if parsing failed, use query as current user message
           aiSdkMessages.push({ role: 'user' as const, content: query });
         }
 
-        // Stream text using streamText from AI SDK
         const result = await streamText({
           model: deepseek('deepseek-chat'),
           messages: aiSdkMessages,
@@ -1759,20 +1664,14 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
           topP: streamingConfig?.topP ?? 0.9,
         });
         
-        // Get the stream response
-        // Use toDataStreamResponse() as documented - TypeScript may not recognize it but it exists in runtime
         const streamResponse = (result as any).toDataStreamResponse();
         
-        // Set status and headers (must be set before writing)
         res.statusCode = streamResponse.status || 200;
         streamResponse.headers.forEach((value, key) => {
-          // Skip content-length as it may not be known for streaming
           if (key.toLowerCase() !== 'content-length') {
             res.setHeader(key, value);
           }
         });
-           
-        // Handle streaming - ensure proper format
         if (streamResponse.body) {
           const reader = streamResponse.body.getReader();
           
@@ -1845,10 +1744,8 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
         return;
       }
 
-      // Decode the URL
       const decodedUrl = decodeURIComponent(targetUrl);
 
-      // Fetch the URL to get OpenGraph metadata
       const { default: axios } = await import('axios');
       const cheerio = await import('cheerio');
 
@@ -1863,15 +1760,12 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
 
       const $ = cheerio.load(response.data);
 
-      // Try to get OpenGraph description first, then fall back to meta description
       const ogDescription = $('meta[property="og:description"]').attr('content') ||
                            $('meta[name="og:description"]').attr('content');
       
       const metaDescription = $('meta[name="description"]').attr('content');
-
       const description = ogDescription || metaDescription || null;
 
-      // Set CORS headers
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET');
@@ -1919,7 +1813,6 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
           return;
         }
 
-        // Extract token from request headers
         const authHeader = req.headers.authorization;
         const token = authHeader?.replace('Bearer ', '');
 
@@ -2251,7 +2144,6 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
 
       const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
 
-      // According to Cognee API: GET /api/v1/users/{user_id}
       const cogneeResponse = await fetch(`${cogneeUrl}/api/v1/users/${userId}`, {
         method: 'GET',
         headers: {
@@ -2300,14 +2192,6 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
 
       const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
 
-      // According to Cognee API docs:
-      // GET /api/v1/users/current-user returns current user
-      // For listing all users, we might need to query via permissions or use a different approach
-      // For now, return current user as a single-item array for testing
-      // The Cognee API doesn't seem to have a direct "list all users" endpoint
-      // We might need to use the tenant's user list or a different approach
-      
-      // Get current user to return as mock data
       const cogneeResponse = await fetch(`${cogneeUrl}/api/v1/users/me`, {
         method: 'GET',
         headers: {
@@ -2318,7 +2202,6 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
 
       if (cogneeResponse.ok) {
         const currentUser = await cogneeResponse.json();
-        // Return current user as a single-item array for testing
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify([currentUser]));
@@ -2491,9 +2374,6 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
           return;
         }
 
-        // TODO: Implement proper role removal via Cognee API
-        // const cogneeUrl = process.env.VITE_COGNEE_URL || 'http://imeso-ki-02:8000';
-        // For now, return success
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ success: true }));

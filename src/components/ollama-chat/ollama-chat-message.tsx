@@ -157,20 +157,9 @@ function OllamaChatMessage({
   // Support both 'reasoning' type and step-based reasoning models
   const reasoningContent = useMemo(() => {
     if (messageParts && Array.isArray(messageParts)) {
-      // Debug: Log parts to see what we're getting (only log once per message to avoid spam)
-      if (messageParts.length > 0 && process.env.NODE_ENV === 'development') {
-        const hasStepStart = messageParts.some(part => part.type === 'step-start');
-        if (hasStepStart) {
-          console.log('Message parts with step-start:', JSON.stringify(messageParts, null, 2));
-        }
-      }
-      
       // First, try to find explicit reasoning part
       const reasoningPart = messageParts.find(part => part.type === 'reasoning');
       if (reasoningPart) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Found reasoning part:', reasoningPart);
-        }
         return reasoningPart.reasoning || null;
       }
       
@@ -186,9 +175,6 @@ function OllamaChatMessage({
         // First, try to find explicit reasoning part
         const reasoningPart = messageParts.find(part => part.type === 'reasoning');
         if (reasoningPart && reasoningPart.reasoning) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Found reasoning part after step-start:', reasoningPart);
-          }
           return reasoningPart.reasoning;
         }
         
@@ -198,9 +184,6 @@ function OllamaChatMessage({
         );
         
         if (partWithReasoning) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Found part with potential reasoning:', partWithReasoning);
-          }
           if (partWithReasoning.reasoning) {
             return partWithReasoning.reasoning;
           }
@@ -213,11 +196,6 @@ function OllamaChatMessage({
         // Check if step-start part has any additional properties
         const stepStartPart = messageParts.find(part => part.type === 'step-start');
         if (stepStartPart) {
-          // Log all properties of step-start to see what's available
-          if (process.env.NODE_ENV === 'development') {
-            console.log('step-start part structure:', JSON.stringify(stepStartPart, null, 2));
-            console.log('All parts structure:', JSON.stringify(messageParts, null, 2));
-          }
           // Check if step-start has reasoning or other properties
           if ((stepStartPart as any).reasoning) {
             return (stepStartPart as any).reasoning;
@@ -226,9 +204,6 @@ function OllamaChatMessage({
         
         // step-start indicates reasoning is happening, but we haven't found the content yet
         // This might mean reasoning comes later in the stream or in a different format
-        if (process.env.NODE_ENV === 'development') {
-          console.log('step-start found but no reasoning content yet. Parts:', messageParts.map(p => ({ type: p.type, keys: Object.keys(p) })));
-        }
         return null;
       }
       
@@ -268,11 +243,6 @@ function OllamaChatMessage({
       (message.role === "assistant" && message.content 
         ? getThinkContent(message.content)
         : null);
-
-    // Debug: Log thinkContent to see if it's being set
-    if (thinkContentValue && process.env.NODE_ENV === 'development') {
-      console.log('thinkContent set:', thinkContentValue.substring(0, 100));
-    }
 
     // Für User-Nachrichten verwende displayContent (ohne Kontext), für Assistant messageContent
     const contentToProcess = message.role === "user" ? displayContent : messageContent;
