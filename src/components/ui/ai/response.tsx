@@ -4,18 +4,39 @@ import { cn } from "@/lib/utils"
 import type { HTMLAttributes } from "react"
 import { memo, useMemo } from "react"
 import ReactMarkdown, { type Options } from "react-markdown"
-import remarkGfm from "remark-gfm"
+import remarkGfm from "remark-gfm-configurable"
 import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import { ExternalLink } from "lucide-react"
 import "katex/dist/katex.min.css"
-import remarkEmoji from "remark-emoji"
-import remarkBreaks from "remark-breaks"
-import remarkSmartypants from "remark-smartypants"
-import remarkToc from "remark-toc"
-import remarkFrontmatter from "remark-frontmatter"
 import rehypeRaw from "rehype-raw"
 import rehypeHighlight from "rehype-highlight"
+
+// 🧩 schützt LaTeX vor GFM-Parsing (verhindert, dass Pipes als Tabellen interpretiert werden)
+function protectLatex(text: string): string {
+  if (!text || typeof text !== "string") {
+    return text
+  }
+  
+  // WICHTIG: Zuerst Block-Formeln behandeln, dann Inline-Formeln
+  // Block-Formeln $$...$$ (können mehrere Zeilen enthalten, auch mit Newlines)
+  // Non-greedy match mit [\s\S]*? um alle Zeichen inkl. Newlines zu erfassen
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_match, inner) => {
+    // Ersetze alle Pipes innerhalb der Block-Formel
+    const safeInner = inner.replace(/\|/g, "¦")
+    return `$$${safeInner}$$`
+  })
+  
+  // Inline-Formeln $...$ (darf keine Newlines enthalten)
+  // Wichtig: [^$\n] verhindert, dass wir über mehrere Zeilen matchen
+  text = text.replace(/\$([^$\n]+)\$/g, (_match, inner) => {
+    // Ersetze alle Pipes innerhalb der Inline-Formel
+    const safeInner = inner.replace(/\|/g, "¦")
+    return `$${safeInner}$`
+  })
+  
+  return text
+}
 
 /**
  * Simplified and optimized markdown parser that handles incomplete tokens during streaming.
@@ -93,9 +114,11 @@ const AIResponse = memo(
   }: AIResponseProps) => {
     // Memoize the parsed content to avoid unnecessary re-parsing
     const content = useMemo(() => {
-      return shouldParseIncompleteMarkdown
+      let processed = shouldParseIncompleteMarkdown
         ? parseIncompleteMarkdown(children)
         : children
+      // LaTeX-Formeln schützen, bevor sie an ReactMarkdown übergeben werden
+      return protectLatex(processed)
     }, [children, shouldParseIncompleteMarkdown])
 
     // Memoize components to avoid re-creating them on every render
@@ -202,14 +225,26 @@ const AIResponse = memo(
 
     return (
       <div className={cn("prose dark:prose-invert", className)} {...props}>
-        <ReactMarkdown
-          remarkPlugins={[remarkMath, remarkGfm, remarkEmoji, remarkBreaks, remarkSmartypants, remarkToc, remarkFrontmatter]}
-          rehypePlugins={[rehypeKatex, rehypeRaw, rehypeHighlight]}
-          components={components}
-          {...options}
-        >
-          {content}
-        </ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[
+              remarkMath, // WICHTIG: remarkMath muss VOR remarkGfm kommen, damit LaTeX zuerst verarbeitet wird
+              [remarkGfm, { 
+                plugins: {
+                  table: false,  // Tabellen komplett deaktivieren - verhindert Pipe-Interpretation
+                  autolinkLiteral: true,
+                  footnote: true,
+                  strikethrough: true,
+                  tasklist: true,
+                },
+                singleTilde: false
+              }],
+            ]}
+            rehypePlugins={[rehypeKatex, rehypeHighlight, rehypeRaw]}
+            components={components}
+            {...options}
+          >
+            {content}
+          </ReactMarkdown>
       </div>
     )
   }

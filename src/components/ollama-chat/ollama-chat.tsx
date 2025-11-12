@@ -197,6 +197,8 @@ export default function OllamaChat({ initialMessages, id }: ChatProps) {
       : selectedProvider === "ollama"
         ? "/api/ollama/chat"
         : "/api/deepseek/chat",
+    // Throttle updates: Lower for Ollama (fast responses), higher for DeepSeek
+    experimental_throttle: selectedProvider === "ollama" ? 10 : 50,
     fetch: async (url, options) => {
       if (chatMode === "cognee") {
         const token = useAuthStore.getState().auth.accessToken;

@@ -36,6 +36,13 @@ interface ExtendedMessage extends Message {
     url: string;
   }>;
   contextText?: string | null;
+  // Support for parts array (for reasoning models)
+  parts?: Array<{
+    type: 'text' | 'reasoning' | 'tool-invocation' | 'source' | 'step-start';
+    text?: string;
+    reasoning?: string;
+    [key: string]: any;
+  }>;
 }
 
 /**
@@ -88,6 +95,7 @@ const MOTION_CONFIG = {
 function OllamaChatMessage({
   message,
   isLast,
+  isLoading,
   reload,
   isCogneeMode = false,
   onAddSelectedTextToInput,
@@ -113,25 +121,141 @@ function OllamaChatMessage({
   const extendedMessage = message as ExtendedMessage;
   const contextText = extendedMessage?.contextText;
 
+  // Extract content from message (support both content string and parts array)
+  // Check both extendedMessage.parts and (message as any).parts for AI SDK compatibility
+  const messageParts = useMemo(() => {
+    return extendedMessage.parts || (message as any).parts || null;
+  }, [extendedMessage.parts, message]);
+
+  const messageContent = useMemo(() => {
+    // If message has parts, extract text parts
+    if (messageParts && Array.isArray(messageParts)) {
+      const textParts = messageParts
+        .filter(part => part.type === 'text')
+        .map(part => part.text || '')
+        .join('');
+      // If we have text parts, use them, otherwise fallback to content
+      return textParts || message.content || '';
+    }
+    // Fallback to content string
+    return message.content || '';
+  }, [message.content, messageParts]);
+
+  // Check if this is a reasoning model with step-start but no content yet
+  // This prevents showing empty messages when step-start arrives before text content
+  const isReasoningModelWaiting = useMemo(() => {
+    if (messageParts && Array.isArray(messageParts)) {
+      const hasStepStart = messageParts.some(part => part.type === 'step-start');
+      const hasText = messageParts.some(part => part.type === 'text' && part.text && part.text.trim().length > 0);
+      // If we have step-start but no text yet, we're waiting for reasoning model response
+      return hasStepStart && !hasText && message.role === 'assistant';
+    }
+    return false;
+  }, [messageParts, message.role]);
+
+  // Extract reasoning content from parts
+  // Support both 'reasoning' type and step-based reasoning models
+  const reasoningContent = useMemo(() => {
+    if (messageParts && Array.isArray(messageParts)) {
+      // Debug: Log parts to see what we're getting (only log once per message to avoid spam)
+      if (messageParts.length > 0 && process.env.NODE_ENV === 'development') {
+        const hasStepStart = messageParts.some(part => part.type === 'step-start');
+        if (hasStepStart) {
+          console.log('Message parts with step-start:', JSON.stringify(messageParts, null, 2));
+        }
+      }
+      
+      // First, try to find explicit reasoning part
+      const reasoningPart = messageParts.find(part => part.type === 'reasoning');
+      if (reasoningPart) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Found reasoning part:', reasoningPart);
+        }
+        return reasoningPart.reasoning || null;
+      }
+      
+      // For step-based reasoning models, check if there are step-start parts
+      // In some models, reasoning comes as separate parts between step-start and final text
+      const hasStepStart = messageParts.some(part => part.type === 'step-start');
+      
+      if (hasStepStart) {
+        // step-start indicates a reasoning step has started
+        // The reasoning content might come in a separate part after step-start
+        // or might be embedded in the step-start part itself
+        
+        // First, try to find explicit reasoning part
+        const reasoningPart = messageParts.find(part => part.type === 'reasoning');
+        if (reasoningPart && reasoningPart.reasoning) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Found reasoning part after step-start:', reasoningPart);
+          }
+          return reasoningPart.reasoning;
+        }
+        
+        // Check for any part with reasoning property (might be in different format)
+        const partWithReasoning = messageParts.find(part => 
+          part.reasoning || (part.type !== 'text' && part.type !== 'step-start')
+        );
+        
+        if (partWithReasoning) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Found part with potential reasoning:', partWithReasoning);
+          }
+          if (partWithReasoning.reasoning) {
+            return partWithReasoning.reasoning;
+          }
+          // Some models might store reasoning in other properties
+          if ((partWithReasoning as any).content) {
+            return (partWithReasoning as any).content;
+          }
+        }
+        
+        // Check if step-start part has any additional properties
+        const stepStartPart = messageParts.find(part => part.type === 'step-start');
+        if (stepStartPart) {
+          // Log all properties of step-start to see what's available
+          if (process.env.NODE_ENV === 'development') {
+            console.log('step-start part structure:', JSON.stringify(stepStartPart, null, 2));
+            console.log('All parts structure:', JSON.stringify(messageParts, null, 2));
+          }
+          // Check if step-start has reasoning or other properties
+          if ((stepStartPart as any).reasoning) {
+            return (stepStartPart as any).reasoning;
+          }
+        }
+        
+        // step-start indicates reasoning is happening, but we haven't found the content yet
+        // This might mean reasoning comes later in the stream or in a different format
+        if (process.env.NODE_ENV === 'development') {
+          console.log('step-start found but no reasoning content yet. Parts:', messageParts.map(p => ({ type: p.type, keys: Object.keys(p) })));
+        }
+        return null;
+      }
+      
+      return null;
+    }
+    return null;
+  }, [messageParts]);
+
   // Für User-Nachrichten mit Kontext: Extrahiere nur den Input aus dem Content
   // Der Content hat das Format: "Kontext: {contextText}\n\n{input}"
   const displayContent = useMemo(() => {
-    if (message.role === "user" && contextText && message.content.includes("Kontext:")) {
+    if (message.role === "user" && contextText && messageContent.includes("Kontext:")) {
       // Entferne den Kontext-Teil und zeige nur den Input
-      const parts = message.content.split(/\n\n/);
+      const parts = messageContent.split(/\n\n/);
       if (parts.length > 1) {
         // Der Input ist alles nach dem ersten "\n\n"
         return parts.slice(1).join("\n\n");
       }
       // Fallback: Entferne "Kontext: ..." manuell
-      return message.content.replace(/^Kontext:[\s\S]*?\n\n/, "");
+      return messageContent.replace(/^Kontext:[\s\S]*?\n\n/, "");
     }
-    return message.content;
-  }, [message.content, message.role, contextText]);
+    return messageContent;
+  }, [messageContent, message.role, contextText]);
 
   /**
-   * Extrahiere "think" Content von DeepSeek R1 Modellen und bereinige Nachricht
-   * Verwende displayContent für User-Nachrichten (ohne Kontext), message.content für Assistant-Nachrichten
+   * Extrahiere "think" Content von DeepSeek R1 Modellen und Reasoning-Modellen
+   * Verwende displayContent für User-Nachrichten (ohne Kontext), messageContent für Assistant-Nachrichten
    */
   const { thinkContent, cleanContent } = useMemo(() => {
     const getThinkContent = (content: string) => {
@@ -139,17 +263,27 @@ function OllamaChatMessage({
       return match ? match[1].trim() : null;
     };
 
-    // Für User-Nachrichten verwende displayContent (ohne Kontext), für Assistant message.content
-    const contentToProcess = message.role === "user" ? displayContent : message.content;
+    // Use reasoning from parts if available, otherwise fallback to think content extraction
+    const thinkContentValue = reasoningContent || 
+      (message.role === "assistant" && message.content 
+        ? getThinkContent(message.content)
+        : null);
+
+    // Debug: Log thinkContent to see if it's being set
+    if (thinkContentValue && process.env.NODE_ENV === 'development') {
+      console.log('thinkContent set:', thinkContentValue.substring(0, 100));
+    }
+
+    // Für User-Nachrichten verwende displayContent (ohne Kontext), für Assistant messageContent
+    const contentToProcess = message.role === "user" ? displayContent : messageContent;
 
     return {
-      thinkContent:
-        message.role === "assistant" ? getThinkContent(message.content) : null,
+      thinkContent: thinkContentValue,
       cleanContent: contentToProcess
         .replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "")
         .trim(),
     };
-  }, [message.content, message.role, displayContent]);
+  }, [messageContent, message.role, displayContent, reasoningContent, message.content]);
 
   /**
    * Auto-Collapse Think-Content, wenn Streaming startet
@@ -258,7 +392,8 @@ function OllamaChatMessage({
 
   const handleCopy = async () => {
     // Remove Sources section before copying to clipboard
-    const contentWithoutSources = message.content
+    // Use messageContent to support both content string and parts array
+    const contentWithoutSources = messageContent
       .replace(/### Sources\s*\n[\s\S]*?(?=\n### |$)/i, '')
       .trim();
     
@@ -506,7 +641,10 @@ function OllamaChatMessage({
           variant={message.role === "user" ? "sent" : "received"}
           className={message.role === "assistant" ? "max-w-[95%]" : ""}
         >
-          <ChatBubbleMessage className={message.role === "user" ? "p-2" : ""}>
+          <ChatBubbleMessage 
+            className={message.role === "user" ? "p-2" : ""}
+            isLoading={isLast && isLoading && message.role === "assistant" && (cleanContent.length === 0 || isReasoningModelWaiting)}
+          >
             {/* Kontext im Header der Nachricht */}
             {contextText && message.role === "user" && (
               <div className="mb-2">

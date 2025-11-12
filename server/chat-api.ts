@@ -211,12 +211,10 @@ export function setupChatApi(server: ViteDevServer) {
     req.on('end', async () => {
       try {
         // Dynamic import to avoid TypeScript version conflicts
-        const { createOllama } = await import('ollama-ai-provider-v2');
+        const { createOllama } = await import('ollama-ai-provider');
         const { streamText, convertToCoreMessages } = await import('ai');
         
-        const parsedBody = JSON.parse(body);
-        console.log('Ollama Chat API - Request Body:', JSON.stringify(parsedBody, null, 2));
-        
+        const parsedBody = JSON.parse(body);        
         // AI SDK 4: Direct body access (no nested metadata.body)
         const { messages, selectedModel, data, streamingConfig, systemPrompt } = parsedBody;
         
@@ -268,18 +266,29 @@ export function setupChatApi(server: ViteDevServer) {
           ];
         }
 
+        // Build messages array with system prompt (matching DeepSeek format)
+        const ollamaMessages = [
+          { role: 'system' as const, content: actualSystemPrompt || "You are a helpful AI assistant. Please provide accurate and helpful responses." },
+          ...convertToCoreMessages(initialMessages),
+          { role: 'user' as const, content: messageContent },
+        ];
+
         // Stream text using the ollama model with parameters
+        // Enable think parameter for reasoning models to include reasoning content
+        // For Qwen 3, DeepSeek-v3.1: use true
+        // For GPT-OSS: use "low", "medium", or "high"
         const result = await streamText({
-          model: ollama(actualSelectedModel),
-          system: actualSystemPrompt || "You are a helpful AI assistant. Please provide accurate and helpful responses.",
-          messages: [
-            ...convertToCoreMessages(initialMessages),
-            { role: 'user' as const, content: messageContent },
-          ],
+          model: ollama(actualSelectedModel, {
+            // Pass think parameter via provider settings
+            // This will be forwarded to the Ollama API
+            ...({ think: true } as any),
+          }),
+          messages: ollamaMessages,
           temperature: actualStreamingConfig?.temperature ?? 0.7,
           topP: actualStreamingConfig?.topP ?? 0.9,
         });
         
+        // Get the stream response
         // Use toDataStreamResponse() as documented - TypeScript may not recognize it but it exists in runtime
         const streamResponse = (result as any).toDataStreamResponse();
         
@@ -291,11 +300,8 @@ export function setupChatApi(server: ViteDevServer) {
             res.setHeader(key, value);
           }
         });
-        
-        // Debug: Log headers to verify correct format
-        console.log('Stream Response Headers:', Object.fromEntries(streamResponse.headers.entries()));
-        
-        // Pipe the body manually - ensure proper format
+          
+        // Handle streaming (matching DeepSeek format)
         if (streamResponse.body) {
           const reader = streamResponse.body.getReader();
           
@@ -304,7 +310,6 @@ export function setupChatApi(server: ViteDevServer) {
               while (true) {
                 const { done, value } = await reader.read();
                 if (done) {
-                  console.log('Stream completed');
                   res.end();
                   return;
                 }
@@ -495,11 +500,18 @@ export function setupChatApi(server: ViteDevServer) {
         ];
 
         // Stream text using streamText from AI SDK
+        // Enable think parameter for reasoning models to include reasoning content
+        // For Qwen 3, DeepSeek-v3.1: use true
+        // For GPT-OSS: use "low", "medium", or "high"
         const result = await streamText({
           model: deepseek(actualSelectedModel),
           messages: deepseekMessages,
           temperature: actualStreamingConfig?.temperature ?? 0.7,
           topP: actualStreamingConfig?.topP ?? 0.9,
+          // Enable reasoning/thinking for reasoning models
+          // This ensures reasoning content is included in the response
+          // Pass think parameter (may need to be passed via provider or as experimental option)
+          ...({ think: true } as any),
         });
         
         // Get the stream response
@@ -514,10 +526,7 @@ export function setupChatApi(server: ViteDevServer) {
             res.setHeader(key, value);
           }
         });
-        
-        // Debug: Log headers to verify correct format
-        console.log('Stream Response Headers:', Object.fromEntries(streamResponse.headers.entries()));
-        
+          
         // Handle streaming with sources append if web search enabled
         if (streamResponse.body) {
           const reader = streamResponse.body.getReader();
@@ -1762,10 +1771,7 @@ Das vorliegende Dokument beschreibt die Installation des Systems. Die Mindestanf
             res.setHeader(key, value);
           }
         });
-        
-        // Debug: Log headers to verify correct format
-        console.log('Stream Response Headers:', Object.fromEntries(streamResponse.headers.entries()));
-        
+           
         // Handle streaming - ensure proper format
         if (streamResponse.body) {
           const reader = streamResponse.body.getReader();
